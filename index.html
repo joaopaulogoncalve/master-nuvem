@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -43,7 +44,7 @@
                     <label class="text-sm font-medium text-slate-300">Espaço Contratado:</label>
                     <span id="gbDisplay" class="bg-blue-600/20 border border-blue-500/30 text-blue-400 px-4 py-1 rounded-lg text-lg font-bold">1 GB</span>
                 </div>
-                <input type="range" id="gbSlider" min="1" max="2000" value="1" oninput="atualizarCalculadora()" onchange="atualizarCalculadora()" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                <input type="range" id="gbSlider" min="1" max="2000" value="1" oninput="atualizarCalculadora()" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
                 <div class="flex justify-between text-xs text-slate-500 mt-2">
                     <span>1 GB</span>
                     <span>100 GB</span>
@@ -131,21 +132,17 @@
                 } else if (preference.sandbox_init_point) {
                     window.location.href = preference.sandbox_init_point;
                 } else {
-                    alert("Erro ao gerar preferência no Mercado Pago.");
+                    alert("Erro na resposta do servidor. Tente novamente.");
                     btn.innerText = "Contratar Agora via PIX/Cartão";
                     btn.disabled = false;
                 }
             } catch (error) {
-                console.error("Erro:", error);
-                alert("Erro ao conectar ao servidor seguro.");
+                console.error("Erro no checkout:", error);
+                alert("Erro ao conectar ao servidor de pagamento.");
                 btn.innerText = "Contratar Agora via PIX/Cartão";
                 btn.disabled = false;
             }
         }
-
-        window.onload = function() {
-            atualizarCalculadora();
-        };
     </script>
 </body>
 </html>
