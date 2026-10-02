@@ -18,7 +18,7 @@ export default {
                 const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
                     method: "POST",
                     headers: {
-                        "Authorization": `Bearer ${ACCESS_TOKEN}`,
+                        "Authorization": "Bearer " + ACCESS_TOKEN,
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
