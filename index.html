@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -44,7 +43,7 @@
                     <label class="text-sm font-medium text-slate-300">Espaço Contratado:</label>
                     <span id="gbDisplay" class="bg-blue-600/20 border border-blue-500/30 text-blue-400 px-4 py-1 rounded-lg text-lg font-bold">1 GB</span>
                 </div>
-                <input type="range" id="gbSlider" min="1" max="2000" value="1" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                <input type="range" id="gbSlider" min="1" max="2000" value="1" oninput="atualizarCalculadora()" onchange="atualizarCalculadora()" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
                 <div class="flex justify-between text-xs text-slate-500 mt-2">
                     <span>1 GB</span>
                     <span>100 GB</span>
@@ -72,10 +71,6 @@
     </section>
 
     <script>
-        const slider = document.getElementById('gbSlider');
-        const gbDisplay = document.getElementById('gbDisplay');
-        const priceDisplay = document.getElementById('priceDisplay');
-
         function calcularPreco(gb) {
             let valor = 0;
             if (gb <= 10) {
@@ -90,26 +85,38 @@
             return valor.toFixed(2);
         }
 
-        slider.oninput = function() {
-            const gb = parseInt(this.value);
-            gbDisplay.innerText = gb >= 1000 ? (gb/1000).toFixed(1) + ' TB' : gb + ' GB';
+        function atualizarCalculadora() {
+            var slider = document.getElementById('gbSlider');
+            var gbDisplay = document.getElementById('gbDisplay');
+            var priceDisplay = document.getElementById('priceDisplay');
+            
+            if (!slider) return;
+            
+            var gb = parseInt(slider.value);
+            if (gb >= 1000) {
+                gbDisplay.innerText = (gb / 1000).toFixed(1) + ' TB';
+            } else {
+                gbDisplay.innerText = gb + ' GB';
+            }
             priceDisplay.innerText = calcularPreco(gb).replace('.', ',');
-        };
+        }
 
         async function gerarCheckoutMercadoPago() {
-            const btn = document.getElementById('checkoutBtn');
-            btn.innerText = "Gerando Checkout Seguro...";
+            var btn = document.getElementById('checkoutBtn');
+            var slider = document.getElementById('gbSlider');
+            
+            btn.innerText = "Gerando Pagamento...";
             btn.disabled = true;
 
-            const gb = slider.value;
-            const valorNumerico = parseFloat(calcularPreco(gb));
-            const planoNome = `Master Nuvem - ${gb >= 1000 ? (gb/1000) + 'TB' : gb + 'GB'} Armazenamento`;
+            var gb = slider.value;
+            var valorNumerico = parseFloat(calcularPreco(gb));
+            var planoNome = "Master Nuvem - " + (gb >= 1000 ? (gb/1000) + "TB" : gb + "GB") + " Armazenamento";
 
             try {
-                const response = await fetch(window.location.href, {
-                    method: 'POST',
+                var response = await fetch(window.location.href, {
+                    method: "POST",
                     headers: {
-                        'Content-Type': 'application/json'
+                        "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
                         planoNome: planoNome,
@@ -117,24 +124,28 @@
                     })
                 });
 
-                const preference = await response.json();
+                var preference = await response.json();
 
                 if (preference.init_point) {
                     window.location.href = preference.init_point;
                 } else if (preference.sandbox_init_point) {
                     window.location.href = preference.sandbox_init_point;
                 } else {
-                    alert("Erro ao gerar link de pagamento. Tente novamente.");
+                    alert("Erro ao gerar preferência no Mercado Pago.");
                     btn.innerText = "Contratar Agora via PIX/Cartão";
                     btn.disabled = false;
                 }
             } catch (error) {
-                console.error("Erro no checkout:", error);
-                alert("Ocorreu um erro na conexão segura.");
+                console.error("Erro:", error);
+                alert("Erro ao conectar ao servidor seguro.");
                 btn.innerText = "Contratar Agora via PIX/Cartão";
                 btn.disabled = false;
             }
         }
+
+        window.onload = function() {
+            atualizarCalculadora();
+        };
     </script>
 </body>
 </html>
