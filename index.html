@@ -3,152 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuvem Privada & Backup Seguro | Pague apenas o que usar</title>
+    <title>Master Nuvem - Armazenamento Sob Medida</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        input<type=range>::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 24px;
-            width: 24px;
-            border-radius: 50%;
-            background: #2563eb;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
-        }
-    </style>
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
 </head>
-<body class="bg-slate-950 text-slate-100 antialiased selection:bg-blue-600 selection:text-white">
+<body class="bg-slate-950 text-white font-sans antialiased">
 
-    
-    <header class="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md fixed w-full z-50 top-0">
+    <nav class="border-b border-slate-800 bg-slate-900/50 backdrop-blur fixed w-full z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-xl shadow-lg shadow-blue-500/30">N</div>
-                <span class="font-bold text-xl tracking-tight text-white">Nuvem<span class="text-blue-500">Privada</span></span>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-xl shadow-lg shadow-blue-500/20">
+                    MN
+                </div>
+                <span class="font-bold text-xl tracking-tight text-white">Master<span class="text-blue-500">Nuvem</span></span>
             </div>
-            <a href="#calculadora" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all duration-200 shadow-lg shadow-blue-600/20">Simular Espaço</a>
+            <a href="#calculadora" class="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
+                Simular Espaço
+            </a>
         </div>
-    </header>
+    </nav>
 
-    
-    <section class="pt-32 pb-20 px-4 max-w-7xl mx-auto text-center">
-        <span class="text-blue-500 font-semibold text-sm uppercase tracking-widest bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">Sua Nuvem sob Medida</span>
-        <h1 class="text-4xl md:text-6xl font-extrabold text-white mt-6 max-w-4xl mx-auto leading-tight">
-            Armazenamento ultra seguro de <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">1 GB até 2 TB</span>.
+    <section id="calculadora" class="pt-32 pb-20 px-4 max-w-4xl mx-auto text-center">
+        <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide uppercase">
+            Sua Nuvem Sob Medida
+        </span>
+        <h1 class="text-4xl sm:text-6xl font-extrabold mt-6 mb-4 tracking-tight">
+            Armazenamento ultra seguro <br>de <span class="text-blue-500">1 GB até 2 TB</span>.
         </h1>
-        <p class="text-slate-400 text-lg md:text-xl mt-4 max-w-2xl mx-auto">
+        <p class="text-slate-400 text-lg mb-12 max-w-2xl mx-auto">
             Sem contratos abusivos ou combos engessados. Escolha a quantidade exata de Gigabytes que a sua empresa precisa e pague apenas por isso.
         </p>
-    </section>
 
-    
-    <section id="calculadora" class="py-12 px-4 max-w-4xl mx-auto">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
-            <div class="absolute -top-24 -right-24 w-60 h-60 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
-
-            <h2 class="text-2xl font-bold text-white text-center mb-8">Monte seu Plano em Tempo Real</h2>
-
+        <div class="bg-slate-900/80 border border-slate-800 p-8 rounded-2xl shadow-2xl backdrop-blur text-left">
+            <h3 class="text-xl font-bold text-center mb-8">Monte seu Plano em Tempo Real</h3>
             
-            <div class="space-y-6">
-                <div class="flex justify-between items-center">
-                    <label class="text-slate-300 font-medium text-sm sm:text-base">Espaço Contratado:</label>
-                    <span id="gb-display" class="text-3xl font-extrabold text-blue-400 bg-blue-950/50 px-4 py-1 rounded-xl border border-blue-800/50">10 GB</span>
+            <div class="mb-8">
+                <div class="flex justify-between items-center mb-4">
+                    <label class="text-sm font-medium text-slate-300">Espaço Contratado:</label>
+                    <span id="gbDisplay" class="bg-blue-600/20 border border-blue-500/30 text-blue-400 px-4 py-1 rounded-lg text-lg font-bold">1 GB</span>
                 </div>
-
-                <input type="range" id="gb-range" min="1" max="2000" value="10" class="w-full h-3 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-600">
-
-                <div class="flex justify-between text-xs text-slate-500 font-semibold">
+                <input type="range" id="gbSlider" min="1" max="2000" value="1" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                <div class="flex justify-between text-xs text-slate-500 mt-2">
                     <span>1 GB</span>
                     <span>100 GB</span>
                     <span>500 GB</span>
-                    <span>1 TB (1000 GB)</span>
-                    <span>2 TB (2000 GB)</span>
+                    <span>1 TB</span>
+                    <span>2 TB</span>
                 </div>
             </div>
 
-            
-            <div class="mt-10 pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-slate-800">
                 <div>
-                    <span class="text-slate-400 text-sm block">Valor Mensal Estimado:</span>
+                    <span class="text-xs text-slate-400 uppercase tracking-wider block">Valor Mensal Estimado:</span>
                     <div class="flex items-baseline gap-1">
-                        <span class="text-slate-400 text-xl font-bold">R$</span>
-                        <span id="price-display" class="text-5xl font-black text-white">9,90</span>
-                        <span class="text-slate-400 text-sm">/mês</span>
+                        <span class="text-sm font-semibold text-slate-300">R$</span>
+                        <span id="priceDisplay" class="text-3xl font-extrabold text-white">10,50</span>
+                        <span class="text-xs text-slate-400">/mês</span>
                     </div>
-                    <span id="discount-badge" class="text-xs text-emerald-400 mt-1 block font-medium">✓ Desconto aplicado para planos acima de 100 GB</span>
                 </div>
 
-                <button id="checkout-btn" onclick="contratarPlano()" class="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-8 py-4 rounded-2xl shadow-xl shadow-blue-600/25 transition-all duration-200 transform hover:-translate-y-0.5">
+                <button id="checkoutBtn" onclick="gerarCheckoutMercadoPago()" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg shadow-blue-600/20 transition transform active:scale-95 text-center">
                     Contratar Agora via PIX/Cartão
                 </button>
             </div>
         </div>
     </section>
 
-    
-    <section class="py-20 max-w-7xl mx-auto px-4 grid md:grid-cols-3 gap-8">
-        <div class="bg-slate-900/50 border border-slate-800/80 p-6 rounded-2xl">
-            <div class="w-10 h-10 bg-blue-600/10 text-blue-400 rounded-xl flex items-center justify-center font-bold mb-4">🔒</div>
-            <h3 class="text-lg font-bold text-white">Criptografia Total</h3>
-            <p class="text-slate-400 text-sm mt-2">Seus arquivos são criptografados antes do envio e trafegam protegidos por conexões SSL ponta a ponta.</p>
-        </div>
-        <div class="bg-slate-900/50 border border-slate-800/80 p-6 rounded-2xl">
-            <div class="w-10 h-10 bg-blue-600/10 text-blue-400 rounded-xl flex items-center justify-center font-bold mb-4">⚡</div>
-            <h3 class="text-lg font-bold text-white">Upload Direto em Alta Velocidade</h3>
-            <p class="text-slate-400 text-sm mt-2">Tecnologia S3 para transferências na velocidade máxima da sua conexão de internet.</p>
-        </div>
-        <div class="bg-slate-900/50 border border-slate-800/80 p-6 rounded-2xl">
-            <div class="w-10 h-10 bg-blue-600/10 text-blue-400 rounded-xl flex items-center justify-center font-bold mb-4">🤝</div>
-            <h3 class="text-lg font-bold text-white">Suporte Humanizado</h3>
-            <p class="text-slate-400 text-sm mt-2">Atendimento via WhatsApp para auxiliar você a configurar suas rotas de backup sem complicação.</p>
-        </div>
-    </section>
-
-    
     <script>
-        const range = document.getElementById('gb-range');
-        const gbDisplay = document.getElementById('gb-display');
-        const priceDisplay = document.getElementById('price-display');
-        const discountBadge = document.getElementById('discount-badge');
+        const PUBLIC_KEY = 'APP_USR-9123c2b0-0888-4798-b50e-809c50a23ee1';
+        const ACCESS_TOKEN = 'APP_USR-3978220072394763-100215-7316e2a9a858f0d112930fb0c10a892a-3734837516';
 
-        function updatePrice() {
-            const gb = parseInt(range.value);
-            let price = 0;
+        const mp = new MercadoPago(PUBLIC_KEY, { locale: 'pt-BR' });
 
-            if (gb >= 1000) {
-                gbDisplay.innerText = (gb / 1000).toFixed(gb % 1000 === 0 ? 0 : 1) + ' TB (' + gb + ' GB)';
-            } else {
-                gbDisplay.innerText = gb + ' GB';
-            }
+        const slider = document.getElementById('gbSlider');
+        const gbDisplay = document.getElementById('gbDisplay');
+        const priceDisplay = document.getElementById('priceDisplay');
 
+        function calcularPreco(gb) {
+            let valor = 0;
             if (gb <= 10) {
-                price = 9.90;
-                discountBadge.style.opacity = '0';
+                valor = 10.50;
             } else if (gb <= 100) {
-                price = 9.90 + (gb - 10) * 0.35;
-                discountBadge.style.opacity = '0';
+                valor = 10.50 + (gb - 10) * 0.42;
             } else if (gb <= 500) {
-                price = 41.40 + (gb - 100) * 0.20;
-                discountBadge.style.opacity = '1';
-                discountBadge.innerText = '✓ Desconto de volume aplicado';
+                valor = 47.90 + (gb - 100) * 0.26;
             } else {
-                price = 121.40 + (gb - 500) * 0.12;
-                discountBadge.style.opacity = '1';
-                discountBadge.innerText = '✓ Melhor valor por GB (Desconto Máximo)';
+                valor = 148.90 + (gb - 500) * 0.16;
             }
-
-            priceDisplay.innerText = price.toFixed(2).replace('.', ',');
+            return valor.toFixed(2);
         }
 
-        range.addEventListener('input', updatePrice);
-        updatePrice();
+        slider.oninput = function() {
+            const gb = parseInt(this.value);
+            gbDisplay.innerText = gb >= 1000 ? (gb/1000).toFixed(1) + ' TB' : gb + ' GB';
+            priceDisplay.innerText = calcularPreco(gb).replace('.', ',');
+        };
 
-        function contratarPlano() {
-            const gb = range.value;
-            const preco = priceDisplay.innerText;
-            alert(`Iniciando contratação de \({gb} GB no valor de R\) ${preco}/mês.\n\nNa próxima etapa, essa ação enviará você para o checkout do Asaas!`);
+        async function gerarCheckoutMercadoPago() {
+            const btn = document.getElementById('checkoutBtn');
+            btn.innerText = "Gerando Pagamento...";
+            btn.disabled = true;
+
+            const gb = slider.value;
+            const valorNumerico = parseFloat(calcularPreco(gb));
+            const planoNome = `Master Nuvem - ${gb >= 1000 ? (gb/1000) + 'TB' : gb + 'GB'} Armazenamento`;
+
+            try {
+                const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${ACCESS_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        items: <
+                            {
+                                title: planoNome,
+                                quantity: 1,
+                                currency_id: 'BRL',
+                                unit_price: valorNumerico
+                            }
+                        >,
+                        back_urls: {
+                            success: window.location.href,
+                            failure: window.location.href,
+                            pending: window.location.href
+                        },
+                        auto_return: 'approved'
+                    })
+                });
+
+                const preference = await response.json();
+
+                if (preference.init_point) {
+                    window.location.href = preference.init_point;
+                } else if (preference.sandbox_init_point) {
+                    window.location.href = preference.sandbox_init_point;
+                } else {
+                    alert("Erro ao conectar ao Mercado Pago. Verifique as credenciais.");
+                    btn.innerText = "Contratar Agora via PIX/Cartão";
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error("Erro no checkout:", error);
+                alert("Ocorreu um erro ao processar o pagamento.");
+                btn.innerText = "Contratar Agora via PIX/Cartão";
+                btn.disabled = false;
+            }
         }
     </script>
 </body>
