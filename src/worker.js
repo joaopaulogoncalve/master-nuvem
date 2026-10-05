@@ -1,14 +1,11 @@
 function calcularPreco(gb) {
   var valor;
-  if (gb <= 10) {
-    valor = 10.50;
-  } else if (gb <= 100) {
-    valor = 10.50 + (gb - 10) * 0.42;
-  } else if (gb <= 500) {
-    valor = 48.30 + (gb - 100) * 0.26;
+  if (gb <= 1000) {
+    valor = 5 + gb * 0.054;
   } else {
-    valor = 152.30 + (gb - 500) * 0.16;
+    valor = 59 + (gb - 1000) * 0.06;
   }
+  if (valor < 9.90) valor = 9.90;
   return Math.round(valor * 100) / 100;
 }
 
@@ -26,11 +23,9 @@ export default {
     if (url.pathname !== "/api/checkout") {
       return env.ASSETS.fetch(request);
     }
-
     if (request.method !== "POST") {
       return resposta({ error: "Método não permitido" }, 405);
     }
-
     if (!env.MP_ACCESS_TOKEN) {
       console.error("MP_ACCESS_TOKEN não configurado");
       return resposta({ error: "Configuração ausente" }, 500);
@@ -44,11 +39,11 @@ export default {
     }
 
     const gb = parseInt(corpo.gb, 10);
-    if (!gb || gb < 1 || gb > 2000) {
+    if (!gb || gb < 1 || gb > 5000) {
       return resposta({ error: "Quantidade inválida" }, 400);
     }
 
-    const nome = gb >= 1000 ? (gb / 1000).toFixed(1) + "TB" : gb + "GB";
+    const nome = gb >= 1000 ? (gb / 1000).toFixed(2) + "TB" : gb + "GB";
 
     try {
       const mp = await fetch("https://api.mercadopago.com/checkout/preferences", {
