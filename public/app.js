@@ -1,22 +1,19 @@
-
 var TEXTO_BOTAO = "Contratar Agora via PIX/Cartão";
 
 function calcularPreco(gb) {
   var valor;
-  if (gb <= 10) {
-    valor = 10.50;
-  } else if (gb <= 100) {
-    valor = 10.50 + (gb - 10) * 0.42;
-  } else if (gb <= 500) {
-    valor = 48.30 + (gb - 100) * 0.26;
+  if (gb <= 1000) {
+    valor = 5 + gb * 0.054;
   } else {
-    valor = 152.30 + (gb - 500) * 0.16;
+    valor = 59 + (gb - 1000) * 0.06;
   }
+  if (valor < 9.90) valor = 9.90;
   return Math.round(valor * 100) / 100;
 }
 
 function formatarEspaco(gb) {
-  return gb >= 1000 ? (gb / 1000).toFixed(1) + " TB" : gb + " GB";
+  if (gb >= 1000) return String(+(gb / 1000).toFixed(2)) + " TB";
+  return gb + " GB";
 }
 
 function atualizar() {
@@ -26,8 +23,17 @@ function atualizar() {
   if (!slider || !gbDisplay || !priceDisplay) return;
 
   var gb = parseInt(slider.value, 10);
+  var min = parseInt(slider.min, 10);
+  var max = parseInt(slider.max, 10);
+  slider.style.setProperty("--p", ((gb - min) / (max - min) * 100) + "%");
+
   gbDisplay.textContent = formatarEspaco(gb);
   priceDisplay.textContent = calcularPreco(gb).toFixed(2).replace(".", ",");
+
+  document.querySelectorAll("[data-gb]").forEach(function (chip) {
+    var ativo = parseInt(chip.getAttribute("data-gb"), 10) === gb;
+    chip.classList.toggle("chip-on", ativo);
+  });
 }
 
 async function processarPagamento() {
@@ -45,7 +51,6 @@ async function processarPagamento() {
       body: JSON.stringify({ gb: gb })
     });
     var data = await resp.json();
-
     if (data.init_point) {
       window.location.href = data.init_point;
       return;
@@ -67,6 +72,12 @@ function iniciar() {
     slider.addEventListener("input", atualizar);
     slider.addEventListener("change", atualizar);
   }
+  document.querySelectorAll("[data-gb]").forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      slider.value = chip.getAttribute("data-gb");
+      atualizar();
+    });
+  });
   if (btn) {
     btn.addEventListener("click", processarPagamento);
   }
