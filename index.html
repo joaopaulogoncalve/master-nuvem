@@ -8,7 +8,6 @@
 </head>
 <body class="bg-slate-950 text-white font-sans antialiased">
 
-    
     <nav class="border-b border-slate-800 bg-slate-900/50 backdrop-blur fixed w-full z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -23,7 +22,6 @@
         </div>
     </nav>
 
-    
     <section id="calculadora" class="pt-32 pb-20 px-4 max-w-4xl mx-auto text-center">
         <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide uppercase">
             Sua Nuvem Sob Medida
@@ -35,7 +33,6 @@
             Sem contratos abusivos ou combos engessados. Escolha a quantidade exata de Gigabytes que a sua empresa precisa e pague apenas por isso.
         </p>
 
-        
         <div class="bg-slate-900/80 border border-slate-800 p-8 rounded-2xl shadow-2xl backdrop-blur text-left">
             <h3 class="text-xl font-bold text-center mb-8">Monte seu Plano em Tempo Real</h3>
             
@@ -44,7 +41,7 @@
                     <label class="text-sm font-medium text-slate-300">Espaço Contratado:</label>
                     <span id="gbDisplay" class="bg-blue-600/20 border border-blue-500/30 text-blue-400 px-4 py-1 rounded-lg text-lg font-bold">1 GB</span>
                 </div>
-                <input type="range" id="gbSlider" min="1" max="2000" value="1" oninput="atualizarCalculadora()" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                <input type="range" id="gbSlider" min="1" max="2000" value="1" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
                 <div class="flex justify-between text-xs text-slate-500 mt-2">
                     <span>1 GB</span>
                     <span>100 GB</span>
@@ -64,7 +61,7 @@
                     </div>
                 </div>
 
-                <button id="checkoutBtn" onclick="gerarCheckoutMercadoPago()" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg shadow-blue-600/20 transition transform active:scale-95 text-center">
+                <button id="checkoutBtn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg shadow-blue-600/20 transition transform active:scale-95 text-center">
                     Contratar Agora via PIX/Cartão
                 </button>
             </div>
@@ -73,7 +70,7 @@
 
     <script>
         function calcularPreco(gb) {
-            let valor = 0;
+            var valor = 0;
             if (gb <= 10) {
                 valor = 10.50;
             } else if (gb <= 100) {
@@ -86,42 +83,51 @@
             return valor.toFixed(2);
         }
 
-        function atualizarCalculadora() {
+        function atualizar() {
             var slider = document.getElementById('gbSlider');
             var gbDisplay = document.getElementById('gbDisplay');
             var priceDisplay = document.getElementById('priceDisplay');
             
-            if (!slider) return;
+            if (!slider || !gbDisplay || !priceDisplay) return;
             
-            var gb = parseInt(slider.value);
+            var gb = parseInt(slider.value, 10);
             if (gb >= 1000) {
-                gbDisplay.innerText = (gb / 1000).toFixed(1) + ' TB';
+                gbDisplay.textContent = (gb / 1000).toFixed(1) + ' TB';
             } else {
-                gbDisplay.innerText = gb + ' GB';
+                gbDisplay.textContent = gb + ' GB';
             }
-            priceDisplay.innerText = calcularPreco(gb).replace('.', ',');
+            priceDisplay.textContent = calcularPreco(gb).replace('.', ',');
         }
 
-        async function gerarCheckoutMercadoPago() {
+        async function processarPagamento() {
             var btn = document.getElementById('checkoutBtn');
             var slider = document.getElementById('gbSlider');
             
-            btn.innerText = "Gerando Pagamento...";
+            btn.innerText = "Conectando ao Mercado Pago...";
             btn.disabled = true;
 
-            var gb = slider.value;
+            var gb = parseInt(slider.value, 10);
             var valorNumerico = parseFloat(calcularPreco(gb));
-            var planoNome = "Master Nuvem - " + (gb >= 1000 ? (gb/1000) + "TB" : gb + "GB") + " Armazenamento";
+            var planoNome = "Master Nuvem - " + (gb >= 1000 ? (gb/1000).toFixed(1) + "TB" : gb + "GB") + " Armazenamento";
+
+            var token = "APP_USR-3978220072394763-100215-7316e2a9a858f0d112930fb0c10a892a-3734837516";
 
             try {
-                var response = await fetch(window.location.href, {
+                var response = await fetch("https://api.mercadopago.com/checkout/preferences", {
                     method: "POST",
                     headers: {
+                        "Authorization": "Bearer " + token,
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        planoNome: planoNome,
-                        valorNumerico: valorNumerico
+                        items: <
+                            {
+                                title: planoNome,
+                                quantity: 1,
+                                currency_id: "BRL",
+                                unit_price: valorNumerico
+                            }
+                        >
                     })
                 });
 
@@ -132,17 +138,33 @@
                 } else if (preference.sandbox_init_point) {
                     window.location.href = preference.sandbox_init_point;
                 } else {
-                    alert("Erro na resposta do servidor. Tente novamente.");
+                    alert("Atenção: Verifique se o Access Token do Mercado Pago está ativo.");
                     btn.innerText = "Contratar Agora via PIX/Cartão";
                     btn.disabled = false;
                 }
             } catch (error) {
-                console.error("Erro no checkout:", error);
-                alert("Erro ao conectar ao servidor de pagamento.");
+                console.error("Erro no Checkout:", error);
+                alert("Erro ao conectar ao Mercado Pago. Tente novamente.");
                 btn.innerText = "Contratar Agora via PIX/Cartão";
                 btn.disabled = false;
             }
         }
+
+        window.addEventListener('DOMContentLoaded', function() {
+            var slider = document.getElementById('gbSlider');
+            var btn = document.getElementById('checkoutBtn');
+
+            if (slider) {
+                slider.addEventListener('input', atualizar);
+                slider.addEventListener('change', atualizar);
+            }
+
+            if (btn) {
+                btn.addEventListener('click', processarPagamento);
+            }
+
+            atualizar();
+        });
     </script>
 </body>
 </html>
