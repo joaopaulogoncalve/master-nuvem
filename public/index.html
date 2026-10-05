@@ -1,73 +1,124 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Master Nuvem - Armazenamento Sob Medida</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Master Nuvem - Armazenamento Sob Medida</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(#38bdf812 1px,transparent 1px),linear-gradient(90deg,#38bdf812 1px,transparent 1px);background-size:48px 48px;-webkit-mask-image:linear-gradient(#000,transparent 85%);mask-image:linear-gradient(#000,transparent 85%)}
+.trails{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.trails span{position:absolute;left:-40%;width:40%;height:2px;background:linear-gradient(90deg,transparent,#38bdf8,#a78bfa,transparent);box-shadow:0 0 12px #38bdf8;opacity:.8;animation:run 7s linear infinite}
+@keyframes run{to{left:110%}}
+.grad{background:linear-gradient(90deg,#38bdf8,#818cf8,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.glass{background:linear-gradient(160deg,#0c1a3dcc,#07102acc);border:1px solid #1e40af88;box-shadow:0 0 50px #38bdf822,inset 0 0 30px #1d4ed811;backdrop-filter:blur(10px)}
+.rack{width:230px;padding:14px;border:1px solid #1e3a8a;border-radius:16px;background:linear-gradient(#0a1633,#050c20);box-shadow:0 0 70px #38bdf840;animation:float 5s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-12px)}}
+.unit{display:flex;align-items:center;gap:8px;height:46px;margin-bottom:10px;padding:0 12px;border-radius:10px;background:#0c1a3d;border:1px solid #1d3a7a}
+.unit:last-child{margin-bottom:0}
+.unit b{flex:1;height:6px;border-radius:4px;background:repeating-linear-gradient(90deg,#1d3a7a 0 6px,transparent 6px 10px)}
+.led{width:8px;height:8px;border-radius:50%;background:#22d3ee;box-shadow:0 0 10px #22d3ee;animation:blink 1.6s infinite}
+.led.b{background:#a78bfa;box-shadow:0 0 10px #a78bfa;animation-delay:.6s}
+@keyframes blink{50%{opacity:.2}}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:9999px;outline:none;cursor:pointer;background:linear-gradient(90deg,#38bdf8 var(--p,0%),#12224a var(--p,0%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;border:5px solid #38bdf8;box-shadow:0 0 20px #38bdf8}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:5px solid #38bdf8;box-shadow:0 0 20px #38bdf8}
+.chip{padding:6px 14px;border-radius:9999px;border:1px solid #1e40af;background:#0c1a3d;color:#93c5fd;font-size:13px;font-weight:600;transition:.2s}
+.chip:hover{border-color:#38bdf8;color:#fff}
+.chip-on{background:linear-gradient(90deg,#0ea5e9,#6366f1);border-color:transparent;color:#fff;box-shadow:0 0 16px #38bdf866}
+.cta{background:linear-gradient(90deg,#0ea5e9,#6366f1);box-shadow:0 0 30px #38bdf866}
+.cta:hover{filter:brightness(1.15)}
+.cta:disabled{opacity:.6}
+</style>
 </head>
-<body class="bg-slate-950 text-white font-sans antialiased">
+<body class="text-white font-sans antialiased">
 
-    <nav class="border-b border-slate-800 bg-slate-900/50 backdrop-blur fixed w-full z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-xl shadow-lg shadow-blue-500/20">
-                    MN
-                </div>
-                <span class="font-bold text-xl tracking-tight text-white">Master<span class="text-blue-500">Nuvem</span></span>
-            </div>
-            <a href="#calculadora" class="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
-                Simular Espaço
-            </a>
+<nav class="fixed w-full z-50 border-b border-blue-900/50 bg-slate-950/60 backdrop-blur">
+  <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl cta flex items-center justify-center font-bold text-lg">MN</div>
+      <span class="font-bold text-xl">Master<span class="grad">Nuvem</span></span>
+    </div>
+    <a href="#calculadora" class="cta font-semibold px-4 py-2 rounded-lg text-sm transition">Simular Espaço</a>
+  </div>
+</nav>
+
+<header class="relative">
+  <div class="trails">
+    <span style="top:18%"></span>
+    <span style="top:34%;animation-delay:2s;animation-duration:9s"></span>
+    <span style="top:52%;animation-delay:4s"></span>
+    <span style="top:70%;animation-delay:1s;animation-duration:8s"></span>
+    <span style="top:86%;animation-delay:5s;animation-duration:10s"></span>
+  </div>
+  <div class="relative max-w-6xl mx-auto px-4 pt-32 pb-16 grid md:grid-cols-2 gap-10 items-center">
+    <div>
+      <span class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-cyan-300 border border-cyan-400/30 bg-cyan-400/10 px-4 py-1.5 rounded-full">
+        <i class="led"></i> Conectado à nuvem
+      </span>
+      <h1 class="text-4xl sm:text-6xl font-extrabold mt-6 mb-5 tracking-tight leading-tight">
+        Seu espaço na nuvem, <span class="grad">do tamanho exato</span> do seu negócio.
+      </h1>
+      <p class="text-slate-300 text-lg max-w-xl">
+        De 1 GB até 5 TB. Escolha quanto precisa, pague só por isso e contrate em minutos por PIX ou cartão.
+      </p>
+      <a href="#calculadora" class="cta inline-block mt-8 font-bold px-8 py-3.5 rounded-xl transition">Montar meu plano</a>
+    </div>
+    <div class="flex justify-center">
+      <div class="rack">
+        <div class="unit"><i class="led"></i><i class="led b"></i><b></b></div>
+        <div class="unit"><i class="led b"></i><i class="led"></i><b></b></div>
+        <div class="unit"><i class="led"></i><i class="led b"></i><b></b></div>
+        <div class="unit"><i class="led b"></i><i class="led"></i><b></b></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="calculadora" class="relative max-w-3xl mx-auto px-4 pb-16">
+  <div class="glass rounded-3xl p-6 sm:p-10">
+    <h2 class="text-2xl font-bold text-center mb-8">Monte seu plano em tempo real</h2>
+
+    <div class="flex justify-between items-center mb-5">
+      <label for="gbSlider" class="text-sm font-medium text-slate-300">Espaço contratado</label>
+      <span id="gbDisplay" class="text-2xl font-extrabold grad">200 GB</span>
+    </div>
+    <input type="range" id="gbSlider" min="1" max="5000" step="1" value="200">
+
+    <div class="flex flex-wrap gap-2 mt-6">
+      <button type="button" class="chip" data-gb="50">50 GB</button>
+      <button type="button" class="chip" data-gb="200">200 GB</button>
+      <button type="button" class="chip" data-gb="500">500 GB</button>
+      <button type="button" class="chip" data-gb="1000">1 TB</button>
+      <button type="button" class="chip" data-gb="2000">2 TB</button>
+      <button type="button" class="chip" data-gb="5000">5 TB</button>
+    </div>
+
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-6 mt-8 pt-6 border-t border-blue-900/60">
+      <div>
+        <span class="text-xs text-slate-400 uppercase tracking-wider block">Valor mensal estimado</span>
+        <div class="flex items-baseline gap-1">
+          <span class="text-sm font-semibold text-slate-300">R$</span>
+          <span id="priceDisplay" class="text-4xl font-extrabold">15,80</span>
+          <span class="text-xs text-slate-400">/mês</span>
         </div>
-    </nav>
+      </div>
+      <button type="button" id="checkoutBtn" class="cta w-full sm:w-auto font-bold px-8 py-3.5 rounded-xl transition active:scale-95">
+        Contratar Agora via PIX/Cartão
+      </button>
+    </div>
+    <p class="text-center text-xs text-slate-500 mt-5">Pagamento seguro pelo Mercado Pago</p>
+  </div>
+</section>
 
-    <section id="calculadora" class="pt-32 pb-20 px-4 max-w-4xl mx-auto text-center">
-        <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide uppercase">
-            Sua Nuvem Sob Medida
-        </span>
-        <h1 class="text-4xl sm:text-6xl font-extrabold mt-6 mb-4 tracking-tight">
-            Armazenamento ultra seguro <br>de <span class="text-blue-500">1 GB até 2 TB</span>.
-        </h1>
-        <p class="text-slate-400 text-lg mb-12 max-w-2xl mx-auto">
-            Sem contratos abusivos ou combos engessados. Escolha a quantidade exata de Gigabytes que a sua empresa precisa e pague apenas por isso.
-        </p>
+<section class="max-w-6xl mx-auto px-4 pb-20 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <div class="glass rounded-2xl p-5"><h3 class="font-bold text-cyan-300 mb-1">Sob medida</h3><p class="text-sm text-slate-400">Do menor ao maior plano, sem combos engessados.</p></div>
+  <div class="glass rounded-2xl p-5"><h3 class="font-bold text-cyan-300 mb-1">Criptografado</h3><p class="text-sm text-slate-400">Arquivos guardados com criptografia em nuvem profissional.</p></div>
+  <div class="glass rounded-2xl p-5"><h3 class="font-bold text-cyan-300 mb-1">PIX ou cartão</h3><p class="text-sm text-slate-400">Contratação rápida, com pagamento pelo Mercado Pago.</p></div>
+  <div class="glass rounded-2xl p-5"><h3 class="font-bold text-violet-300 mb-1">Entrega de arquivos <span class="text-xs font-semibold text-violet-200 bg-violet-500/20 px-2 py-0.5 rounded-full">em breve</span></h3><p class="text-sm text-slate-400">Links para enviar e receber arquivos pesados dos seus clientes.</p></div>
+</section>
 
-        <div class="bg-slate-900/80 border border-slate-800 p-8 rounded-2xl shadow-2xl backdrop-blur text-left">
-            <h3 class="text-xl font-bold text-center mb-8">Monte seu Plano em Tempo Real</h3>
-
-            <div class="mb-8">
-                <div class="flex justify-between items-center mb-4">
-                    <label for="gbSlider" class="text-sm font-medium text-slate-300">Espaço Contratado:</label>
-                    <span id="gbDisplay" class="bg-blue-600/20 border border-blue-500/30 text-blue-400 px-4 py-1 rounded-lg text-lg font-bold">1 GB</span>
-                </div>
-                <input type="range" id="gbSlider" min="1" max="2000" step="1" value="1" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
-                <div class="flex justify-between text-xs text-slate-500 mt-2">
-                    <span>1 GB</span>
-                    <span>100 GB</span>
-                    <span>500 GB</span>
-                    <span>1 TB</span>
-                    <span>2 TB</span>
-                </div>
-            </div>
-
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-slate-800">
-                <div>
-                    <span class="text-xs text-slate-400 uppercase tracking-wider block">Valor Mensal Estimado:</span>
-                    <div class="flex items-baseline gap-1">
-                        <span class="text-sm font-semibold text-slate-300">R$</span>
-                        <span id="priceDisplay" class="text-3xl font-extrabold text-white">10,50</span>
-                        <span class="text-xs text-slate-400">/mês</span>
-                    </div>
-                </div>
-
-                <button type="button" id="checkoutBtn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg shadow-blue-600/20 transition transform active:scale-95 text-center">
-                    Contratar Agora via PIX/Cartão
-                </button>
-            </div>
-        </div>
-    </section>
-
-    <script src="/app.js"></script>
+<script src="/app.js"></script>
 </body>
 </html>
