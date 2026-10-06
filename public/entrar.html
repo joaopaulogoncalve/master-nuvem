@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entrar - Master Nuvem</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
+.glass{background:linear-gradient(160deg,#0c1a3dcc,#07102acc);border:1px solid #1e40af88;box-shadow:0 0 50px #38bdf822;backdrop-filter:blur(10px)}
+.grad{background:linear-gradient(90deg,#38bdf8,#818cf8,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.cta{background:linear-gradient(90deg,#0ea5e9,#6366f1);box-shadow:0 0 30px #38bdf866}
+.cta:hover{filter:brightness(1.15)}
+.cta:disabled{opacity:.6}
+.campo{width:100%;padding:12px 14px;border-radius:12px;background:#0a1633;border:1px solid #1e3a8a;color:#fff;outline:none}
+.campo:focus{border-color:#38bdf8}
+.aba{flex:1;padding:10px;border-radius:10px;font-weight:600;color:#93c5fd}
+.aba-on{background:linear-gradient(90deg,#0ea5e9,#6366f1);color:#fff}
+</style>
+</head>
+<body class="text-white font-sans antialiased min-h-screen flex items-center justify-center px-4">
+
+<main class="glass w-full max-w-md rounded-3xl p-8">
+  <a href="/" class="block text-center font-bold text-2xl mb-6">Master<span class="grad">Nuvem</span></a>
+
+  <div class="flex gap-2 mb-6">
+    <button type="button" id="abaEntrar" class="aba aba-on">Entrar</button>
+    <button type="button" id="abaCriar" class="aba">Criar conta</button>
+  </div>
+
+  <form id="formulario" class="space-y-4">
+    <div id="blocoNome" class="hidden">
+      <label for="nome" class="text-sm text-slate-300">Seu nome</label>
+      <input id="nome" type="text" class="campo mt-1" autocomplete="name">
+    </div>
+    <div>
+      <label for="email" class="text-sm text-slate-300">E-mail</label>
+      <input id="email" type="email" class="campo mt-1" autocomplete="email" required>
+    </div>
+    <div>
+      <label for="senha" class="text-sm text-slate-300">Senha</label>
+      <input id="senha" type="password" class="campo mt-1" autocomplete="current-password" required>
+      <p id="dicaSenha" class="hidden text-xs text-slate-400 mt-1">Use pelo menos 8 caracteres.</p>
+    </div>
+    <p id="erro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+    <button type="submit" id="botao" class="cta w-full font-bold py-3 rounded-xl transition">Entrar</button>
+  </form>
+</main>
+
+<script>
+var modo = "entrar";
+
+function definirModo(novo) {
+  modo = novo;
+  var criar = novo === "criar";
+  document.getElementById("abaEntrar").className = "aba" + (criar ? "" : " aba-on");
+  document.getElementById("abaCriar").className = "aba" + (criar ? " aba-on" : "");
+  document.getElementById("blocoNome").classList.toggle("hidden", !criar);
+  document.getElementById("dicaSenha").classList.toggle("hidden", !criar);
+  document.getElementById("botao").textContent = criar ? "Criar minha conta" : "Entrar";
+  document.getElementById("senha").setAttribute("autocomplete", criar ? "new-password" : "current-password");
+  document.getElementById("erro").textContent = "";
+}
+
+async function enviar(ev) {
+  ev.preventDefault();
+  var botao = document.getElementById("botao");
+  var erro = document.getElementById("erro");
+  erro.textContent = "";
+  botao.disabled = true;
+
+  var rota = modo === "criar" ? "/api/register" : "/api/login";
+  var dados = {
+    email: document.getElementById("email").value,
+    senha: document.getElementById("senha").value,
+    nome: document.getElementById("nome").value
+  };
+
+  try {
+    var resp = await fetch(rota, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dados)
+    });
+    var json = await resp.json();
+    if (resp.ok) {
+      window.location.href = "/painel";
+      return;
+    }
+    erro.textContent = json.error || "Não foi possível continuar.";
+  } catch (e) {
+    erro.textContent = "Erro de conexão. Tente novamente.";
+  }
+  botao.disabled = false;
+}
+
+document.getElementById("abaEntrar").addEventListener("click", function () { definirModo("entrar"); });
+document.getElementById("abaCriar").addEventListener("click", function () { definirModo("criar"); });
+document.getElementById("formulario").addEventListener("submit", enviar);
+
+fetch("/api/me").then(function (r) {
+  if (r.ok) window.location.href = "/painel";
+});
+</script>
+</body>
+</html>
