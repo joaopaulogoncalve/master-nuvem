@@ -25,31 +25,43 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
 <main class="glass w-full max-w-md rounded-3xl p-8">
   <a href="/" class="block text-center font-bold text-2xl mb-6">Master<span class="grad">Nuvem</span></a>
 
-  <div class="flex gap-2 mb-6">
-    <button type="button" id="abaEntrar" class="aba aba-on">Entrar</button>
-    <button type="button" id="abaCriar" class="aba">Criar conta</button>
+  <div id="etapaSenha">
+    <div class="flex gap-2 mb-6">
+      <button type="button" id="abaEntrar" class="aba aba-on">Entrar</button>
+      <button type="button" id="abaCriar" class="aba">Criar conta</button>
+    </div>
+
+    <form id="formulario" class="space-y-4">
+      <div id="blocoNome" class="hidden">
+        <label for="nome" class="text-sm text-slate-300">Seu nome</label>
+        <input id="nome" type="text" class="campo mt-1" autocomplete="name">
+      </div>
+      <div>
+        <label for="email" class="text-sm text-slate-300">E-mail</label>
+        <input id="email" type="email" class="campo mt-1" autocomplete="email" required>
+      </div>
+      <div>
+        <label for="senha" class="text-sm text-slate-300">Senha</label>
+        <div class="relative mt-1">
+          <input id="senha" type="password" class="campo" style="padding-right:84px" autocomplete="current-password" required>
+          <button type="button" id="olho" class="olho" aria-label="Mostrar ou ocultar a senha">Mostrar</button>
+        </div>
+        <p id="dicaSenha" class="hidden text-xs text-slate-400 mt-1">Use pelo menos 8 caracteres.</p>
+      </div>
+      <p id="erro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+      <button type="submit" id="botao" class="cta w-full font-bold py-3 rounded-xl transition">Entrar</button>
+    </form>
   </div>
 
-  <form id="formulario" class="space-y-4">
-    <div id="blocoNome" class="hidden">
-      <label for="nome" class="text-sm text-slate-300">Seu nome</label>
-      <input id="nome" type="text" class="campo mt-1" autocomplete="name">
-    </div>
-    <div>
-      <label for="email" class="text-sm text-slate-300">E-mail</label>
-      <input id="email" type="email" class="campo mt-1" autocomplete="email" required>
-    </div>
-    <div>
-      <label for="senha" class="text-sm text-slate-300">Senha</label>
-      <div class="relative mt-1">
-        <input id="senha" type="password" class="campo" style="padding-right:84px" autocomplete="current-password" required>
-        <button type="button" id="olho" class="olho" aria-label="Mostrar ou ocultar a senha">Mostrar</button>
-      </div>
-      <p id="dicaSenha" class="hidden text-xs text-slate-400 mt-1">Use pelo menos 8 caracteres.</p>
-    </div>
-    <p id="erro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
-    <button type="submit" id="botao" class="cta w-full font-bold py-3 rounded-xl transition">Entrar</button>
-  </form>
+  <div id="etapa2fa" class="hidden">
+    <h2 class="text-lg font-bold text-center mb-2">Verificação em duas etapas</h2>
+    <p class="text-sm text-slate-400 text-center mb-5">Digite o código de 6 dígitos que aparece no seu aplicativo autenticador.</p>
+    <form id="formulario2fa" class="space-y-4">
+      <input id="codigo" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" class="campo text-center text-2xl tracking-widest" required>
+      <p id="erro2fa" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+      <button type="submit" id="botao2fa" class="cta w-full font-bold py-3 rounded-xl transition">Confirmar</button>
+    </form>
+  </div>
 </main>
 
 <script>
@@ -96,6 +108,12 @@ async function enviar(ev) {
       body: JSON.stringify(dados)
     });
     var json = await resp.json();
+    if (resp.ok && json.need2fa) {
+      document.getElementById("etapaSenha").classList.add("hidden");
+      document.getElementById("etapa2fa").classList.remove("hidden");
+      document.getElementById("codigo").focus();
+      return;
+    }
     if (resp.ok) {
       window.location.href = "/painel";
       return;
@@ -107,10 +125,39 @@ async function enviar(ev) {
   botao.disabled = false;
 }
 
+async function enviar2fa(ev) {
+  ev.preventDefault();
+  var botao = document.getElementById("botao2fa");
+  var erro = document.getElementById("erro2fa");
+  erro.textContent = "";
+  botao.disabled = true;
+
+  try {
+    var resp = await fetch("/api/login/2fa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ codigo: document.getElementById("codigo").value })
+    });
+    var json = await resp.json();
+    if (resp.ok) {
+      window.location.href = "/painel";
+      return;
+    }
+    erro.textContent = json.error || "Código incorreto.";
+    if (resp.status === 401 && String(json.error).indexOf("expirada") > -1) {
+      setTimeout(function () { window.location.reload(); }, 1500);
+    }
+  } catch (e) {
+    erro.textContent = "Erro de conexão. Tente novamente.";
+  }
+  botao.disabled = false;
+}
+
 document.getElementById("abaEntrar").addEventListener("click", function () { definirModo("entrar"); });
 document.getElementById("abaCriar").addEventListener("click", function () { definirModo("criar"); });
 document.getElementById("olho").addEventListener("click", alternarSenha);
 document.getElementById("formulario").addEventListener("submit", enviar);
+document.getElementById("formulario2fa").addEventListener("submit", enviar2fa);
 
 fetch("/api/me").then(function (r) {
   if (r.ok) window.location.href = "/painel";
