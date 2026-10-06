@@ -1,6 +1,8 @@
 const enc = new TextEncoder();
 const DIAS_SESSAO = 30;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+const MAX_TENTATIVAS_2FA = 5;
 
 function calcularPreco(gb) {
   var valor;
@@ -76,12 +78,76 @@ function lerCookie(request, nome) {
   return null;
 }
 
-async function criarSessao(env, userId) {
+/* ---------- 2FA (TOTP) ---------- */
+
+function base32Encode(bytes) {
+  let bits = 0;
+  let valor = 0;
+  let out = "";
+  for (let i = 0; i < bytes.length; i++) {
+    valor = (valor << 8) | bytes[i];
+    bits += 8;
+    while (bits >= 5) {
+      out += B32[(valor >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) out += B32[(valor << (5 - bits)) & 31];
+  return out;
+}
+
+function base32Decode(txt) {
+  let bits = 0;
+  let valor = 0;
+  const out = [];
+  for (const ch of txt) {
+    const idx = B32.indexOf(ch);
+    if (idx < 0) continue;
+    valor = (valor << 5) | idx;
+    bits += 5;
+    if (bits >= 8) {
+      out.push((valor >>> (bits - 8)) & 255);
+      bits -= 8;
+    }
+  }
+  return new Uint8Array(out);
+}
+
+async function hotp(segredoBytes, contador) {
+  const chave = await crypto.subtle.importKey("raw", segredoBytes, { name: "HMAC", hash: "SHA-1" }, false, ["sign"]);
+  const msg = new ArrayBuffer(8);
+  const view = new DataView(msg);
+  view.setUint32(0, Math.floor(contador / 4294967296));
+  view.setUint32(4, contador >>> 0);
+  const h = new Uint8Array(await crypto.subtle.sign("HMAC", chave, msg));
+  const off = h[19] & 15;
+  const bin = ((h[off] & 127) << 24) | (h[off + 1] << 16) | (h[off + 2] << 8) | h[off + 3];
+  return String(bin % 1000000).padStart(6, "0");
+}
+
+async function verificarTotp(segredo, codigo, ultimoPasso) {
+  codigo = String(codigo || "").replace(/\s/g, "");
+  if (!/^\d{6}$/.test(codigo)) return null;
+  const bytes = base32Decode(segredo);
+  const agora = Math.floor(Date.now() / 30000);
+  for (let d = -1; d <= 1; d++) {
+    const passo = agora + d;
+    if (passo <= ultimoPasso) continue;
+    const esperado = await hotp(bytes, passo);
+    if (iguais(esperado, codigo)) return passo;
+  }
+  return null;
+}
+
+/* ---------- sessões ---------- */
+
+async function criarSessao(env, userId, pendente) {
   const token = novoToken();
   const h = await sha256Hex(token);
+  const validade = pendente ? "+10 minutes" : "+" + DIAS_SESSAO + " days";
   await env.DB.prepare(
-    "INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, datetime('now', '+" + DIAS_SESSAO + " days'))"
-  ).bind(h, userId).run();
+    "INSERT INTO sessions (token_hash, user_id, expires_at, pending) VALUES (?, ?, datetime('now', ?), ?)"
+  ).bind(h, userId, validade, pendente ? 1 : 0).run();
   return token;
 }
 
@@ -90,8 +156,26 @@ async function usuarioLogado(request, env) {
   if (!token) return null;
   const h = await sha256Hex(token);
   return await env.DB.prepare(
-    "SELECT u.id, u.email, u.name, u.role FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > datetime('now')"
+    "SELECT u.id, u.email, u.name, u.role, u.totp_enabled FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.pending = 0 AND s.expires_at > datetime('now')"
   ).bind(h).first();
+}
+
+async function sessaoPendente(request, env) {
+  const token = lerCookie(request, "sessao");
+  if (!token) return null;
+  const h = await sha256Hex(token);
+  return await env.DB.prepare(
+    "SELECT s.token_hash, s.tentativas, u.id AS user_id, u.totp_secret, u.totp_last FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.pending = 1 AND s.expires_at > datetime('now')"
+  ).bind(h).first();
+}
+
+async function senhaConfere(env, userId, senha) {
+  const u = await env.DB.prepare(
+    "SELECT password_hash, password_salt FROM users WHERE id = ?"
+  ).bind(userId).first();
+  if (!u) return false;
+  const hash = await derivarSenha(senha, deHex(u.password_salt));
+  return iguais(hash, u.password_hash);
 }
 
 async function lerJson(request) {
@@ -113,7 +197,7 @@ async function tratarApi(request, env, url) {
   if (caminho === "/api/me") {
     const u = await usuarioLogado(request, env);
     if (!u) return resposta({ error: "Não autenticado" }, 401);
-    return resposta({ email: u.email, nome: u.name, role: u.role }, 200);
+    return resposta({ email: u.email, nome: u.name, role: u.role, totp: !!u.totp_enabled }, 200);
   }
 
   if (caminho === "/api/register") {
@@ -152,7 +236,7 @@ async function tratarApi(request, env, url) {
       return resposta({ error: "Erro ao cadastrar" }, 500);
     }
 
-    const token = await criarSessao(env, userId);
+    const token = await criarSessao(env, userId, false);
     return resposta({ ok: true }, 200, cookieSessao(token, DIAS_SESSAO * 86400));
   }
 
@@ -167,7 +251,7 @@ async function tratarApi(request, env, url) {
     const senha = String(corpo.senha || "");
 
     const u = await env.DB.prepare(
-      "SELECT id, password_hash, password_salt FROM users WHERE email = ?"
+      "SELECT id, password_hash, password_salt, totp_enabled FROM users WHERE email = ?"
     ).bind(email).first();
 
     if (!u) {
@@ -180,8 +264,110 @@ async function tratarApi(request, env, url) {
       return resposta({ error: "E-mail ou senha incorretos" }, 401);
     }
 
-    const token = await criarSessao(env, u.id);
+    if (u.totp_enabled) {
+      const pend = await criarSessao(env, u.id, true);
+      return resposta({ need2fa: true }, 200, cookieSessao(pend, 600));
+    }
+
+    const token = await criarSessao(env, u.id, false);
     return resposta({ ok: true }, 200, cookieSessao(token, DIAS_SESSAO * 86400));
+  }
+
+  if (caminho === "/api/login/2fa") {
+    if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+    if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
+
+    const pend = await sessaoPendente(request, env);
+    if (!pend) return resposta({ error: "Sessão expirada. Entre novamente." }, 401);
+
+    if (pend.tentativas >= MAX_TENTATIVAS_2FA) {
+      await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(pend.token_hash).run();
+      return resposta({ error: "Muitas tentativas. Entre novamente." }, 429);
+    }
+    await env.DB.prepare("UPDATE sessions SET tentativas = tentativas + 1 WHERE token_hash = ?").bind(pend.token_hash).run();
+
+    const corpo = await lerJson(request);
+    if (!corpo) return resposta({ error: "JSON inválido" }, 400);
+
+    const passo = await verificarTotp(pend.totp_secret || "", corpo.codigo, pend.totp_last || 0);
+    if (passo === null) return resposta({ error: "Código incorreto" }, 401);
+
+    await env.DB.prepare("UPDATE users SET totp_last = ? WHERE id = ?").bind(passo, pend.user_id).run();
+    await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(pend.token_hash).run();
+    const token = await criarSessao(env, pend.user_id, false);
+    return resposta({ ok: true }, 200, cookieSessao(token, DIAS_SESSAO * 86400));
+  }
+
+  if (caminho === "/api/2fa/setup") {
+    if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+    if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
+
+    const u = await usuarioLogado(request, env);
+    if (!u) return resposta({ error: "Não autenticado" }, 401);
+    if (u.totp_enabled) return resposta({ error: "A verificação em duas etapas já está ativa" }, 400);
+
+    const bytes = new Uint8Array(20);
+    crypto.getRandomValues(bytes);
+    const segredo = base32Encode(bytes);
+
+    await env.DB.prepare(
+      "UPDATE users SET totp_secret = ?, totp_enabled = 0, totp_last = 0 WHERE id = ?"
+    ).bind(segredo, u.id).run();
+
+    const uri = "otpauth://totp/MasterNuvem:" + encodeURIComponent(u.email) +
+      "?secret=" + segredo + "&issuer=MasterNuvem&digits=6&period=30";
+    return resposta({ secret: segredo, uri: uri }, 200);
+  }
+
+  if (caminho === "/api/2fa/enable") {
+    if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+    if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
+
+    const u = await usuarioLogado(request, env);
+    if (!u) return resposta({ error: "Não autenticado" }, 401);
+
+    const corpo = await lerJson(request);
+    if (!corpo) return resposta({ error: "JSON inválido" }, 400);
+
+    const reg = await env.DB.prepare(
+      "SELECT totp_secret, totp_last FROM users WHERE id = ?"
+    ).bind(u.id).first();
+    if (!reg || !reg.totp_secret) return resposta({ error: "Gere o QR code primeiro" }, 400);
+
+    const passo = await verificarTotp(reg.totp_secret, corpo.codigo, reg.totp_last || 0);
+    if (passo === null) return resposta({ error: "Código incorreto. Tente o próximo código do aplicativo." }, 400);
+
+    await env.DB.prepare(
+      "UPDATE users SET totp_enabled = 1, totp_last = ? WHERE id = ?"
+    ).bind(passo, u.id).run();
+    return resposta({ ok: true }, 200);
+  }
+
+  if (caminho === "/api/2fa/disable") {
+    if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+    if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
+
+    const u = await usuarioLogado(request, env);
+    if (!u) return resposta({ error: "Não autenticado" }, 401);
+    if (!u.totp_enabled) return resposta({ error: "A verificação em duas etapas não está ativa" }, 400);
+
+    const corpo = await lerJson(request);
+    if (!corpo) return resposta({ error: "JSON inválido" }, 400);
+
+    if (!(await senhaConfere(env, u.id, String(corpo.senha || "")))) {
+      return resposta({ error: "Senha incorreta" }, 401);
+    }
+
+    const reg = await env.DB.prepare(
+      "SELECT totp_secret, totp_last FROM users WHERE id = ?"
+    ).bind(u.id).first();
+    const passo = await verificarTotp(reg.totp_secret || "", corpo.codigo, reg.totp_last || 0);
+    if (passo === null) return resposta({ error: "Código incorreto" }, 401);
+
+    await env.DB.prepare(
+      "UPDATE users SET totp_enabled = 0, totp_secret = NULL, totp_last = 0 WHERE id = ?"
+    ).bind(u.id).run();
+    return resposta({ ok: true }, 200);
   }
 
   if (caminho === "/api/logout") {
