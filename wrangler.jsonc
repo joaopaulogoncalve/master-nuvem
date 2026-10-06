@@ -10,7 +10,7 @@
     {
       "binding": "DB",
       "database_name": "master-nuvem-db",
-      "database_id": "COLE-AQUI-O-DATABASE-ID"
+      "database_id": "b60c217f-b668-4f05-a94a-ba8a8620f085"
     }
   ],
   "observability": { "enabled": true }
