@@ -5,10 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Meu painel - Master Nuvem</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
 .glass{background:linear-gradient(160deg,#0c1a3dcc,#07102acc);border:1px solid #1e40af88;box-shadow:0 0 50px #38bdf822;backdrop-filter:blur(10px)}
 .grad{background:linear-gradient(90deg,#38bdf8,#818cf8,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.cta{background:linear-gradient(90deg,#0ea5e9,#6366f1);box-shadow:0 0 30px #38bdf866}
+.cta:hover{filter:brightness(1.15)}
+.cta:disabled{opacity:.6}
+.campo{width:100%;padding:12px 14px;border-radius:12px;background:#0a1633;border:1px solid #1e3a8a;color:#fff;outline:none}
+.campo:focus{border-color:#38bdf8}
+#qr{display:inline-block;padding:10px;background:#fff;border-radius:12px}
 </style>
 </head>
 <body class="text-white font-sans antialiased min-h-screen">
@@ -20,7 +27,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
   </div>
 </nav>
 
-<main class="max-w-4xl mx-auto px-4 py-10">
+<main class="max-w-4xl mx-auto px-4 py-10 space-y-6">
   <div class="glass rounded-3xl p-8">
     <div class="flex items-center gap-3 flex-wrap">
       <h1 id="ola" class="text-2xl font-bold">Carregando...</h1>
@@ -29,9 +36,103 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
     <p id="email" class="text-slate-400 mt-1"></p>
     <p class="text-slate-300 mt-6">Aqui vão ficar os seus arquivos e o seu plano. Esta área está em construção.</p>
   </div>
+
+  <div class="glass rounded-3xl p-8">
+    <h2 class="text-xl font-bold mb-1">Segurança</h2>
+    <p class="text-sm text-slate-400 mb-5">Verificação em duas etapas com aplicativo autenticador.</p>
+
+    <div id="blocoAtivar" class="hidden">
+      <p class="text-slate-300 mb-4">Desativada. Ative para proteger a sua conta com um código extra a cada login.</p>
+      <button type="button" id="btnAtivar" class="cta font-bold px-6 py-3 rounded-xl transition">Ativar verificação em duas etapas</button>
+    </div>
+
+    <div id="blocoSetup" class="hidden space-y-4">
+      <p class="text-slate-300">1. No celular, abra o Google Authenticator (ou Microsoft Authenticator) e escaneie o QR code:</p>
+      <div id="qr"></div>
+      <p class="text-sm text-slate-400">Se não conseguir escanear, digite esta chave no aplicativo:</p>
+      <p id="chave" class="font-mono text-cyan-300 break-all"></p>
+      <p class="text-slate-300">2. Digite o código de 6 dígitos que o aplicativo mostrar:</p>
+      <input id="codigoAtivar" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" class="campo text-center text-xl tracking-widest" style="max-width:220px">
+      <p id="erroAtivar" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+      <button type="button" id="btnConfirmar" class="cta font-bold px-6 py-3 rounded-xl transition">Confirmar e ativar</button>
+    </div>
+
+    <div id="blocoAtivo" class="hidden space-y-4">
+      <p class="text-emerald-300 font-semibold">Verificação em duas etapas ativada.</p>
+      <p class="text-sm text-slate-400">Para desativar, confirme a sua senha e um código do aplicativo.</p>
+      <input id="senhaDesativar" type="password" placeholder="Sua senha" autocomplete="current-password" class="campo" style="max-width:320px">
+      <input id="codigoDesativar" type="text" inputmode="numeric" maxlength="6" placeholder="Código de 6 dígitos" autocomplete="one-time-code" class="campo" style="max-width:320px">
+      <p id="erroDesativar" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+      <button type="button" id="btnDesativar" class="font-semibold text-red-300 border border-red-400/40 px-5 py-2.5 rounded-xl hover:bg-red-500/10">Desativar</button>
+    </div>
+  </div>
 </main>
 
 <script>
+async function postar(rota, corpo) {
+  var resp = await fetch(rota, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(corpo || {})
+  });
+  var dados = {};
+  try { dados = await resp.json(); } catch (e) {}
+  return { ok: resp.ok, dados: dados };
+}
+
+function mostrar(id, sim) {
+  document.getElementById(id).classList.toggle("hidden", !sim);
+}
+
+function estadoSeguranca(ativo) {
+  mostrar("blocoAtivar", !ativo);
+  mostrar("blocoSetup", false);
+  mostrar("blocoAtivo", ativo);
+}
+
+async function iniciarSetup() {
+  var r = await postar("/api/2fa/setup");
+  if (!r.ok) {
+    alert(r.dados.error || "Não foi possível iniciar.");
+    return;
+  }
+  mostrar("blocoAtivar", false);
+  mostrar("blocoSetup", true);
+  document.getElementById("chave").textContent = r.dados.secret;
+  var caixa = document.getElementById("qr");
+  caixa.innerHTML = "";
+  if (typeof QRCode !== "undefined") {
+    new QRCode(caixa, { text: r.dados.uri, width: 180, height: 180 });
+  } else {
+    caixa.textContent = "QR code indisponível. Use a chave abaixo.";
+  }
+}
+
+async function confirmarSetup() {
+  var erro = document.getElementById("erroAtivar");
+  erro.textContent = "";
+  var r = await postar("/api/2fa/enable", { codigo: document.getElementById("codigoAtivar").value });
+  if (r.ok) {
+    window.location.reload();
+    return;
+  }
+  erro.textContent = r.dados.error || "Código incorreto.";
+}
+
+async function desativar() {
+  var erro = document.getElementById("erroDesativar");
+  erro.textContent = "";
+  var r = await postar("/api/2fa/disable", {
+    senha: document.getElementById("senhaDesativar").value,
+    codigo: document.getElementById("codigoDesativar").value
+  });
+  if (r.ok) {
+    window.location.reload();
+    return;
+  }
+  erro.textContent = r.dados.error || "Não foi possível desativar.";
+}
+
 fetch("/api/me").then(function (r) {
   if (!r.ok) {
     window.location.href = "/entrar";
@@ -45,10 +146,14 @@ fetch("/api/me").then(function (r) {
   if (u.role === "admin") {
     document.getElementById("papel").classList.remove("hidden");
   }
+  estadoSeguranca(u.totp);
 });
 
+document.getElementById("btnAtivar").addEventListener("click", iniciarSetup);
+document.getElementById("btnConfirmar").addEventListener("click", confirmarSetup);
+document.getElementById("btnDesativar").addEventListener("click", desativar);
 document.getElementById("sair").addEventListener("click", function () {
-  fetch("/api/logout", { method: "POST" }).then(function () {
+  postar("/api/logout").then(function () {
     window.location.href = "/entrar";
   });
 });
