@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meus arquivos - Master Nuvem</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
+.glass{background:linear-gradient(160deg,#0c1a3dcc,#07102acc);border:1px solid #1e40af88;box-shadow:0 0 50px #38bdf822;backdrop-filter:blur(10px)}
+.grad{background:linear-gradient(90deg,#38bdf8,#818cf8,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.cta{background:linear-gradient(90deg,#0ea5e9,#6366f1);box-shadow:0 0 30px #38bdf866}
+.cta:hover{filter:brightness(1.15)}
+.cta:disabled{opacity:.5}
+.barra{height:10px;border-radius:9999px;background:#12224a;overflow:hidden}
+.barra i{display:block;height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#818cf8);transition:width .3s}
+.zona{border:2px dashed #1e40af;border-radius:16px;padding:28px;text-align:center;color:#93c5fd;transition:.2s}
+.zona.sobre{border-color:#38bdf8;background:#0c1a3d}
+</style>
+</head>
+<body class="text-white font-sans antialiased min-h-screen">
+
+<nav class="border-b border-blue-900/50 bg-slate-950/60 backdrop-blur">
+  <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+    <a href="/" class="font-bold text-xl">Master<span class="grad">Nuvem</span></a>
+    <div class="flex items-center gap-5">
+      <a href="/painel" class="text-sm font-semibold text-blue-300 hover:text-white">Painel</a>
+      <button type="button" id="sair" class="text-sm font-semibold text-blue-300 hover:text-white">Sair</button>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-4xl mx-auto px-4 py-10 space-y-6">
+
+  <div class="glass rounded-3xl p-8">
+    <h1 class="text-2xl font-bold mb-4">Meus arquivos</h1>
+    <div class="flex justify-between text-sm text-slate-300 mb-2">
+      <span id="textoUso">Carregando...</span>
+      <span id="textoPlano"></span>
+    </div>
+    <div class="barra"><i id="barraUso"></i></div>
+    <p id="avisoPlano" class="hidden text-sm text-amber-300 mt-4">Você ainda não tem um plano ativo, então o envio de arquivos está bloqueado.</p>
+  </div>
+
+  <div class="glass rounded-3xl p-8">
+    <div id="zona" class="zona">
+      <p class="mb-3">Arraste arquivos até aqui ou</p>
+      <button type="button" id="btnEscolher" class="cta font-bold px-6 py-3 rounded-xl transition">Escolher arquivos</button>
+      <input id="entradaArquivo" type="file" multiple class="hidden">
+      <p class="text-xs text-slate-500 mt-3">Limite atual: 4,5 GB por arquivo.</p>
+    </div>
+    <div id="progressos" class="mt-5 space-y-3"></div>
+  </div>
+
+  <div class="glass rounded-3xl p-8">
+    <h2 class="text-xl font-bold mb-4">Arquivos enviados</h2>
+    <p id="vazio" class="hidden text-slate-400">Nenhum arquivo ainda.</p>
+    <ul id="lista" class="divide-y divide-blue-900/50"></ul>
+  </div>
+</main>
+
+<script>
+var estado = { plano: false, quota: 0, usado: 0 };
+
+function formatar(bytes) {
+  var un = ["B", "KB", "MB", "GB", "TB"];
+  var i = 0;
+  var v = bytes;
+  while (v >= 1000 && i < un.length - 1) {
+    v = v / 1000;
+    i++;
+  }
+  return (i === 0 ? v : v.toFixed(v >= 100 ? 0 : 1)) + " " + un[i];
+}
+
+async function api(rota, corpo) {
+  var opcoes = corpo === undefined ? {} : {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(corpo)
+  };
+  var resposta = await fetch(rota, opcoes);
+  if (resposta.status === 401) {
+    window.location.href = "/entrar";
+    throw new Error("Não autenticado");
+  }
+  var dados = {};
+  try { dados = await resposta.json(); } catch (e) {}
+  return { ok: resposta.ok, dados: dados };
+}
+
+async function carregar() {
+  var r = await api("/api/files");
+  if (!r.ok) return;
+  var d = r.dados;
+  estado.plano = d.plano;
+  estado.quota = d.quota_bytes;
+  estado.usado = d.usado_bytes;
+
+  var pct = d.quota_bytes > 0 ? Math.min(100, d.usado_bytes / d.quota_bytes * 100) : 0;
+  document.getElementById("barraUso").style.width = pct + "%";
+  document.getElementById("textoUso").textContent = formatar(d.usado_bytes) + " usados";
+  document.getElementById("textoPlano").textContent = d.plano ? "de " + formatar(d.quota_bytes) : "";
+  document.getElementById("avisoPlano").classList.toggle("hidden", d.plano);
+  document.getElementById("btnEscolher").disabled = !d.plano;
+
+  var lista = document.getElementById("lista");
+  lista.innerHTML = "";
+  document.getElementById("vazio").classList.toggle("hidden", d.arquivos.length > 0);
+
+  d.arquivos.forEach(function (a) {
+    var li = document.createElement("li");
+    li.className = "py-3 flex items-center justify-between gap-4";
+
+    var info = document.createElement("div");
+    info.className = "min-w-0";
+    var nome = document.createElement("p");
+    nome.className = "font-medium truncate";
+    nome.textContent = a.name;
+    var meta = document.createElement("p");
+    meta.className = "text-xs text-slate-400";
+    meta.textContent = formatar(a.size_bytes) + " · " + a.created_at;
+    info.appendChild(nome);
+    info.appendChild(meta);
+
+    var acoes = document.createElement("div");
+    acoes.className = "flex gap-4 shrink-0";
+    var baixar = document.createElement("button");
+    baixar.type = "button";
+    baixar.className = "text-sm font-semibold text-cyan-300 hover:text-white";
+    baixar.textContent = "Baixar";
+    baixar.addEventListener("click", function () { baixarArquivo(a.id); });
+    var apagar = document.createElement("button");
+    apagar.type = "button";
+    apagar.className = "text-sm font-semibold text-red-300 hover:text-red-200";
+    apagar.textContent = "Apagar";
+    apagar.addEventListener("click", function () { apagarArquivo(a.id, a.name); });
+    acoes.appendChild(baixar);
+    acoes.appendChild(apagar);
+
+    li.appendChild(info);
+    li.appendChild(acoes);
+    lista.appendChild(li);
+  });
+}
+
+async function baixarArquivo(id) {
+  var r = await api("/api/files/download?id=" + id);
+  if (r.ok && r.dados.url) {
+    window.location.href = r.dados.url;
+  } else {
+    alert(r.dados.error || "Não foi possível baixar agora.");
+  }
+}
+
+async function apagarArquivo(id, nome) {
+  if (!confirm("Apagar \"" + nome + "\"? Essa ação não pode ser desfeita pelo site.")) return;
+  var r = await api("/api/files/delete", { id: id });
+  if (!r.ok) alert(r.dados.error || "Não foi possível apagar agora.");
+  carregar();
+}
+
+function criarLinhaProgresso(nome) {
+  var caixa = document.createElement("div");
+  var topo = document.createElement("div");
+  topo.className = "flex justify-between text-sm";
+  var n = document.createElement("span");
+  n.className = "truncate";
+  n.textContent = nome;
+  var st = document.createElement("span");
+  st.className = "text-slate-400 shrink-0 ml-3";
+  st.textContent = "Preparando...";
+  topo.appendChild(n);
+  topo.appendChild(st);
+  var barra = document.createElement("div");
+  barra.className = "barra mt-1";
+  var preenchido = document.createElement("i");
+  barra.appendChild(preenchido);
+  caixa.appendChild(topo);
+  caixa.appendChild(barra);
+  document.getElementById("progressos").appendChild(caixa);
+  return { caixa: caixa, status: st, barra: preenchido };
+}
+
+function enviarParaB2(url, arquivo, aoProgredir) {
+  return new Promise(function (resolve, reject) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("PUT", url);
+    xhr.upload.onprogress = function (e) {
+      if (e.lengthComputable) aoProgredir(e.loaded / e.total);
+    };
+    xhr.onload = function () {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error("O armazenamento recusou o envio (" + xhr.status + ")"));
+    };
+    xhr.onerror = function () {
+      reject(new Error("Falha de conexão no envio. Verifique as regras de CORS do bucket."));
+    };
+    xhr.send(arquivo);
+  });
+}
+
+async function enviarArquivo(arquivo) {
+  var linha = criarLinhaProgresso(arquivo.name);
+  try {
+    var pedido = await api("/api/files/upload-url", { name: arquivo.name, size: arquivo.size });
+    if (!pedido.ok) throw new Error(pedido.dados.error || "Não foi possível iniciar o envio");
+
+    linha.status.textContent = "Enviando...";
+    await enviarParaB2(pedido.dados.url, arquivo, function (p) {
+      linha.barra.style.width = Math.round(p * 100) + "%";
+      linha.status.textContent = Math.round(p * 100) + "%";
+    });
+
+    linha.status.textContent = "Finalizando...";
+    var fim = await api("/api/files/complete", { id: pedido.dados.id });
+    if (!fim.ok) throw new Error(fim.dados.error || "Não foi possível finalizar o envio");
+
+    linha.status.textContent = "Pronto";
+    linha.status.className = "text-emerald-300 shrink-0 ml-3";
+    linha.barra.style.width = "100%";
+  } catch (e) {
+    linha.status.textContent = e.message;
+    linha.status.className = "text-red-400 shrink-0 ml-3 text-right";
+  }
+}
+
+async function enviarVarios(arquivos) {
+  for (var i = 0; i < arquivos.length; i++) {
+    await enviarArquivo(arquivos[i]);
+  }
+  await carregar();
+}
+
+var zona = document.getElementById("zona");
+var entrada = document.getElementById("entradaArquivo");
+
+document.getElementById("btnEscolher").addEventListener("click", function () { entrada.click(); });
+entrada.addEventListener("change", function () {
+  if (entrada.files.length) enviarVarios(Array.from(entrada.files));
+  entrada.value = "";
+});
+zona.addEventListener("dragover", function (e) {
+  e.preventDefault();
+  zona.classList.add("sobre");
+});
+zona.addEventListener("dragleave", function () { zona.classList.remove("sobre"); });
+zona.addEventListener("drop", function (e) {
+  e.preventDefault();
+  zona.classList.remove("sobre");
+  if (!estado.plano) return;
+  if (e.dataTransfer.files.length) enviarVarios(Array.from(e.dataTransfer.files));
+});
+
+document.getElementById("sair").addEventListener("click", function () {
+  api("/api/logout", {}).then(function () {
+    window.location.href = "/entrar";
+  });
+});
+
+carregar();
+</script>
+</body>
+</html>
