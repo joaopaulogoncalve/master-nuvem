@@ -1,3 +1,4 @@
+import { tratarArquivos } from "./arquivos.js";
 const enc = new TextEncoder();
 const DIAS_SESSAO = 30;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
