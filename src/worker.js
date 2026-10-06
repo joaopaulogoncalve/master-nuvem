@@ -434,7 +434,9 @@ async function tratarApi(request, env, url) {
       return resposta({ error: "Falha ao criar pagamento" }, 502);
     }
   }
-
+  if (caminho.startsWith("/api/files")) {
+    return await tratarArquivos(request, env, url);
+  }
   return resposta({ error: "Rota não encontrada" }, 404);
 }
 
