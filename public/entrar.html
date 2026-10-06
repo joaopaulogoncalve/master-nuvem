@@ -16,6 +16,8 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
 .campo:focus{border-color:#38bdf8}
 .aba{flex:1;padding:10px;border-radius:10px;font-weight:600;color:#93c5fd}
 .aba-on{background:linear-gradient(90deg,#0ea5e9,#6366f1);color:#fff}
+.olho{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:600;color:#93c5fd;padding:6px 8px}
+.olho:hover{color:#fff}
 </style>
 </head>
 <body class="text-white font-sans antialiased min-h-screen flex items-center justify-center px-4">
@@ -39,7 +41,10 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
     </div>
     <div>
       <label for="senha" class="text-sm text-slate-300">Senha</label>
-      <input id="senha" type="password" class="campo mt-1" autocomplete="current-password" required>
+      <div class="relative mt-1">
+        <input id="senha" type="password" class="campo" style="padding-right:84px" autocomplete="current-password" required>
+        <button type="button" id="olho" class="olho" aria-label="Mostrar ou ocultar a senha">Mostrar</button>
+      </div>
       <p id="dicaSenha" class="hidden text-xs text-slate-400 mt-1">Use pelo menos 8 caracteres.</p>
     </div>
     <p id="erro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
@@ -60,6 +65,14 @@ function definirModo(novo) {
   document.getElementById("botao").textContent = criar ? "Criar minha conta" : "Entrar";
   document.getElementById("senha").setAttribute("autocomplete", criar ? "new-password" : "current-password");
   document.getElementById("erro").textContent = "";
+}
+
+function alternarSenha() {
+  var campo = document.getElementById("senha");
+  var botao = document.getElementById("olho");
+  var visivel = campo.type === "text";
+  campo.type = visivel ? "password" : "text";
+  botao.textContent = visivel ? "Mostrar" : "Ocultar";
 }
 
 async function enviar(ev) {
@@ -96,6 +109,7 @@ async function enviar(ev) {
 
 document.getElementById("abaEntrar").addEventListener("click", function () { definirModo("entrar"); });
 document.getElementById("abaCriar").addEventListener("click", function () { definirModo("criar"); });
+document.getElementById("olho").addEventListener("click", alternarSenha);
 document.getElementById("formulario").addEventListener("submit", enviar);
 
 fetch("/api/me").then(function (r) {
