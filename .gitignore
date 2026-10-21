@@ -1,0 +1,7 @@
+# Segredos locais do wrangler dev (NUNCA commitar)
+.dev.vars
+.dev.vars.*
+
+# Dependências e arquivos temporários
+node_modules/
+.wrangler/
