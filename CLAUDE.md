@@ -33,7 +33,7 @@ Navegador ◄──► Backblaze B2 (S3)   → upload/download DIRETO por URL as
 | Nome | Para quê |
 |---|---|
 | `MP_ACCESS_TOKEN` | Token do Mercado Pago (checkout). **O atual é temporário — trocar pelo definitivo.** |
-| `B2_KEY_ID` | ID da chave de aplicação do Backblaze |
+| `B2_KEY_ID` | ID da chave de aplicação do Backblaze (`site-master-nuvem`, só o bucket, Read and Write). A Master Key **não** funciona na API S3. Trocar: `scripts\b2-chave-site.ps1 -KeyId 005...` |
 | `B2_APP_KEY` | Chave secreta do Backblaze |
 | `B2_BUCKET` | `master-nuvem-cliente` (bucket **privado**) |
 | `B2_ENDPOINT` | `s3.us-east-005.backblazeb2.com` (a região é extraída do 2º pedaço do host) |
@@ -93,7 +93,9 @@ código de 2FA pronto (admin ainda **sem** 2FA ativado); fluxo de arquivos imple
    na API do MP, nunca confiar no corpo), inserir/renovar `subscriptions` (`status='active'`, `paid_until`, `quota_gb`).
 2. **Checkout sem login** — qualquer um gera link; decidir se exige conta antes de pagar (recomendado).
 3. **Renovação/expiração** — mensal? Definir ciclo, aviso de vencimento, e o que acontece com arquivos após `paid_until` (bloqueio de upload já existe; download/retenção não).
-4. **CORS do bucket B2** — upload/download direto do navegador precisa de regra CORS no bucket (origem do site, métodos PUT/GET/HEAD). Conferir se está configurado.
+4. ~~**CORS do bucket B2**~~ Resolvido em 2026-10-23 com `scripts\b2-cors.ps1` (regra personalizada: PUT/GET/HEAD para masternuvem.com.br, www e workers.dev).
+   **Não salvar nada na tela "Regras do CORS" do Backblaze**: ela só libera download e apaga a regra personalizada.
+   Upload/download testados no site com sucesso. Erro de chave no B2 aparece no navegador como "Falha de conexão... CORS".
 5. **Painel admin** — existe `role` mas nenhuma rota/tela de admin (listar clientes, planos, uso, conceder plano manual, bloquear).
 6. **Ativar 2FA no admin** antes de vender de verdade.
 7. **Sem recuperação de senha** nem verificação de e-mail; **sem rate-limit** em login/cadastro (só o 2FA tem limite). Considerar Cloudflare Turnstile.
@@ -118,7 +120,7 @@ código de 2FA pronto (admin ainda **sem** 2FA ativado); fluxo de arquivos imple
 1. ~~Versionar o esquema do D1 (`migrations/`).~~ Feito em 2026-10-21.
 2. Exigir login no checkout + `external_reference` + webhook do Mercado Pago → criar `subscriptions` automaticamente.
 3. Testar compra real de valor mínimo (PIX) ponta a ponta: pagar → plano ativo → enviar arquivo → baixar → apagar.
-4. Conferir CORS do B2; ativar 2FA do admin.
+4. ~~Conferir CORS do B2~~ (feito); ativar 2FA do admin (conta `masternuvem.contato@gmail.com`).
 5. Painel admin básico (clientes, uso, plano manual).
 6. Renovação mensal + avisos; Cron de limpeza.
 7. Termos/Privacidade, recuperação de senha, Turnstile.
