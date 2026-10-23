@@ -66,6 +66,10 @@ Local: usar `.dev.vars` (no `.gitignore`!) para rodar `wrangler dev`. Nunca comm
 | `/api/2fa/disable` | POST | sim | exige senha + código |
 | `/api/checkout` | POST | sim | `{gb}` → grava pedido `subscriptions` `pending`, cria preferência no MP (`external_reference` = id do pedido, `notification_url` = webhook), devolve `{init_point}`. Sem login: 401 `{login:true}` |
 | `/api/mp/webhook` | POST | não (MP) | Aviso do MP. Consulta o pagamento na API do MP; `approved` + valor certo → plano `active` por 30 dias (mesmo tamanho soma dias; outro tamanho começa hoje; anteriores viram `replaced`). Estorno → `cancelled` |
+| `/api/admin/clientes` | GET | admin | clientes com plano ativo, uso e nº de arquivos + `receita_mensal` estimada (sem planos manuais) |
+| `/api/admin/backblaze` | GET | admin | lista o bucket (S3 ListObjectsV2) e soma bytes; custo B2 (US$ 6,95/TB, 10 GB grátis, constantes no topo do worker) em US$/R$ (dólar AwesomeAPI, reserva 5,5); espaço vendido; diferença bucket × site = objetos órfãos |
+| `/api/admin/plano` | POST | admin | `{user_id,gb,dias}` → plano manual `active` (`mp_payment_id='manual:<adminId>'`); anteriores viram `replaced` |
+| `/api/admin/plano/remover` | POST | admin | `{user_id}` → planos ativos viram `cancelled` (arquivos ficam) |
 | `/api/files` | GET | sim | `{plano,quota_bytes,usado_bytes,max_arquivo,arquivos[]}` |
 | `/api/files/upload-url` | POST | sim | `{name,size}` → registra `pending` e devolve URL PUT assinada (1 h) |
 | `/api/files/complete` | POST | sim | `{id}` → faz HEAD no B2, confere tamanho real/cota, marca `ready` |
@@ -100,7 +104,8 @@ código de 2FA pronto (admin ainda **sem** 2FA ativado); fluxo de arquivos imple
 4. ~~**CORS do bucket B2**~~ Resolvido em 2026-10-23 com `scripts\b2-cors.ps1` (regra personalizada: PUT/GET/HEAD para masternuvem.com.br, www e workers.dev).
    **Não salvar nada na tela "Regras do CORS" do Backblaze**: ela só libera download e apaga a regra personalizada.
    Upload/download testados no site com sucesso. Erro de chave no B2 aparece no navegador como "Falha de conexão... CORS".
-5. **Painel admin** — existe `role` mas nenhuma rota/tela de admin (listar clientes, planos, uso, conceder plano manual, bloquear).
+5. **Painel admin** — `/admin` (link no painel para `role='admin'`): lista clientes, plano, uso, receita estimada; dar/trocar/remover plano manual.
+   Falta: bloquear conta, apagar cliente, ver arquivos do cliente. Recomendado exigir 2FA para admin.
 6. **Ativar 2FA no admin** antes de vender de verdade.
 7. **Sem recuperação de senha** nem verificação de e-mail; **sem rate-limit** em login/cadastro (só o 2FA tem limite). Considerar Cloudflare Turnstile.
 8. **Preço duplicado** em `app.js` e `worker.js` (`calcularPreco`). O servidor é a fonte da verdade; manter igual ou expor o preço por endpoint.

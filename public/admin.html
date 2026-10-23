@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Painel admin - Master Nuvem</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
+.glass{background:linear-gradient(160deg,#0c1a3dcc,#07102acc);border:1px solid #1e40af88;box-shadow:0 0 50px #38bdf822;backdrop-filter:blur(10px)}
+.grad{background:linear-gradient(90deg,#38bdf8,#818cf8,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.cta{background:linear-gradient(90deg,#0ea5e9,#6366f1);box-shadow:0 0 30px #38bdf866}
+.cta:hover{filter:brightness(1.15)}
+.cta:disabled{opacity:.6}
+.campo{width:100%;padding:10px 12px;border-radius:12px;background:#0a1633;border:1px solid #1e3a8a;color:#fff;outline:none}
+.campo:focus{border-color:#38bdf8}
+.barra{height:6px;border-radius:9px;background:#1e293b;overflow:hidden}
+.barra i{display:block;height:100%;background:linear-gradient(90deg,#38bdf8,#818cf8)}
+</style>
+</head>
+<body class="text-white font-sans antialiased min-h-screen">
+
+<nav class="border-b border-blue-900/50 bg-slate-950/60 backdrop-blur">
+  <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+    <a href="/" class="font-bold text-xl">Master<span class="grad">Nuvem</span> <span class="text-sm text-violet-300 font-semibold">admin</span></a>
+    <div class="flex gap-5 text-sm font-semibold text-blue-300">
+      <a href="/painel" class="hover:text-white">Painel</a>
+      <button type="button" id="sair" class="hover:text-white">Sair</button>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-5xl mx-auto px-4 py-10 space-y-6">
+  <p id="carregando" class="text-slate-400">Carregando...</p>
+
+  <div id="conteudo" class="hidden space-y-6">
+    <div class="glass rounded-3xl p-6">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <h2 class="text-lg font-bold">Backblaze B2 <span class="text-sm font-normal text-slate-400">armazenamento e custo</span></h2>
+        <button type="button" id="btnB2" class="text-sm font-semibold text-cyan-300 hover:text-white">Atualizar</button>
+      </div>
+      <p id="b2Carregando" class="text-sm text-slate-400">Consultando o Backblaze...</p>
+      <div id="b2Dados" class="hidden">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div><p class="text-xs text-slate-400 uppercase tracking-wider">Guardado no B2</p><p id="b2Guardado" class="text-2xl font-bold mt-1">-</p><p id="b2Objetos" class="text-xs text-slate-500 mt-1"></p></div>
+          <div><p class="text-xs text-slate-400 uppercase tracking-wider">Custo B2 / mês</p><p id="b2Custo" class="text-2xl font-bold mt-1 text-amber-300">-</p><p id="b2CustoUsd" class="text-xs text-slate-500 mt-1"></p></div>
+          <div><p class="text-xs text-slate-400 uppercase tracking-wider">Espaço vendido</p><p id="b2Vendido" class="text-2xl font-bold mt-1">-</p><p id="b2VendidoCusto" class="text-xs text-slate-500 mt-1"></p></div>
+          <div><p class="text-xs text-slate-400 uppercase tracking-wider">Lucro / mês</p><p id="b2Lucro" class="text-2xl font-bold mt-1">-</p><p class="text-xs text-slate-500 mt-1">receita − custo B2, antes das taxas do Mercado Pago</p></div>
+        </div>
+        <p id="b2Aviso" class="hidden text-sm text-amber-300 mt-4"></p>
+        <p id="b2Rodape" class="text-xs text-slate-500 mt-4"></p>
+      </div>
+      <p id="b2Erro" class="hidden text-sm text-red-400"></p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="glass rounded-2xl p-5"><p class="text-xs text-slate-400 uppercase tracking-wider">Clientes</p><p id="totClientes" class="text-2xl font-bold mt-1">-</p></div>
+      <div class="glass rounded-2xl p-5"><p class="text-xs text-slate-400 uppercase tracking-wider">Planos ativos</p><p id="totPlanos" class="text-2xl font-bold mt-1">-</p></div>
+      <div class="glass rounded-2xl p-5"><p class="text-xs text-slate-400 uppercase tracking-wider">Espaço usado</p><p id="totUso" class="text-2xl font-bold mt-1">-</p></div>
+      <div class="glass rounded-2xl p-5"><p class="text-xs text-slate-400 uppercase tracking-wider">Receita mensal</p><p id="totReceita" class="text-2xl font-bold mt-1 text-emerald-300">-</p><p class="text-xs text-slate-500 mt-1">estimada, sem planos manuais</p></div>
+    </div>
+
+    <input id="busca" type="search" placeholder="Buscar por nome ou e-mail" class="campo">
+
+    <div id="lista" class="space-y-4"></div>
+  </div>
+</main>
+
+<script>
+var clientes = [];
+var receitaMensal = null;
+var dadosB2 = null;
+
+function reais(v) {
+  return "R$ " + v.toFixed(2).replace(".", ",");
+}
+
+async function postar(rota, corpo) {
+  var resp = await fetch(rota, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(corpo || {})
+  });
+  var dados = {};
+  try { dados = await resp.json(); } catch (e) {}
+  return { ok: resp.ok, dados: dados };
+}
+
+function formatarBytes(b) {
+  if (b >= 1e12) return (b / 1e12).toFixed(2) + " TB";
+  if (b >= 1e9) return (b / 1e9).toFixed(2) + " GB";
+  if (b >= 1e6) return (b / 1e6).toFixed(1) + " MB";
+  if (b >= 1e3) return (b / 1e3).toFixed(0) + " KB";
+  return b + " B";
+}
+
+function formatarEspaco(gb) {
+  if (gb >= 1000) return String(+(gb / 1000).toFixed(2)) + " TB";
+  return gb + " GB";
+}
+
+function formatarData(txt) {
+  if (!txt) return "-";
+  var d = txt.slice(0, 10).split("-");
+  return d[2] + "/" + d[1] + "/" + d[0];
+}
+
+function el(tag, classe, texto) {
+  var e = document.createElement(tag);
+  if (classe) e.className = classe;
+  if (texto !== undefined) e.textContent = texto;
+  return e;
+}
+
+function selo(texto, cor) {
+  return el("span", "text-xs font-semibold px-2.5 py-0.5 rounded-full " + cor, texto);
+}
+
+function cartao(c) {
+  var caixa = el("div", "glass rounded-2xl p-5");
+
+  var topo = el("div", "flex flex-wrap items-center gap-2");
+  topo.appendChild(el("p", "font-bold text-lg", c.nome || "(sem nome)"));
+  if (c.role === "admin") topo.appendChild(selo("Administrador", "text-violet-200 bg-violet-500/20"));
+  if (c.totp) topo.appendChild(selo("2FA", "text-emerald-200 bg-emerald-500/20"));
+  caixa.appendChild(topo);
+  caixa.appendChild(el("p", "text-sm text-slate-400 break-all", c.email));
+  caixa.appendChild(el("p", "text-xs text-slate-500", "Cliente desde " + formatarData(c.criado)));
+
+  var plano = el("p", "mt-3 text-sm");
+  if (c.plano) {
+    plano.appendChild(el("span", "text-emerald-300 font-semibold", formatarEspaco(c.plano.quota_gb)));
+    plano.appendChild(document.createTextNode(" até " + formatarData(c.plano.paid_until) + (c.plano.manual ? " (manual)" : " (pago)")));
+  } else {
+    plano.appendChild(el("span", "text-amber-300", "Sem plano ativo"));
+  }
+  caixa.appendChild(plano);
+
+  var cota = c.plano ? c.plano.quota_gb * 1e9 : 0;
+  caixa.appendChild(el("p", "text-sm text-slate-400 mt-1",
+    formatarBytes(c.usado_bytes) + " usados em " + c.arquivos + " arquivo(s)" + (cota ? " de " + formatarEspaco(c.plano.quota_gb) : "")));
+  if (cota) {
+    var barra = el("div", "barra mt-2");
+    var i = el("i");
+    i.style.width = Math.min(100, c.usado_bytes / cota * 100) + "%";
+    barra.appendChild(i);
+    caixa.appendChild(barra);
+  }
+
+  // Ações: dar plano manual / remover plano
+  var acoes = el("div", "mt-4 flex flex-wrap items-end gap-3");
+  var campoGb = el("input", "campo");
+  campoGb.type = "number"; campoGb.min = 1; campoGb.max = 5000;
+  campoGb.value = c.plano ? c.plano.quota_gb : 10;
+  campoGb.style.maxWidth = "110px";
+  var campoDias = el("input", "campo");
+  campoDias.type = "number"; campoDias.min = 1; campoDias.max = 3650; campoDias.value = 30;
+  campoDias.style.maxWidth = "110px";
+
+  var blocoGb = el("label", "text-xs text-slate-400 space-y-1");
+  blocoGb.appendChild(el("span", "block", "GB"));
+  blocoGb.appendChild(campoGb);
+  var blocoDias = el("label", "text-xs text-slate-400 space-y-1");
+  blocoDias.appendChild(el("span", "block", "Dias"));
+  blocoDias.appendChild(campoDias);
+
+  var btnDar = el("button", "cta font-bold px-4 py-2.5 rounded-xl text-sm transition", c.plano ? "Trocar plano" : "Dar plano");
+  btnDar.type = "button";
+  var erro = el("p", "text-sm text-red-400 w-full min-h-[1.25rem]");
+
+  btnDar.addEventListener("click", async function () {
+    var gb = parseInt(campoGb.value, 10);
+    var dias = parseInt(campoDias.value, 10);
+    if (!confirm("Dar " + formatarEspaco(gb) + " por " + dias + " dias para " + c.email + "?\nO plano atual dele (se houver) será substituído.")) return;
+    btnDar.disabled = true;
+    var r = await postar("/api/admin/plano", { user_id: c.id, gb: gb, dias: dias });
+    btnDar.disabled = false;
+    if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível."; return; }
+    carregar();
+  });
+
+  acoes.appendChild(blocoGb);
+  acoes.appendChild(blocoDias);
+  acoes.appendChild(btnDar);
+
+  if (c.plano) {
+    var btnRemover = el("button", "font-semibold text-sm text-red-300 border border-red-400/40 px-4 py-2.5 rounded-xl hover:bg-red-500/10", "Remover plano");
+    btnRemover.type = "button";
+    btnRemover.addEventListener("click", async function () {
+      if (!confirm("Remover o plano de " + c.email + "?\nEle não vai mais conseguir enviar arquivos (os arquivos atuais continuam guardados).")) return;
+      btnRemover.disabled = true;
+      var r = await postar("/api/admin/plano/remover", { user_id: c.id });
+      btnRemover.disabled = false;
+      if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível."; return; }
+      carregar();
+    });
+    acoes.appendChild(btnRemover);
+  }
+  acoes.appendChild(erro);
+  caixa.appendChild(acoes);
+  return caixa;
+}
+
+function desenhar() {
+  var termo = document.getElementById("busca").value.trim().toLowerCase();
+  var lista = document.getElementById("lista");
+  lista.innerHTML = "";
+  var filtrados = clientes.filter(function (c) {
+    return !termo || (c.email + " " + (c.nome || "")).toLowerCase().indexOf(termo) > -1;
+  });
+  if (!filtrados.length) lista.appendChild(el("p", "text-slate-400", "Nenhum cliente encontrado."));
+  filtrados.forEach(function (c) { lista.appendChild(cartao(c)); });
+}
+
+async function carregar() {
+  var resp = await fetch("/api/admin/clientes");
+  if (resp.status === 401) { window.location.href = "/entrar?volta=" + encodeURIComponent("/admin"); return; }
+  if (resp.status === 403) { window.location.href = "/painel"; return; }
+  var d = await resp.json();
+  clientes = d.clientes || [];
+
+  var planos = 0, uso = 0;
+  clientes.forEach(function (c) { if (c.plano) planos++; uso += c.usado_bytes; });
+  document.getElementById("totClientes").textContent = clientes.length;
+  document.getElementById("totPlanos").textContent = planos;
+  document.getElementById("totUso").textContent = formatarBytes(uso);
+  document.getElementById("totReceita").textContent = reais(d.receita_mensal);
+  receitaMensal = d.receita_mensal;
+
+  document.getElementById("carregando").classList.add("hidden");
+  document.getElementById("conteudo").classList.remove("hidden");
+  desenhar();
+  mostrarLucro();
+}
+
+function mostrarLucro() {
+  if (receitaMensal === null || !dadosB2) return;
+  var lucro = receitaMensal - dadosB2.custo_brl;
+  var campo = document.getElementById("b2Lucro");
+  campo.textContent = reais(lucro);
+  campo.className = "text-2xl font-bold mt-1 " + (lucro >= 0 ? "text-emerald-300" : "text-red-300");
+}
+
+async function carregarB2() {
+  var btn = document.getElementById("btnB2");
+  btn.disabled = true;
+  document.getElementById("b2Carregando").classList.remove("hidden");
+  document.getElementById("b2Erro").classList.add("hidden");
+  try {
+    var resp = await fetch("/api/admin/backblaze");
+    var d = await resp.json();
+    if (!resp.ok) throw new Error(d.error || "Erro ao consultar o Backblaze");
+    dadosB2 = d;
+
+    document.getElementById("b2Guardado").textContent = formatarBytes(d.bucket_bytes);
+    document.getElementById("b2Objetos").textContent = d.bucket_objetos + " arquivo(s)" + (d.bucket_completo ? "" : " (contagem parcial)");
+    document.getElementById("b2Custo").textContent = reais(d.custo_brl);
+    document.getElementById("b2CustoUsd").textContent = "US$ " + d.custo_usd.toFixed(2) +
+      (d.bucket_bytes <= d.gratis_bytes ? " · dentro dos 10 GB grátis" : "");
+    document.getElementById("b2Vendido").textContent = formatarEspaco(d.vendido_gb);
+    document.getElementById("b2VendidoCusto").textContent = "se lotar, o B2 custaria " + reais(d.custo_vendido_brl) + "/mês";
+
+    // Diferença entre o bucket e o que o site registrou = envios que ficaram pela metade (objetos órfãos).
+    var sobra = d.bucket_bytes - d.site_bytes;
+    var aviso = document.getElementById("b2Aviso");
+    if (sobra > 1e6) {
+      aviso.textContent = formatarBytes(sobra) + " no B2 não aparecem em nenhum cliente (envios que ficaram pela metade). Ocupam espaço e custam, mas ninguém usa.";
+      aviso.classList.remove("hidden");
+    } else {
+      aviso.classList.add("hidden");
+    }
+
+    document.getElementById("b2Rodape").textContent = "Preço B2: US$ " + d.preco_tb_usd.toFixed(2) + " por TB/mês (primeiros 10 GB grátis). " +
+      "Dólar: R$ " + d.dolar.toFixed(2).replace(".", ",") + (d.dolar_ao_vivo ? " (cotação de agora)" : " (valor aproximado)") + ".";
+
+    document.getElementById("b2Carregando").classList.add("hidden");
+    document.getElementById("b2Dados").classList.remove("hidden");
+    mostrarLucro();
+  } catch (e) {
+    document.getElementById("b2Carregando").classList.add("hidden");
+    var erro = document.getElementById("b2Erro");
+    erro.textContent = e.message;
+    erro.classList.remove("hidden");
+  }
+  btn.disabled = false;
+}
+
+document.getElementById("busca").addEventListener("input", desenhar);
+document.getElementById("btnB2").addEventListener("click", carregarB2);
+carregarB2();
+document.getElementById("sair").addEventListener("click", function () {
+  postar("/api/logout").then(function () { window.location.href = "/entrar"; });
+});
+carregar();
+</script>
+</body>
+</html>

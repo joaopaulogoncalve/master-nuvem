@@ -1,10 +1,15 @@
-import { tratarArquivos } from "./arquivos.js";
+import { tratarArquivos, medirBucket } from "./arquivos.js";
 const enc = new TextEncoder();
 const DIAS_SESSAO = 30;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 const MAX_TENTATIVAS_2FA = 5;
 const DIAS_PLANO = 30;
+// Backblaze B2 (pague pelo uso): US$ 6,95 por TB a cada 30 dias, primeiros 10 GB grátis.
+// Conferir em backblaze.com/cloud-storage/pricing se o preço mudar.
+const B2_US_POR_TB = 6.95;
+const B2_GRATIS_BYTES = 10e9;
+const DOLAR_RESERVA = 5.5;
 
 function calcularPreco(gb) {
   var valor;
@@ -263,6 +268,123 @@ async function aplicarPagamento(env, pg) {
   }
 
   return "status " + pg.status;
+}
+
+/* ---------- painel admin ---------- */
+
+async function tratarAdmin(request, env, url) {
+  const caminho = url.pathname;
+  const u = await usuarioLogado(request, env);
+  if (!u) return resposta({ error: "Não autenticado" }, 401);
+  if (u.role !== "admin") return resposta({ error: "Acesso restrito" }, 403);
+
+  if (caminho === "/api/admin/clientes") {
+    const r = await env.DB.prepare(
+      "SELECT u.id, u.email, u.name, u.role, u.created_at, u.totp_enabled, " +
+      "p.quota_gb, p.paid_until, p.mp_payment_id, " +
+      "(SELECT COALESCE(SUM(size_bytes), 0) FROM files f WHERE f.user_id = u.id AND f.status = 'ready') AS usado_bytes, " +
+      "(SELECT COUNT(*) FROM files f WHERE f.user_id = u.id AND f.status = 'ready') AS arquivos " +
+      "FROM users u LEFT JOIN subscriptions p ON p.id = (" +
+      "SELECT s.id FROM subscriptions s WHERE s.user_id = u.id AND s.status = 'active' AND s.paid_until > datetime('now') ORDER BY s.id DESC LIMIT 1) " +
+      "ORDER BY u.id DESC"
+    ).all();
+    const clientes = r.results.map(function (c) {
+      return {
+        id: c.id,
+        email: c.email,
+        nome: c.name,
+        role: c.role,
+        criado: c.created_at,
+        totp: !!c.totp_enabled,
+        // Pago = tem id numérico de pagamento do Mercado Pago; o resto (manual ou lançado direto no banco) é manual.
+        plano: c.quota_gb ? { quota_gb: c.quota_gb, paid_until: c.paid_until, manual: !/^\d+$/.test(String(c.mp_payment_id || "")) } : null,
+        usado_bytes: c.usado_bytes,
+        arquivos: c.arquivos
+      };
+    });
+    // Receita mensal estimada: só planos pagos pelo Mercado Pago (manuais não contam).
+    let receita = 0;
+    for (const c of clientes) {
+      if (c.plano && !c.plano.manual) receita += calcularPreco(c.plano.quota_gb);
+    }
+    return resposta({ clientes: clientes, receita_mensal: Math.round(receita * 100) / 100 }, 200);
+  }
+
+  if (caminho === "/api/admin/backblaze") {
+    let medida;
+    try {
+      medida = await medirBucket(env);
+    } catch (e) {
+      console.error("Falha ao medir o bucket:", e.message);
+      return resposta({ error: "Não foi possível consultar o Backblaze" }, 502);
+    }
+    const reg = await env.DB.prepare(
+      "SELECT COALESCE(SUM(size_bytes), 0) AS bytes FROM files WHERE status = 'ready'"
+    ).first();
+    const vendido = await env.DB.prepare(
+      "SELECT COALESCE(SUM(quota_gb), 0) AS gb FROM subscriptions WHERE status = 'active' AND paid_until > datetime('now')"
+    ).first();
+
+    // Cotação do dólar (AwesomeAPI); se falhar, usa um valor de reserva.
+    let dolar = DOLAR_RESERVA;
+    let dolarAoVivo = false;
+    try {
+      const c = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL");
+      const v = parseFloat((await c.json()).USDBRL.bid);
+      if (v > 1 && v < 20) { dolar = v; dolarAoVivo = true; }
+    } catch (e) {}
+
+    const cobrado = Math.max(0, medida.bytes - B2_GRATIS_BYTES);
+    const custoUsd = cobrado / 1e12 * B2_US_POR_TB;
+    return resposta({
+      bucket_bytes: medida.bytes,
+      bucket_objetos: medida.objetos,
+      bucket_completo: medida.completo,
+      site_bytes: reg.bytes,
+      vendido_gb: vendido.gb,
+      preco_tb_usd: B2_US_POR_TB,
+      gratis_bytes: B2_GRATIS_BYTES,
+      dolar: Math.round(dolar * 100) / 100,
+      dolar_ao_vivo: dolarAoVivo,
+      custo_usd: Math.round(custoUsd * 100) / 100,
+      custo_brl: Math.round(custoUsd * dolar * 100) / 100,
+      custo_vendido_brl: Math.round(vendido.gb / 1000 * B2_US_POR_TB * dolar * 100) / 100
+    }, 200);
+  }
+
+  if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+  if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
+  const corpo = await lerJson(request);
+  if (!corpo) return resposta({ error: "JSON inválido" }, 400);
+
+  const alvo = await env.DB.prepare("SELECT id FROM users WHERE id = ?").bind(parseInt(corpo.user_id, 10) || 0).first();
+  if (!alvo) return resposta({ error: "Cliente não encontrado" }, 404);
+
+  if (caminho === "/api/admin/plano") {
+    const gb = parseInt(corpo.gb, 10);
+    const dias = parseInt(corpo.dias, 10);
+    if (!gb || gb < 1 || gb > 5000) return resposta({ error: "Quantidade de GB inválida (1 a 5000)" }, 400);
+    if (!dias || dias < 1 || dias > 3650) return resposta({ error: "Dias inválidos (1 a 3650)" }, 400);
+
+    const r = await env.DB.prepare(
+      "INSERT INTO subscriptions (user_id, quota_gb, status, paid_until, mp_payment_id) VALUES (?, ?, 'active', datetime('now', ?), ?)"
+    ).bind(alvo.id, gb, "+" + dias + " days", "manual:" + u.id).run();
+    await env.DB.prepare(
+      "UPDATE subscriptions SET status = 'replaced' WHERE user_id = ? AND status = 'active' AND id != ?"
+    ).bind(alvo.id, r.meta.last_row_id).run();
+    console.log("Admin", u.id, "deu plano", gb, "GB por", dias, "dias ao cliente", alvo.id);
+    return resposta({ ok: true }, 200);
+  }
+
+  if (caminho === "/api/admin/plano/remover") {
+    await env.DB.prepare(
+      "UPDATE subscriptions SET status = 'cancelled' WHERE user_id = ? AND status = 'active'"
+    ).bind(alvo.id).run();
+    console.log("Admin", u.id, "removeu o plano do cliente", alvo.id);
+    return resposta({ ok: true }, 200);
+  }
+
+  return resposta({ error: "Rota não encontrada" }, 404);
 }
 
 async function tratarApi(request, env, url) {
@@ -556,6 +678,10 @@ async function tratarApi(request, env, url) {
     const resultado = await aplicarPagamento(env, await mp.json());
     console.log("Webhook MP", dataId, resultado);
     return resposta({ ok: true }, 200);
+  }
+
+  if (caminho.startsWith("/api/admin/")) {
+    return await tratarAdmin(request, env, url);
   }
 
   if (caminho.startsWith("/api/files")) {

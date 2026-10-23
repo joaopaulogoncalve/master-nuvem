@@ -109,6 +109,28 @@ async function removerObjeto(env, chaveObjeto) {
   return await fetch(url, { method: "DELETE" });
 }
 
+// Soma o que está guardado de verdade no bucket (lista os objetos pela API S3, 1000 por página).
+export async function medirBucket(env) {
+  let bytes = 0;
+  let objetos = 0;
+  let token = "";
+  for (let pagina = 0; pagina < 50; pagina++) {
+    const extra = { "list-type": "2", "max-keys": "1000" };
+    if (token) extra["continuation-token"] = token;
+    const r = await fetch(await urlAssinada(env, "GET", "", 60, extra));
+    const xml = await r.text();
+    if (!r.ok) throw new Error("B2 respondeu " + r.status + ": " + xml.slice(0, 200));
+    for (const m of xml.matchAll(/<Size>(\d+)<\/Size>/g)) {
+      bytes += Number(m[1]);
+      objetos++;
+    }
+    const prox = xml.match(/<NextContinuationToken>([^<]+)<\/NextContinuationToken>/);
+    if (!/<IsTruncated>true<\/IsTruncated>/.test(xml) || !prox) return { bytes: bytes, objetos: objetos, completo: true };
+    token = prox[1];
+  }
+  return { bytes: bytes, objetos: objetos, completo: false };
+}
+
 export async function tratarArquivos(request, env, url) {
   const caminho = url.pathname;
 
