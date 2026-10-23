@@ -25,6 +25,8 @@ Navegador ◄──► Backblaze B2 (S3)   → upload/download DIRETO por URL as
 - `wrangler.jsonc`: nome `master-nuvem`, entrada `src/worker.js`, assets em `./public`, D1 `master-nuvem-db`
   (id `b60c217f-b668-4f05-a94a-ba8a8620f085`), observability ligada.
 - Sem framework, sem build: JS puro nos dois lados. Tailwind via CDN no front.
+- Domínio: **masternuvem.com.br** (Registro.br, DNS na Cloudflare: brit/carlos.ns.cloudflare.com).
+  `masternuvem.com.br` e `www.` ligados ao Worker como Custom Domains pela API em 2026-10-21 (não estão no `wrangler.jsonc`).
 - Deploy: `npx wrangler deploy` (ou integração Git da Cloudflare com o repositório `master-nuvem` no GitHub).
 
 ## 3. Segredos / variáveis (só nomes; valores ficam na Cloudflare → Settings → Variables and Secrets)
