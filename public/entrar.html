@@ -49,6 +49,10 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         </div>
         <p id="dicaSenha" class="hidden text-xs text-slate-400 mt-1">Use pelo menos 8 caracteres.</p>
       </div>
+      <label id="blocoAceite" class="hidden flex items-start gap-2 text-sm text-slate-300">
+        <input id="aceite" type="checkbox" class="mt-1">
+        <span>Li e aceito os <a href="/termos" target="_blank" class="text-cyan-300 underline">Termos de uso</a> e a <a href="/privacidade" target="_blank" class="text-cyan-300 underline">Política de privacidade</a>.</span>
+      </label>
       <p id="erro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
       <button type="submit" id="botao" class="cta w-full font-bold py-3 rounded-xl transition">Entrar</button>
       <button type="button" id="linkEsqueci" class="block mx-auto text-sm text-blue-300 hover:text-white">Esqueci minha senha</button>
@@ -87,6 +91,7 @@ function definirModo(novo) {
   document.getElementById("abaCriar").className = "aba" + (criar ? " aba-on" : "");
   document.getElementById("blocoNome").classList.toggle("hidden", !criar);
   document.getElementById("dicaSenha").classList.toggle("hidden", !criar);
+  document.getElementById("blocoAceite").classList.toggle("hidden", !criar);
   document.getElementById("botao").textContent = criar ? "Criar minha conta" : "Entrar";
   document.getElementById("linkEsqueci").classList.toggle("hidden", criar);
   document.getElementById("senha").setAttribute("autocomplete", criar ? "new-password" : "current-password");
@@ -112,8 +117,14 @@ async function enviar(ev) {
   var dados = {
     email: document.getElementById("email").value,
     senha: document.getElementById("senha").value,
-    nome: document.getElementById("nome").value
+    nome: document.getElementById("nome").value,
+    aceite: document.getElementById("aceite").checked
   };
+  if (modo === "criar" && !dados.aceite) {
+    erro.textContent = "Para criar a conta, aceite os Termos de uso e a Política de privacidade.";
+    botao.disabled = false;
+    return;
+  }
 
   try {
     var resp = await fetch(rota, {

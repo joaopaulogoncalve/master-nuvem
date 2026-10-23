@@ -115,7 +115,10 @@ código de 2FA pronto (admin ainda **sem** 2FA ativado); fluxo de arquivos imple
 8. **Preço duplicado** em `app.js` e `worker.js` (`calcularPreco`). O servidor é a fonte da verdade; manter igual ou expor o preço por endpoint.
 9. Arquivo máx. 4,5 GB (upload simples PUT). Maior que isso exige multipart upload.
 10. Limpeza: registros `pending` antigos só são apagados na próxima tentativa de upload do próprio usuário (e o objeto órfão no B2 não é removido) — criar tarefa agendada (Cron Trigger).
-11. Páginas legais (termos, privacidade/LGPD), política de reembolso, contato/WhatsApp.
+11. `/termos` e `/privacidade` (LGPD) criadas em 2026-10-23: plano de 30 dias sem renovação automática, arquivos guardados
+    **15 dias** após o vencimento e depois podem ser apagados, reembolso só nos 7 dias do CDC, foro Goiânia-GO.
+    Cadastro exige aceite (`users.terms_accepted_at`, `migrations/0003`). Falta: **apagar de fato** após 15 dias (Cron), WhatsApp.
+    Se mudar regra de cobrança/retenção no código, atualizar os textos também.
 
 **Ideias futuras:** bot de WhatsApp para suporte/venda; "Fase 2" com HD/NAS próprio para baratear; planos pré-definidos além do slider; e-mails transacionais.
 

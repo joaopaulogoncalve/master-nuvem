@@ -456,6 +456,9 @@ async function tratarApi(request, env, url) {
     if (senha.length < 8 || senha.length > 100) {
       return resposta({ error: "A senha precisa ter de 8 a 100 caracteres" }, 400);
     }
+    if (corpo.aceite !== true) {
+      return resposta({ error: "Para criar a conta, aceite os Termos de uso e a Política de privacidade." }, 400);
+    }
 
     const salt = new Uint8Array(16);
     crypto.getRandomValues(salt);
@@ -464,7 +467,7 @@ async function tratarApi(request, env, url) {
     let userId;
     try {
       const r = await env.DB.prepare(
-        "INSERT INTO users (email, name, password_hash, password_salt) VALUES (?, ?, ?, ?)"
+        "INSERT INTO users (email, name, password_hash, password_salt, terms_accepted_at) VALUES (?, ?, ?, ?, datetime('now'))"
       ).bind(email, nome, hash, paraHex(salt)).run();
       userId = r.meta.last_row_id;
     } catch (e) {
