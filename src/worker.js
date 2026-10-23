@@ -10,6 +10,9 @@ const DIAS_PLANO = 30;
 const B2_US_POR_TB = 6.95;
 const B2_GRATIS_BYTES = 10e9;
 const DOLAR_RESERVA = 5.5;
+const MINUTOS_LINK_SENHA = 30;
+const MAX_PEDIDOS_SENHA_HORA = 3;
+const REMETENTE = "Master Nuvem <nao-responda@masternuvem.com.br>";
 
 function calcularPreco(gb) {
   var valor;
@@ -196,6 +199,39 @@ async function lerJson(request) {
 function origemOk(request, url) {
   const o = request.headers.get("Origin");
   return !o || o === url.origin;
+}
+
+/* ---------- e-mail (Resend) ---------- */
+
+async function enviarEmail(env, para, assunto, html, texto) {
+  if (!env.RESEND_API_KEY) {
+    console.error("RESEND_API_KEY não configurado; e-mail não enviado para", para);
+    return false;
+  }
+  const r = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: REMETENTE, to: [para], subject: assunto, html: html, text: texto })
+  });
+  if (!r.ok) {
+    console.error("Resend recusou o e-mail:", r.status, (await r.text()).slice(0, 300));
+    return false;
+  }
+  return true;
+}
+
+function emailRecuperarSenha(nome, link) {
+  const ola = "Olá" + (nome ? ", " + nome.replace(/[<>&"]/g, "") : "") + "!";
+  const texto = ola + "\n\nRecebemos um pedido para criar uma nova senha na Master Nuvem.\n" +
+    "Abra este link (vale por " + MINUTOS_LINK_SENHA + " minutos e só pode ser usado uma vez):\n\n" + link +
+    "\n\nSe não foi você, ignore este e-mail: sua senha continua a mesma.\n\nMaster Nuvem";
+  const html = "<div style=\"font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#0f172a\">" +
+    "<h2 style=\"color:#0ea5e9\">Master Nuvem</h2><p>" + ola + "</p>" +
+    "<p>Recebemos um pedido para criar uma nova senha na sua conta.</p>" +
+    "<p style=\"margin:28px 0\"><a href=\"" + link + "\" style=\"background:#0ea5e9;color:#fff;padding:12px 22px;border-radius:10px;text-decoration:none;font-weight:bold\">Criar nova senha</a></p>" +
+    "<p style=\"font-size:13px;color:#475569\">O link vale por " + MINUTOS_LINK_SENHA + " minutos e só pode ser usado uma vez.<br>" +
+    "Se não foi você, ignore este e-mail: sua senha continua a mesma.</p></div>";
+  return { html: html, texto: texto };
 }
 
 /* ---------- planos / Mercado Pago ---------- */
@@ -474,6 +510,67 @@ async function tratarApi(request, env, url) {
 
     const token = await criarSessao(env, u.id, false);
     return resposta({ ok: true }, 200, cookieSessao(token, DIAS_SESSAO * 86400));
+  }
+
+  if (caminho === "/api/senha/esqueci") {
+    if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+    if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
+
+    const corpo = await lerJson(request);
+    if (!corpo) return resposta({ error: "JSON inválido" }, 400);
+    const email = String(corpo.email || "").trim().toLowerCase();
+
+    // Resposta é sempre a mesma, exista ou não a conta (não revela quem é cliente).
+    const u = EMAIL_OK.test(email) ? await env.DB.prepare("SELECT id, name FROM users WHERE email = ?").bind(email).first() : null;
+    if (u) {
+      const recentes = await env.DB.prepare(
+        "SELECT COUNT(*) AS n FROM password_resets WHERE user_id = ? AND created_at > datetime('now', '-1 hour')"
+      ).bind(u.id).first();
+      if (recentes.n < MAX_PEDIDOS_SENHA_HORA) {
+        const token = novoToken();
+        await env.DB.prepare(
+          "INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, datetime('now', ?))"
+        ).bind(await sha256Hex(token), u.id, "+" + MINUTOS_LINK_SENHA + " minutes").run();
+        const msg = emailRecuperarSenha(u.name, url.origin + "/redefinir?token=" + token);
+        await enviarEmail(env, email, "Criar nova senha - Master Nuvem", msg.html, msg.texto);
+      } else {
+        console.log("Limite de pedidos de senha atingido para o usuário", u.id);
+      }
+    }
+    return resposta({ ok: true }, 200);
+  }
+
+  if (caminho === "/api/senha/redefinir") {
+    if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+    if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
+
+    const corpo = await lerJson(request);
+    if (!corpo) return resposta({ error: "JSON inválido" }, 400);
+    const token = String(corpo.token || "");
+    const senha = String(corpo.senha || "");
+    if (senha.length < 8 || senha.length > 100) {
+      return resposta({ error: "A senha precisa ter de 8 a 100 caracteres" }, 400);
+    }
+    if (!/^[0-9a-f]{64}$/.test(token)) return resposta({ error: "Link inválido ou expirado. Peça um novo." }, 400);
+
+    const h = await sha256Hex(token);
+    // Marca como usado antes de trocar a senha: o mesmo link não funciona duas vezes.
+    const marcado = await env.DB.prepare(
+      "UPDATE password_resets SET used = 1 WHERE token_hash = ? AND used = 0 AND expires_at > datetime('now')"
+    ).bind(h).run();
+    if (!marcado.meta.changes) return resposta({ error: "Link inválido ou expirado. Peça um novo." }, 400);
+    const pedido = await env.DB.prepare("SELECT user_id FROM password_resets WHERE token_hash = ?").bind(h).first();
+
+    const salt = new Uint8Array(16);
+    crypto.getRandomValues(salt);
+    const hash = await derivarSenha(senha, salt);
+    await env.DB.prepare("UPDATE users SET password_hash = ?, password_salt = ? WHERE id = ?")
+      .bind(hash, paraHex(salt), pedido.user_id).run();
+    // Derruba todas as sessões abertas e invalida outros links pendentes.
+    await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(pedido.user_id).run();
+    await env.DB.prepare("UPDATE password_resets SET used = 1 WHERE user_id = ?").bind(pedido.user_id).run();
+    console.log("Senha redefinida pelo link de e-mail, usuário", pedido.user_id);
+    return resposta({ ok: true }, 200);
   }
 
   if (caminho === "/api/login/2fa") {

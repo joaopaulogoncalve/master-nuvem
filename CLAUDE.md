@@ -35,6 +35,7 @@ Navegador ◄──► Backblaze B2 (S3)   → upload/download DIRETO por URL as
 | Nome | Para quê |
 |---|---|
 | `MP_ACCESS_TOKEN` | Token do Mercado Pago (checkout e consulta de pagamentos no webhook). **O atual é temporário — trocar pelo definitivo.** |
+| `RESEND_API_KEY` | Envio de e-mail (Resend, remetente `nao-responda@masternuvem.com.br`). Gravar com `scripts\segredo.ps1 -Nome RESEND_API_KEY` |
 | `MP_WEBHOOK_SECRET` | Opcional. Se existir, o webhook exige a assinatura `x-signature` do MP. Só criar depois de confirmar que os avisos chegam assinados (senão nenhum plano ativa). A segurança principal é consultar o pagamento na API. |
 | `B2_KEY_ID` | ID da chave de aplicação do Backblaze (`site-master-nuvem`, só o bucket, Read and Write). A Master Key **não** funciona na API S3. Trocar: `scripts\b2-chave-site.ps1 -KeyId 005...` |
 | `B2_APP_KEY` | Chave secreta do Backblaze |
@@ -60,6 +61,8 @@ Local: usar `.dev.vars` (no `.gitignore`!) para rodar `wrangler dev`. Nunca comm
 | `/api/login` | POST | não | `{email,senha}` → cookie de sessão, ou `{need2fa:true}` com sessão pendente de 10 min |
 | `/api/login/2fa` | POST | sessão pendente | `{codigo}`; máx. 5 tentativas; anti-replay via `totp_last` |
 | `/api/logout` | POST | sim | apaga sessão |
+| `/api/senha/esqueci` | POST | não | `{email}` → sempre `{ok}`; se a conta existe, grava hash do token em `password_resets` (30 min, máx. 3/hora) e manda link `/redefinir?token=` pelo Resend |
+| `/api/senha/redefinir` | POST | token | `{token,senha}` → troca a senha, derruba todas as sessões e invalida outros links |
 | `/api/me` | GET | sim | `{email,nome,role,totp}` |
 | `/api/2fa/setup` | POST | sim | gera segredo e URI `otpauth://` |
 | `/api/2fa/enable` | POST | sim | confirma com 1º código |
@@ -103,11 +106,12 @@ código de 2FA pronto (admin ainda **sem** 2FA ativado); fluxo de arquivos imple
 3. **Renovação/expiração** — mensal? Definir ciclo, aviso de vencimento, e o que acontece com arquivos após `paid_until` (bloqueio de upload já existe; download/retenção não).
 4. ~~**CORS do bucket B2**~~ Resolvido em 2026-10-23 com `scripts\b2-cors.ps1` (regra personalizada: PUT/GET/HEAD para masternuvem.com.br, www e workers.dev).
    **Não salvar nada na tela "Regras do CORS" do Backblaze**: ela só libera download e apaga a regra personalizada.
-   Upload/download testados no site com sucesso. Erro de chave no B2 aparece no navegador como "Falha de conexão... CORS".
+   Upload/download testados no site com sucesso.
+   **Ciclo de vida do bucket: "Manter somente a última versão"** (desde 2026-10-23). Antes havia uma regra que ESCONDIA todo arquivo 1 dia após o envio — nunca usar regra com "Dias até ocultar" sem prefixo. Erro de chave no B2 aparece no navegador como "Falha de conexão... CORS".
 5. **Painel admin** — `/admin` (link no painel para `role='admin'`): lista clientes, plano, uso, receita estimada; dar/trocar/remover plano manual.
    Falta: bloquear conta, apagar cliente, ver arquivos do cliente. Recomendado exigir 2FA para admin.
 6. **Ativar 2FA no admin** antes de vender de verdade.
-7. **Sem recuperação de senha** nem verificação de e-mail; **sem rate-limit** em login/cadastro (só o 2FA tem limite). Considerar Cloudflare Turnstile.
+7. ~~Sem recuperação de senha~~ "Esqueci minha senha" no ar desde 2026-10-23 (Resend, tabela `password_resets` via `migrations/0002`, aplicada com `d1 execute --remote --file`). Sem verificação de e-mail; **sem rate-limit** em login/cadastro (só o 2FA tem limite). Considerar Cloudflare Turnstile.
 8. **Preço duplicado** em `app.js` e `worker.js` (`calcularPreco`). O servidor é a fonte da verdade; manter igual ou expor o preço por endpoint.
 9. Arquivo máx. 4,5 GB (upload simples PUT). Maior que isso exige multipart upload.
 10. Limpeza: registros `pending` antigos só são apagados na próxima tentativa de upload do próprio usuário (e o objeto órfão no B2 não é removido) — criar tarefa agendada (Cron Trigger).

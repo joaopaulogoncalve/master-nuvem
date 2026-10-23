@@ -51,6 +51,18 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       </div>
       <p id="erro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
       <button type="submit" id="botao" class="cta w-full font-bold py-3 rounded-xl transition">Entrar</button>
+      <button type="button" id="linkEsqueci" class="block mx-auto text-sm text-blue-300 hover:text-white">Esqueci minha senha</button>
+    </form>
+  </div>
+
+  <div id="etapaEsqueci" class="hidden">
+    <h2 class="text-lg font-bold text-center mb-2">Esqueci minha senha</h2>
+    <p class="text-sm text-slate-400 text-center mb-5">Digite o e-mail da sua conta. Vamos mandar um link para você criar uma senha nova.</p>
+    <form id="formEsqueci" class="space-y-4">
+      <input id="emailEsqueci" type="email" class="campo" autocomplete="email" placeholder="seu@email.com" required>
+      <p id="msgEsqueci" class="text-sm min-h-[1.25rem]"></p>
+      <button type="submit" id="botaoEsqueci" class="cta w-full font-bold py-3 rounded-xl transition">Enviar link</button>
+      <button type="button" id="voltarLogin" class="block mx-auto text-sm text-blue-300 hover:text-white">Voltar para o login</button>
     </form>
   </div>
 
@@ -76,6 +88,7 @@ function definirModo(novo) {
   document.getElementById("blocoNome").classList.toggle("hidden", !criar);
   document.getElementById("dicaSenha").classList.toggle("hidden", !criar);
   document.getElementById("botao").textContent = criar ? "Criar minha conta" : "Entrar";
+  document.getElementById("linkEsqueci").classList.toggle("hidden", criar);
   document.getElementById("senha").setAttribute("autocomplete", criar ? "new-password" : "current-password");
   document.getElementById("erro").textContent = "";
 }
@@ -159,6 +172,42 @@ document.getElementById("abaCriar").addEventListener("click", function () { defi
 document.getElementById("olho").addEventListener("click", alternarSenha);
 document.getElementById("formulario").addEventListener("submit", enviar);
 document.getElementById("formulario2fa").addEventListener("submit", enviar2fa);
+
+function mostrarEsqueci(sim) {
+  document.getElementById("etapaSenha").classList.toggle("hidden", sim);
+  document.getElementById("etapaEsqueci").classList.toggle("hidden", !sim);
+  if (sim) {
+    document.getElementById("emailEsqueci").value = document.getElementById("email").value;
+    document.getElementById("msgEsqueci").textContent = "";
+    document.getElementById("emailEsqueci").focus();
+  }
+}
+
+async function enviarEsqueci(ev) {
+  ev.preventDefault();
+  var botao = document.getElementById("botaoEsqueci");
+  var msg = document.getElementById("msgEsqueci");
+  msg.textContent = "";
+  botao.disabled = true;
+  try {
+    var resp = await fetch("/api/senha/esqueci", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: document.getElementById("emailEsqueci").value })
+    });
+    if (!resp.ok) throw new Error();
+    msg.className = "text-sm text-emerald-300 min-h-[1.25rem]";
+    msg.textContent = "Pronto! Se esse e-mail tiver conta, o link chega em alguns minutos. Olhe também o Spam.";
+  } catch (e) {
+    msg.className = "text-sm text-red-400 min-h-[1.25rem]";
+    msg.textContent = "Erro de conexão. Tente novamente.";
+  }
+  botao.disabled = false;
+}
+
+document.getElementById("linkEsqueci").addEventListener("click", function () { mostrarEsqueci(true); });
+document.getElementById("voltarLogin").addEventListener("click", function () { mostrarEsqueci(false); });
+document.getElementById("formEsqueci").addEventListener("submit", enviarEsqueci);
 
 // Para onde ir depois do login: só caminhos deste site (ex.: voltar para a contratação).
 function destino() {
