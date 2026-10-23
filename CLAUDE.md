@@ -27,12 +27,15 @@ Navegador ◄──► Backblaze B2 (S3)   → upload/download DIRETO por URL as
 - Sem framework, sem build: JS puro nos dois lados. Tailwind via CDN no front.
 - Domínio: **masternuvem.com.br** (Registro.br, DNS na Cloudflare: brit/carlos.ns.cloudflare.com).
   `masternuvem.com.br` e `www.` ligados ao Worker como Custom Domains pela API em 2026-10-21 (não estão no `wrangler.jsonc`).
+- E-mail: **contato@masternuvem.com.br** → `masternuvem.contato@gmail.com` (Cloudflare Email Routing, só recebe; testado em 2026-10-23).
+  Novos endereços: regra em Email → Email Routing (ou API). Responder como @masternuvem.com.br ainda não está configurado.
 - Deploy: `npx wrangler deploy` (ou integração Git da Cloudflare com o repositório `master-nuvem` no GitHub).
 
 ## 3. Segredos / variáveis (só nomes; valores ficam na Cloudflare → Settings → Variables and Secrets)
 | Nome | Para quê |
 |---|---|
-| `MP_ACCESS_TOKEN` | Token do Mercado Pago (checkout). **O atual é temporário — trocar pelo definitivo.** |
+| `MP_ACCESS_TOKEN` | Token do Mercado Pago (checkout e consulta de pagamentos no webhook). **O atual é temporário — trocar pelo definitivo.** |
+| `MP_WEBHOOK_SECRET` | Opcional. Se existir, o webhook exige a assinatura `x-signature` do MP. Só criar depois de confirmar que os avisos chegam assinados (senão nenhum plano ativa). A segurança principal é consultar o pagamento na API. |
 | `B2_KEY_ID` | ID da chave de aplicação do Backblaze (`site-master-nuvem`, só o bucket, Read and Write). A Master Key **não** funciona na API S3. Trocar: `scripts\b2-chave-site.ps1 -KeyId 005...` |
 | `B2_APP_KEY` | Chave secreta do Backblaze |
 | `B2_BUCKET` | `master-nuvem-cliente` (bucket **privado**) |
@@ -61,7 +64,8 @@ Local: usar `.dev.vars` (no `.gitignore`!) para rodar `wrangler dev`. Nunca comm
 | `/api/2fa/setup` | POST | sim | gera segredo e URI `otpauth://` |
 | `/api/2fa/enable` | POST | sim | confirma com 1º código |
 | `/api/2fa/disable` | POST | sim | exige senha + código |
-| `/api/checkout` | POST | **não** | `{gb}` → cria preferência no Mercado Pago, devolve `{init_point}` |
+| `/api/checkout` | POST | sim | `{gb}` → grava pedido `subscriptions` `pending`, cria preferência no MP (`external_reference` = id do pedido, `notification_url` = webhook), devolve `{init_point}`. Sem login: 401 `{login:true}` |
+| `/api/mp/webhook` | POST | não (MP) | Aviso do MP. Consulta o pagamento na API do MP; `approved` + valor certo → plano `active` por 30 dias (mesmo tamanho soma dias; outro tamanho começa hoje; anteriores viram `replaced`). Estorno → `cancelled` |
 | `/api/files` | GET | sim | `{plano,quota_bytes,usado_bytes,max_arquivo,arquivos[]}` |
 | `/api/files/upload-url` | POST | sim | `{name,size}` → registra `pending` e devolve URL PUT assinada (1 h) |
 | `/api/files/complete` | POST | sim | `{id}` → faz HEAD no B2, confere tamanho real/cota, marca `ready` |

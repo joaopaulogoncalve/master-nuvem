@@ -28,6 +28,8 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
 </nav>
 
 <main class="max-w-4xl mx-auto px-4 py-10 space-y-6">
+  <div id="avisoPagamento" class="hidden glass rounded-2xl p-5 text-sm"></div>
+
   <div class="glass rounded-3xl p-8">
     <div class="flex items-center gap-3 flex-wrap">
       <h1 id="ola" class="text-2xl font-bold">Carregando...</h1>
@@ -35,6 +37,12 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
     </div>
     <p id="email" class="text-slate-400 mt-1"></p>
     <a href="/arquivos" class="cta inline-block mt-6 font-bold px-6 py-3 rounded-xl transition">Meus arquivos</a>  </div>
+
+  <div class="glass rounded-3xl p-8">
+    <h2 class="text-xl font-bold mb-1">Meu plano</h2>
+    <p id="textoPlano" class="text-slate-300">Carregando...</p>
+    <a id="linkContratar" href="/#calculadora" class="hidden inline-block mt-4 text-sm font-semibold text-cyan-300 hover:text-white">Contratar ou renovar plano →</a>
+  </div>
 
   <div class="glass rounded-3xl p-8">
     <h2 class="text-xl font-bold mb-1">Segurança</h2>
@@ -146,7 +154,42 @@ fetch("/api/me").then(function (r) {
     document.getElementById("papel").classList.remove("hidden");
   }
   estadoSeguranca(u.totp);
+  mostrarPlano(u.plano);
 });
+
+function formatarEspaco(gb) {
+  if (gb >= 1000) return String(+(gb / 1000).toFixed(2)) + " TB";
+  return gb + " GB";
+}
+
+function mostrarPlano(plano) {
+  var texto = document.getElementById("textoPlano");
+  if (plano) {
+    var d = plano.paid_until.slice(0, 10).split("-");
+    texto.innerHTML = "<span class=\"text-emerald-300 font-semibold\">" + formatarEspaco(plano.quota_gb) +
+      "</span> ativo até " + d[2] + "/" + d[1] + "/" + d[0] + ".";
+  } else {
+    texto.textContent = "Você ainda não tem um plano ativo.";
+  }
+  mostrar("linkContratar", true);
+}
+
+// Volta do Mercado Pago: o plano é ativado pelo aviso (webhook), que pode levar alguns segundos.
+(function () {
+  var pg = new URLSearchParams(window.location.search).get("pagamento");
+  var caixa = document.getElementById("avisoPagamento");
+  if (!pg) return;
+  var textos = {
+    ok: ["text-emerald-300", "Pagamento aprovado! Seu plano é ativado em instantes. Se ainda não aparecer abaixo, atualize a página em alguns segundos."],
+    pendente: ["text-amber-300", "Pagamento em análise. Assim que o Mercado Pago confirmar (no PIX costuma ser rápido), seu plano é ativado sozinho."],
+    erro: ["text-red-300", "O pagamento não foi concluído. Nenhum valor foi cobrado. Você pode tentar de novo."]
+  };
+  var t = textos[pg];
+  if (!t) return;
+  caixa.classList.add(t[0]);
+  caixa.textContent = t[1];
+  caixa.classList.remove("hidden");
+})();
 
 document.getElementById("btnAtivar").addEventListener("click", iniciarSetup);
 document.getElementById("btnConfirmar").addEventListener("click", confirmarSetup);

@@ -13,5 +13,9 @@
       "database_id": "b60c217f-b668-4f05-a94a-ba8a8620f085"
     }
   ],
+  "routes": [
+    { "pattern": "masternuvem.com.br", "custom_domain": true },
+    { "pattern": "www.masternuvem.com.br", "custom_domain": true }
+  ],
   "observability": { "enabled": true }
 }

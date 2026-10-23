@@ -4,6 +4,7 @@ const DIAS_SESSAO = 30;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 const MAX_TENTATIVAS_2FA = 5;
+const DIAS_PLANO = 30;
 
 function calcularPreco(gb) {
   var valor;
@@ -192,13 +193,92 @@ function origemOk(request, url) {
   return !o || o === url.origin;
 }
 
+/* ---------- planos / Mercado Pago ---------- */
+
+async function planoAtual(env, userId) {
+  return await env.DB.prepare(
+    "SELECT id, quota_gb, paid_until FROM subscriptions WHERE user_id = ? AND status = 'active' AND paid_until > datetime('now') ORDER BY id DESC LIMIT 1"
+  ).bind(userId).first();
+}
+
+// Confere a assinatura x-signature do Mercado Pago (só se MP_WEBHOOK_SECRET estiver configurado).
+async function assinaturaMpOk(request, env, dataId) {
+  if (!env.MP_WEBHOOK_SECRET) return true;
+  const cab = request.headers.get("x-signature") || "";
+  let ts = "";
+  let v1 = "";
+  for (const parte of cab.split(",")) {
+    const [k, v] = parte.split("=").map(function (s) { return s.trim(); });
+    if (k === "ts") ts = v || "";
+    if (k === "v1") v1 = v || "";
+  }
+  if (!ts || !v1) return false;
+  const reqId = request.headers.get("x-request-id") || "";
+  let manifesto = "id:" + String(dataId).toLowerCase() + ";";
+  if (reqId) manifesto += "request-id:" + reqId + ";";
+  manifesto += "ts:" + ts + ";";
+  const chave = await crypto.subtle.importKey("raw", enc.encode(env.MP_WEBHOOK_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const esperado = paraHex(await crypto.subtle.sign("HMAC", chave, enc.encode(manifesto)));
+  return iguais(esperado, v1);
+}
+
+// Aplica um pagamento consultado direto na API do Mercado Pago (nunca confia no corpo do aviso).
+async function aplicarPagamento(env, pg) {
+  const subId = parseInt(pg.external_reference, 10);
+  if (!subId) return "sem referência";
+
+  const sub = await env.DB.prepare(
+    "SELECT id, user_id, quota_gb, status, mp_payment_id FROM subscriptions WHERE id = ?"
+  ).bind(subId).first();
+  if (!sub) return "pedido não encontrado";
+
+  const idPg = String(pg.id);
+
+  if (pg.status === "approved") {
+    if (sub.status !== "pending") return "já processado";
+    const valor = Number(pg.transaction_amount || 0);
+    if (pg.currency_id !== "BRL" || valor + 0.01 < calcularPreco(sub.quota_gb)) {
+      console.error("Valor pago não confere", subId, valor, pg.currency_id);
+      return "valor não confere";
+    }
+
+    // Renovação do mesmo tamanho soma os dias que faltam; troca de tamanho começa hoje.
+    const anterior = await planoAtual(env, sub.user_id);
+    const inicio = anterior && anterior.quota_gb === sub.quota_gb ? anterior.paid_until : null;
+
+    const r = await env.DB.prepare(
+      "UPDATE subscriptions SET status = 'active', mp_payment_id = ?, paid_until = datetime(COALESCE(?, datetime('now')), ?) WHERE id = ? AND status = 'pending'"
+    ).bind(idPg, inicio, "+" + DIAS_PLANO + " days", sub.id).run();
+    if (!r.meta.changes) return "já processado";
+
+    await env.DB.prepare(
+      "UPDATE subscriptions SET status = 'replaced' WHERE user_id = ? AND status = 'active' AND id != ?"
+    ).bind(sub.user_id, sub.id).run();
+    return "plano ativado";
+  }
+
+  if ((pg.status === "refunded" || pg.status === "charged_back") && sub.mp_payment_id === idPg) {
+    await env.DB.prepare("UPDATE subscriptions SET status = 'cancelled' WHERE id = ?").bind(sub.id).run();
+    return "plano cancelado";
+  }
+
+  return "status " + pg.status;
+}
+
 async function tratarApi(request, env, url) {
   const caminho = url.pathname;
 
   if (caminho === "/api/me") {
     const u = await usuarioLogado(request, env);
     if (!u) return resposta({ error: "Não autenticado" }, 401);
-    return resposta({ email: u.email, nome: u.name, role: u.role, totp: !!u.totp_enabled }, 200);
+    const plano = await planoAtual(env, u.id);
+    return resposta({
+      email: u.email,
+      nome: u.name,
+      role: u.role,
+      totp: !!u.totp_enabled,
+      plano: plano ? { quota_gb: plano.quota_gb, paid_until: plano.paid_until } : null
+    }, 200);
   }
 
   if (caminho === "/api/register") {
@@ -385,10 +465,14 @@ async function tratarApi(request, env, url) {
 
   if (caminho === "/api/checkout") {
     if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+    if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
     if (!env.MP_ACCESS_TOKEN) {
       console.error("MP_ACCESS_TOKEN não configurado");
       return resposta({ error: "Configuração ausente" }, 500);
     }
+
+    const u = await usuarioLogado(request, env);
+    if (!u) return resposta({ error: "Entre na sua conta para contratar", login: true }, 401);
 
     const corpo = await lerJson(request);
     if (!corpo) return resposta({ error: "JSON inválido" }, 400);
@@ -399,6 +483,15 @@ async function tratarApi(request, env, url) {
     }
 
     const nome = gb >= 1000 ? (gb / 1000).toFixed(2) + "TB" : gb + "GB";
+
+    // Pedido fica "pending" até o webhook confirmar o pagamento; pedidos abandonados com mais de 2 dias são limpos.
+    await env.DB.prepare(
+      "DELETE FROM subscriptions WHERE user_id = ? AND status = 'pending' AND created_at < datetime('now', '-2 days')"
+    ).bind(u.id).run();
+    const pedido = await env.DB.prepare(
+      "INSERT INTO subscriptions (user_id, quota_gb, status) VALUES (?, ?, 'pending')"
+    ).bind(u.id, gb).run();
+    const pedidoId = pedido.meta.last_row_id;
 
     try {
       const mp = await fetch("https://api.mercadopago.com/checkout/preferences", {
@@ -414,10 +507,13 @@ async function tratarApi(request, env, url) {
             currency_id: "BRL",
             unit_price: calcularPreco(gb)
           }],
+          payer: { email: u.email },
+          external_reference: String(pedidoId),
+          notification_url: url.origin + "/api/mp/webhook",
           back_urls: {
-            success: url.origin + "/?status=ok",
-            failure: url.origin + "/?status=erro",
-            pending: url.origin + "/?status=pendente"
+            success: url.origin + "/painel?pagamento=ok",
+            failure: url.origin + "/painel?pagamento=erro",
+            pending: url.origin + "/painel?pagamento=pendente"
           },
           auto_return: "approved"
         })
@@ -434,6 +530,34 @@ async function tratarApi(request, env, url) {
       return resposta({ error: "Falha ao criar pagamento" }, 502);
     }
   }
+
+  if (caminho === "/api/mp/webhook") {
+    if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+
+    const corpo = (await lerJson(request)) || {};
+    const tipo = url.searchParams.get("type") || url.searchParams.get("topic") || corpo.type || corpo.topic || "";
+    const dataId = url.searchParams.get("data.id") || url.searchParams.get("id") || (corpo.data && corpo.data.id) || "";
+    if (tipo !== "payment" || !/^\d+$/.test(String(dataId))) return resposta({ ok: true }, 200);
+
+    if (!(await assinaturaMpOk(request, env, dataId))) {
+      console.error("Webhook MP com assinatura inválida", dataId);
+      return resposta({ error: "Assinatura inválida" }, 401);
+    }
+
+    const mp = await fetch("https://api.mercadopago.com/v1/payments/" + dataId, {
+      headers: { "Authorization": "Bearer " + env.MP_ACCESS_TOKEN }
+    });
+    if (mp.status === 404) return resposta({ ok: true }, 200);
+    if (!mp.ok) {
+      console.error("Falha ao consultar pagamento", dataId, mp.status);
+      return resposta({ error: "Falha ao consultar pagamento" }, 502);
+    }
+
+    const resultado = await aplicarPagamento(env, await mp.json());
+    console.log("Webhook MP", dataId, resultado);
+    return resposta({ ok: true }, 200);
+  }
+
   if (caminho.startsWith("/api/files")) {
     return await tratarArquivos(request, env, url);
   }

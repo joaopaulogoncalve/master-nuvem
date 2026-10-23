@@ -26,6 +26,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
   <a href="/" class="block text-center font-bold text-2xl mb-6">Master<span class="grad">Nuvem</span></a>
 
   <div id="etapaSenha">
+    <p id="avisoVolta" class="hidden text-sm text-cyan-300 text-center mb-4">Entre ou crie sua conta para contratar o plano.</p>
     <div class="flex gap-2 mb-6">
       <button type="button" id="abaEntrar" class="aba aba-on">Entrar</button>
       <button type="button" id="abaCriar" class="aba">Criar conta</button>
@@ -115,7 +116,7 @@ async function enviar(ev) {
       return;
     }
     if (resp.ok) {
-      window.location.href = "/painel";
+      window.location.href = destino();
       return;
     }
     erro.textContent = json.error || "Não foi possível continuar.";
@@ -140,7 +141,7 @@ async function enviar2fa(ev) {
     });
     var json = await resp.json();
     if (resp.ok) {
-      window.location.href = "/painel";
+      window.location.href = destino();
       return;
     }
     erro.textContent = json.error || "Código incorreto.";
@@ -159,8 +160,19 @@ document.getElementById("olho").addEventListener("click", alternarSenha);
 document.getElementById("formulario").addEventListener("submit", enviar);
 document.getElementById("formulario2fa").addEventListener("submit", enviar2fa);
 
+// Para onde ir depois do login: só caminhos deste site (ex.: voltar para a contratação).
+function destino() {
+  var volta = new URLSearchParams(window.location.search).get("volta") || "";
+  if (volta.charAt(0) === "/" && volta.charAt(1) !== "/" && volta.charAt(1) !== "\\") return volta;
+  return "/painel";
+}
+
+if (new URLSearchParams(window.location.search).get("volta")) {
+  document.getElementById("avisoVolta").classList.remove("hidden");
+}
+
 fetch("/api/me").then(function (r) {
-  if (r.ok) window.location.href = "/painel";
+  if (r.ok) window.location.href = destino();
 });
 </script>
 </body>
