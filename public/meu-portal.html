@@ -95,6 +95,41 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
     <div id="listaAlbuns" class="grid md:grid-cols-2 gap-3"></div>
   </section>
 
+  <!-- 4. Cobranças -->
+  <section id="secCobrancas" class="hidden glass rounded-3xl p-6 space-y-5">
+    <div>
+      <h2 class="text-lg font-bold">4. Cobranças</h2>
+      <p class="text-sm text-slate-400 mt-1">O dinheiro vai <strong class="text-white">direto para você</strong> (seu PIX ou o link da sua maquininha). Aqui você organiza quem pagou e pode trancar o álbum até o pagamento.</p>
+    </div>
+    <div class="grid grid-cols-3 gap-3">
+      <div class="bg-slate-900/50 rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">A receber</p><p id="resReceber" class="text-xl font-bold mt-1">-</p></div>
+      <div class="bg-slate-900/50 rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">Atrasado</p><p id="resAtrasado" class="text-xl font-bold mt-1 text-red-300">-</p></div>
+      <div class="bg-slate-900/50 rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">Recebido no mês</p><p id="resMes" class="text-xl font-bold mt-1 text-emerald-300">-</p></div>
+    </div>
+    <div>
+      <label class="text-sm text-slate-300">Como você recebe (aparece para o cliente em toda cobrança)
+        <textarea id="instrucoes" class="campo mt-1 h-20" maxlength="500" placeholder="PIX (CNPJ): 12.345.678/0001-90 – Estúdio Aurora&#10;Banco: ..."></textarea>
+      </label>
+      <button type="button" id="btnInstrucoes" class="link mt-1">Salvar forma de recebimento</button>
+      <span id="instrOk" class="hidden text-sm text-emerald-300 ml-2">Salvo!</span>
+    </div>
+    <div class="grid md:grid-cols-3 gap-3 items-end">
+      <label class="text-sm text-slate-300">Cliente<select id="cobCliente" class="campo mt-1"></select></label>
+      <label class="text-sm text-slate-300">Álbum (opcional)<select id="cobAlbum" class="campo mt-1"></select></label>
+      <label class="text-sm text-slate-300">Descrição<input id="cobDescricao" class="campo mt-1" maxlength="120" placeholder="Saldo do casamento"></label>
+      <label class="text-sm text-slate-300">Valor (R$)<input id="cobValor" class="campo mt-1" inputmode="decimal" placeholder="800,00"></label>
+      <label class="text-sm text-slate-300">Vencimento (opcional)<input id="cobVenc" type="date" class="campo mt-1"></label>
+      <label class="text-sm text-slate-300">Link de pagamento (opcional)<input id="cobLink" class="campo mt-1" maxlength="300" placeholder="https://..."></label>
+    </div>
+    <label id="blocoTrancar" class="hidden flex items-start gap-2 text-sm text-slate-300">
+      <input id="cobTrancar" type="checkbox" class="mt-1">
+      <span>🔒 Trancar o álbum até eu marcar como pago (o cliente não vê nem baixa as fotos até lá)</span>
+    </label>
+    <p id="cobErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+    <button type="button" id="btnCobranca" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Criar cobrança</button>
+    <div id="listaCobrancas" class="space-y-2"></div>
+  </section>
+
   <!-- Álbum aberto -->
   <section id="secAberto" class="hidden glass rounded-3xl p-6 space-y-4">
     <div class="flex flex-wrap items-start justify-between gap-3">
@@ -193,13 +228,141 @@ async function carregar() {
   }
   mostrar("secClientes", !!dados.portal);
   mostrar("secAlbuns", !!dados.portal);
+  mostrar("secCobrancas", !!dados.portal);
+  if (dados.portal) document.getElementById("instrucoes").value = dados.portal.instrucoes_pagamento || "";
   var tipo = document.getElementById("albTipo");
   if (!tipo.options.length) dados.tipos.forEach(function (t) { tipo.appendChild(new Option(t, t)); });
   if (dados.portal) {
     await carregarClientes();
     await carregarAlbuns();
+    await carregarCobrancas();
   }
 }
+
+/* ---------- cobranças ---------- */
+
+function reais(c) {
+  return "R$ " + (c / 100).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function dataBr(t) {
+  if (!t) return "";
+  var d = t.slice(0, 10).split("-");
+  return d[2] + "/" + d[1] + "/" + d[0];
+}
+
+function preencherAlbunsCobranca() {
+  var cli = parseInt(document.getElementById("cobCliente").value, 10);
+  var sel = document.getElementById("cobAlbum");
+  sel.innerHTML = "";
+  sel.appendChild(new Option("Nenhum", ""));
+  dados.albuns.filter(function (a) { return a.cliente_id === cli; }).forEach(function (a) {
+    sel.appendChild(new Option(a.titulo, a.id));
+  });
+  mostrar("blocoTrancar", !!sel.value);
+}
+
+async function carregarCobrancas() {
+  var selCli = document.getElementById("cobCliente");
+  var antes = selCli.value;
+  selCli.innerHTML = "";
+  dados.clientes.forEach(function (c) { selCli.appendChild(new Option(c.nome, c.id)); });
+  if (antes) selCli.value = antes;
+  preencherAlbunsCobranca();
+
+  var r = await api("/api/portal/cobrancas");
+  var res = r.dados.resumo || { a_receber: 0, atrasado: 0, recebido_mes: 0 };
+  document.getElementById("resReceber").textContent = reais(res.a_receber);
+  document.getElementById("resAtrasado").textContent = reais(res.atrasado);
+  document.getElementById("resMes").textContent = reais(res.recebido_mes);
+
+  var lista = document.getElementById("listaCobrancas");
+  lista.innerHTML = "";
+  var cobs = r.dados.cobrancas || [];
+  if (!cobs.length) lista.appendChild(el("p", "text-sm text-slate-400", "Nenhuma cobrança ainda."));
+  var hoje = new Date().toISOString().slice(0, 10);
+  cobs.forEach(function (b) {
+    var atrasada = b.status === "pendente" && b.vencimento && b.vencimento < hoje;
+    var linha = el("div", "flex flex-wrap items-center justify-between gap-3 bg-slate-900/50 rounded-xl px-4 py-3" + (b.status === "cancelado" ? " opacity-50" : ""));
+    var info = el("div");
+    var topo = el("p", "font-semibold");
+    topo.appendChild(document.createTextNode(reais(b.valor_centavos) + " · " + b.descricao + " "));
+    var selo = b.status === "pago" ? ["Pago " + dataBr(b.pago_em), "text-emerald-200 bg-emerald-500/20"]
+      : b.status === "cancelado" ? ["Cancelada", "text-slate-300 bg-slate-500/20"]
+      : atrasada ? ["Atrasada", "text-red-200 bg-red-500/20"] : ["Pendente", "text-amber-200 bg-amber-500/20"];
+    topo.appendChild(el("span", "text-xs font-semibold px-2 py-0.5 rounded-full " + selo[1], selo[0]));
+    info.appendChild(topo);
+    info.appendChild(el("p", "text-xs text-slate-400", b.cliente + (b.album ? " · " + b.album : "") +
+      (b.vencimento ? " · vence " + dataBr(b.vencimento) : "") + (b.bloqueia_album && b.status === "pendente" ? " · 🔒 álbum trancado" : "")));
+    linha.appendChild(info);
+
+    var acoes = el("div", "flex flex-wrap gap-4");
+    function botao(txt, classe, fn) {
+      var x = el("button", classe, txt);
+      x.type = "button";
+      x.addEventListener("click", fn);
+      acoes.appendChild(x);
+    }
+    async function mudar(status) {
+      var r2 = await api("/api/portal/cobrancas/status", { id: b.id, status: status });
+      if (!r2.ok) { alert(r2.dados.error || "Não foi possível."); return; }
+      await carregarCobrancas();
+      carregarAlbuns();
+    }
+    if (b.status === "pendente") {
+      botao("Copiar mensagem", "link", function () {
+        var msg = "Olá, " + b.cliente.split(" ")[0] + "! Segue a cobrança de " + reais(b.valor_centavos) + " (" + b.descricao + ")" +
+          (b.vencimento ? ", com vencimento em " + dataBr(b.vencimento) : "") + ".\n" +
+          (b.link_pagamento ? "Pague por aqui: " + b.link_pagamento + "\n" : "") +
+          (dados.portal.instrucoes_pagamento ? dados.portal.instrucoes_pagamento + "\n" : "") +
+          "Você também vê tudo no seu portal: " + window.location.origin + "/p/" + dados.portal.slug;
+        navigator.clipboard.writeText(msg);
+        this.textContent = "Copiada!";
+      });
+      botao("✔ Marcar como pago", "link", function () {
+        if (confirm("Confirmar que " + b.cliente + " pagou " + reais(b.valor_centavos) + "?" + (b.bloqueia_album ? "\nO álbum será liberado." : ""))) mudar("pago");
+      });
+      botao("Cancelar", "perigo", function () { if (confirm("Cancelar esta cobrança?")) mudar("cancelado"); });
+    } else if (b.status === "pago") {
+      botao("Desfazer pagamento", "perigo", function () { if (confirm("Voltar esta cobrança para pendente?")) mudar("pendente"); });
+    }
+    linha.appendChild(acoes);
+    lista.appendChild(linha);
+  });
+}
+
+document.getElementById("cobCliente").addEventListener("change", preencherAlbunsCobranca);
+document.getElementById("cobAlbum").addEventListener("change", function () {
+  mostrar("blocoTrancar", !!this.value);
+  if (!this.value) document.getElementById("cobTrancar").checked = false;
+});
+
+document.getElementById("btnInstrucoes").addEventListener("click", async function () {
+  var r = await api("/api/portal/pagamento", { instrucoes: document.getElementById("instrucoes").value });
+  if (!r.ok) { alert(r.dados.error || "Não foi possível salvar."); return; }
+  dados.portal.instrucoes_pagamento = document.getElementById("instrucoes").value.trim();
+  mostrar("instrOk", true);
+  setTimeout(function () { mostrar("instrOk", false); }, 2000);
+});
+
+document.getElementById("btnCobranca").addEventListener("click", async function () {
+  var erro = document.getElementById("cobErro");
+  erro.textContent = "";
+  var r = await api("/api/portal/cobrancas/nova", {
+    cliente_id: document.getElementById("cobCliente").value,
+    album_id: document.getElementById("cobAlbum").value || null,
+    descricao: document.getElementById("cobDescricao").value,
+    valor: document.getElementById("cobValor").value,
+    vencimento: document.getElementById("cobVenc").value,
+    link: document.getElementById("cobLink").value,
+    bloqueia_album: document.getElementById("cobTrancar").checked
+  });
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível criar."; return; }
+  ["cobDescricao", "cobValor", "cobVenc", "cobLink"].forEach(function (id) { document.getElementById(id).value = ""; });
+  document.getElementById("cobTrancar").checked = false;
+  await carregarCobrancas();
+  carregarAlbuns();
+});
 
 async function carregarClientes() {
   var r = await api("/api/portal/clientes");
@@ -253,11 +416,12 @@ async function carregarAlbuns() {
     var c = el("button", "text-left bg-slate-900/50 hover:bg-slate-900 rounded-2xl p-4 border border-blue-900/60");
     c.type = "button";
     c.appendChild(el("p", "text-xs uppercase tracking-wider text-slate-400", a.tipo || ""));
-    c.appendChild(el("p", "font-bold", a.titulo));
+    c.appendChild(el("p", "font-bold", (a.trancado ? "🔒 " : "") + a.titulo));
     c.appendChild(el("p", "text-sm text-slate-400", a.cliente + " · " + a.arquivos + " arquivo(s) · " + formatarBytes(a.bytes) + (a.favoritas ? " · ♥ " + a.favoritas : "")));
     c.addEventListener("click", function () { abrirAlbum(a); });
     lista.appendChild(c);
   });
+  preencherAlbunsCobranca();
 }
 
 /* ---------- ações ---------- */
@@ -297,7 +461,8 @@ document.getElementById("btnCliente").addEventListener("click", async function (
   if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível criar."; return; }
   alert("Acesso criado! Envie para " + nome + ":\n\nLink: " + window.location.origin + "/p/" + dados.portal.slug + "\nE-mail: " + email + "\nSenha: " + senha);
   ["cliNome", "cliEmail", "cliSenha"].forEach(function (id) { document.getElementById(id).value = ""; });
-  carregarClientes();
+  await carregarClientes();
+  carregarCobrancas();
 });
 
 document.getElementById("btnAlbum").addEventListener("click", async function () {

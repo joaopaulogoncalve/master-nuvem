@@ -55,6 +55,12 @@ body{background:#f1f5f9;color:#0f172a}
     <p class="text-xs text-slate-400 text-center mt-4">Esqueceu a senha? Fale com o estúdio para receber uma nova.</p>
   </section>
 
+  <!-- Pagamentos -->
+  <section id="secPagamentos" class="hidden space-y-3 mb-8">
+    <h1 class="text-xl font-bold">Pagamentos</h1>
+    <div id="listaCobrancas" class="space-y-3"></div>
+  </section>
+
   <!-- Lista de álbuns -->
   <section id="secAlbuns" class="hidden space-y-4">
     <h1 class="text-xl font-bold">Seus álbuns</h1>
@@ -72,7 +78,8 @@ body{background:#f1f5f9;color:#0f172a}
       </div>
       <button type="button" id="soFavoritas" class="btn2">♥ Minhas favoritas</button>
     </div>
-    <p class="text-sm text-slate-500">Toque no ♥ para escolher as fotos do seu álbum. Toque na foto para ver grande e baixar.</p>
+    <p id="avisoTrancado" class="hidden cartao p-4 text-sm text-amber-700 bg-amber-50 border-amber-200">🔒 Este álbum será liberado assim que o pagamento for confirmado pelo estúdio. Veja os detalhes em “Pagamentos”.</p>
+    <p id="dicaFotos" class="text-sm text-slate-500">Toque no ♥ para escolher as fotos do seu álbum. Toque na foto para ver grande e baixar.</p>
     <div id="grade" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2"></div>
     <div class="text-center"><button type="button" id="mais" class="hidden btn2">Carregar mais</button></div>
   </section>
@@ -132,12 +139,63 @@ async function iniciar() {
   document.getElementById("ola").textContent = "Olá, " + me.dados.nome.split(" ")[0];
   mostrar("usuario", true);
   mostrar("secLogin", false);
-  mostrarAlbuns(me.dados.albuns);
+  mostrarAlbuns(me.dados.albuns, me.dados);
 }
 
-function mostrarAlbuns(albuns) {
+function reais(c) {
+  return "R$ " + (c / 100).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+function dataBr(t) {
+  if (!t) return "";
+  var d = t.slice(0, 10).split("-");
+  return d[2] + "/" + d[1] + "/" + d[0];
+}
+
+function mostrarCobrancas(me) {
+  var cobs = (me && me.cobrancas) || [];
+  var lista = document.getElementById("listaCobrancas");
+  lista.innerHTML = "";
+  mostrar("secPagamentos", cobs.length > 0);
+  var instr = me && me.portal.instrucoes_pagamento;
+  cobs.forEach(function (b) {
+    var pago = b.status === "pago";
+    var c = el("div", "cartao p-4 space-y-2");
+    var topo = el("div", "flex flex-wrap items-center justify-between gap-2");
+    var t = el("div");
+    t.appendChild(el("p", "font-bold text-lg", reais(b.valor_centavos)));
+    t.appendChild(el("p", "text-sm text-slate-600", b.descricao + (b.album ? " · " + b.album : "")));
+    topo.appendChild(t);
+    topo.appendChild(el("span", "text-xs font-semibold px-3 py-1 rounded-full " + (pago ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"),
+      pago ? "Pago em " + dataBr(b.pago_em) : (b.vencimento ? "Vence em " + dataBr(b.vencimento) : "Pendente")));
+    c.appendChild(topo);
+    if (!pago) {
+      if (b.link_pagamento) {
+        var a = el("a", "btn inline-block", "Pagar agora");
+        a.href = b.link_pagamento;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        c.appendChild(a);
+      }
+      if (instr) {
+        var caixa = el("div", "bg-slate-50 rounded-xl p-3 text-sm text-slate-700");
+        caixa.appendChild(el("p", "font-semibold mb-1", "Como pagar"));
+        caixa.appendChild(el("p", "whitespace-pre-line break-words", instr));
+        var copiar = el("button", "btn2 mt-2", "Copiar dados de pagamento");
+        copiar.type = "button";
+        copiar.addEventListener("click", function () { navigator.clipboard.writeText(instr); copiar.textContent = "Copiado!"; });
+        caixa.appendChild(copiar);
+        c.appendChild(caixa);
+      }
+      c.appendChild(el("p", "text-xs text-slate-500", "Depois de pagar, o estúdio confirma o recebimento e esta cobrança aparece como paga."));
+    }
+    lista.appendChild(c);
+  });
+}
+
+function mostrarAlbuns(albuns, me) {
   mostrar("secAlbum", false);
   mostrar("secAlbuns", true);
+  if (me) mostrarCobrancas(me);
   var lista = document.getElementById("listaAlbuns");
   lista.innerHTML = "";
   if (!albuns.length) lista.appendChild(el("p", "text-slate-500", "Ainda não há álbuns para você. Assim que o estúdio enviar, eles aparecem aqui."));
@@ -145,7 +203,7 @@ function mostrarAlbuns(albuns) {
     var c = el("button", "cartao p-4 text-left hover:shadow-md transition");
     c.type = "button";
     c.appendChild(el("p", "text-xs uppercase tracking-wider text-slate-500", a.tipo || ""));
-    c.appendChild(el("p", "font-bold text-lg", a.titulo));
+    c.appendChild(el("p", "font-bold text-lg", (a.trancado ? "🔒 " : "") + a.titulo));
     c.appendChild(el("p", "text-sm text-slate-500", a.arquivos + " arquivo(s)" + (a.favoritas ? " · ♥ " + a.favoritas + " favorita(s)" : "")));
     c.addEventListener("click", function () { abrirAlbum(a); });
     lista.appendChild(c);
@@ -161,6 +219,7 @@ async function abrirAlbum(a) {
   document.getElementById("albTipo").textContent = a.tipo || "";
   document.getElementById("albTitulo").textContent = a.titulo;
   mostrar("secAlbuns", false);
+  mostrar("secPagamentos", false);
   mostrar("secAlbum", true);
   window.scrollTo(0, 0);
   await carregarPagina();
@@ -170,6 +229,9 @@ async function carregarPagina() {
   var r = await api("/api/p/album?id=" + albumAtual.id + "&pagina=" + pagina);
   if (!r.ok) return;
   arquivos = arquivos.concat(r.dados.arquivos);
+  mostrar("avisoTrancado", !!r.dados.trancado);
+  mostrar("dicaFotos", !r.dados.trancado);
+  albumAtual.trancado = !!r.dados.trancado;
   document.getElementById("albInfo").textContent = r.dados.total + " arquivo(s) · " + formatarBytes(r.dados.bytes);
   mostrar("mais", (r.dados.pagina + 1) * r.dados.por_pagina < r.dados.total);
   desenharGrade();
@@ -190,7 +252,7 @@ function desenharGrade() {
       caixa.appendChild(img);
     } else {
       var ic = el("div", "w-full h-full flex flex-col items-center justify-center text-xs text-slate-600 p-2 text-center");
-      ic.appendChild(el("span", "text-3xl", f.tipo === "video" ? "🎬" : "📄"));
+      ic.appendChild(el("span", "text-3xl", albumAtual.trancado ? "🔒" : f.tipo === "video" ? "🎬" : "📄"));
       ic.appendChild(el("span", "break-all mt-1", f.nome));
       caixa.appendChild(ic);
     }
@@ -238,7 +300,7 @@ document.getElementById("soFavoritas").addEventListener("click", function () {
 });
 document.getElementById("voltar").addEventListener("click", async function () {
   var me = await api("/api/p/me");
-  if (me.ok) mostrarAlbuns(me.dados.albuns);
+  if (me.ok) mostrarAlbuns(me.dados.albuns, me.dados);
 });
 
 document.getElementById("formLogin").addEventListener("submit", async function (ev) {

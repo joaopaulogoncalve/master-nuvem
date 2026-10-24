@@ -166,6 +166,11 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
    - `/portais` = vitrine/demonstração dos 8 ramos (dados fictícios).
    - Falta (v1.1): miniaturas leves (hoje a prévia é a foto original), "baixar tudo" (zip), marca d'água, limite de tentativas
      no login do cliente, e-mail automático com o acesso, outros ramos (gráfica, contador...).
+   **Central de cobranças, modo manual — feita em 2026-10-24** (`migrations/0006_cobrancas.sql`): `portais.instrucoes_pagamento`
+   (PIX/banco do fotógrafo) + tabela `cobrancas` (cliente, álbum opcional, valor em centavos, vencimento, link https opcional,
+   `bloqueia_album`, status pendente/pago/cancelado). Rotas: `/api/portal/pagamento`, `/api/portal/cobrancas` (lista + resumo
+   a receber/atrasado/recebido no mês), `/cobrancas/nova`, `/cobrancas/status`. Álbum trancado = cobrança pendente com
+   `bloqueia_album=1`: o cliente não recebe prévia nem link de download (402). O cliente vê as cobranças em `/p/<slug>`.
    **Ideias do João para o Portal (2026-10-24, ainda não feitas):**
    - v1.1: seleção "Para o álbum impresso" com limite do pacote (ex.: 32/60), prévia em páginas duplas, "enviar seleção"
      (trava); botão "Pedir edição" por foto com comentário e status "feito".

@@ -98,8 +98,27 @@ function tipoArquivo(nome) {
   return "outro";
 }
 
+// Valor digitado ("800", "800,50", "1.234,56") → centavos. Devolve null se inválido.
+function paraCentavos(v) {
+  let t = String(v === undefined || v === null ? "" : v).trim().replace(/^R\$\s*/i, "");
+  if (typeof v === "number") t = v.toFixed(2);
+  else if (t.indexOf(",") > -1) t = t.replace(/\./g, "").replace(",", ".");
+  if (!/^\d+(\.\d{1,2})?$/.test(t)) return null;
+  const c = Math.round(parseFloat(t) * 100);
+  return c >= 100 && c <= 10000000 ? c : null;
+}
+
+// Álbum trancado = tem cobrança pendente marcada para segurar o álbum até o pagamento.
+async function albumTrancado(env, albumId) {
+  const r = await env.DB.prepare(
+    "SELECT 1 AS t FROM cobrancas WHERE album_id = ? AND status = 'pendente' AND bloqueia_album = 1 LIMIT 1"
+  ).bind(albumId).first();
+  return !!r;
+}
+
 // Monta uma página de arquivos de um álbum, com link de prévia (só imagens) e se é favorita do cliente.
-async function paginaArquivos(env, albumId, clienteId, pagina) {
+// semPrevia = true quando o álbum está trancado para o cliente (não gera link nenhum do arquivo).
+async function paginaArquivos(env, albumId, clienteId, pagina, semPrevia) {
   const total = await env.DB.prepare(
     "SELECT COUNT(*) AS n, COALESCE(SUM(size_bytes), 0) AS bytes FROM files WHERE album_id = ? AND status = 'ready'"
   ).bind(albumId).first();
@@ -117,7 +136,7 @@ async function paginaArquivos(env, albumId, clienteId, pagina) {
       tamanho: f.size_bytes,
       tipo: tipo,
       favorito: !!f.favorito,
-      previa: tipo === "foto" ? await urlArquivo(env, f.object_key, f.name, false, 3600) : null
+      previa: tipo === "foto" && !semPrevia ? await urlArquivo(env, f.object_key, f.name, false, 3600) : null
     });
   }
   return { total: total.n, bytes: total.bytes, pagina: pagina, por_pagina: POR_PAGINA, arquivos: arquivos };
@@ -145,7 +164,7 @@ export async function tratarPortalDono(request, env, url) {
   const u = await usuarioLogado(request, env);
   if (!u) return resp({ error: "Não autenticado" }, 401);
 
-  const portal = await env.DB.prepare("SELECT id, slug, nome, cor, ramo FROM portais WHERE user_id = ?").bind(u.id).first();
+  const portal = await env.DB.prepare("SELECT id, slug, nome, cor, ramo, instrucoes_pagamento FROM portais WHERE user_id = ?").bind(u.id).first();
 
   if (caminho === "/api/portal" && request.method === "GET") {
     return resp({ portal: portal, plano: await temPlano(env, u.id), tipos: TIPOS_FOTO }, 200);
@@ -166,7 +185,8 @@ export async function tratarPortalDono(request, env, url) {
       "SELECT a.id, a.titulo, a.tipo, a.created_at, a.cliente_id, c.nome AS cliente, " +
       "(SELECT COUNT(*) FROM files f WHERE f.album_id = a.id AND f.status = 'ready') AS arquivos, " +
       "(SELECT COALESCE(SUM(size_bytes), 0) FROM files f WHERE f.album_id = a.id AND f.status = 'ready') AS bytes, " +
-      "(SELECT COUNT(*) FROM favoritos v JOIN files f ON f.id = v.file_id WHERE f.album_id = a.id) AS favoritas " +
+      "(SELECT COUNT(*) FROM favoritos v JOIN files f ON f.id = v.file_id WHERE f.album_id = a.id) AS favoritas, " +
+      "EXISTS (SELECT 1 FROM cobrancas b WHERE b.album_id = a.id AND b.status = 'pendente' AND b.bloqueia_album = 1) AS trancado " +
       "FROM albuns a JOIN portal_clientes c ON c.id = a.cliente_id WHERE a.portal_id = ? ORDER BY a.id DESC"
     ).bind(portal.id).all();
     return resp({ albuns: r.results }, 200);
@@ -189,6 +209,23 @@ export async function tratarPortalDono(request, env, url) {
     const dados = await paginaArquivos(env, album.id, album.cliente_id, pagina);
     dados.album = album;
     return resp(dados, 200);
+  }
+
+  if (caminho === "/api/portal/cobrancas" && request.method === "GET") {
+    if (!portal) return resp({ cobrancas: [], resumo: null }, 200);
+    const r = await env.DB.prepare(
+      "SELECT b.id, b.descricao, b.valor_centavos, b.vencimento, b.link_pagamento, b.bloqueia_album, b.status, b.pago_em, b.created_at, " +
+      "b.cliente_id, c.nome AS cliente, b.album_id, a.titulo AS album " +
+      "FROM cobrancas b JOIN portal_clientes c ON c.id = b.cliente_id LEFT JOIN albuns a ON a.id = b.album_id " +
+      "WHERE b.portal_id = ? ORDER BY CASE b.status WHEN 'pendente' THEN 0 WHEN 'pago' THEN 1 ELSE 2 END, b.id DESC LIMIT 300"
+    ).bind(portal.id).all();
+    const resumo = await env.DB.prepare(
+      "SELECT COALESCE(SUM(CASE WHEN status = 'pendente' THEN valor_centavos END), 0) AS a_receber, " +
+      "COALESCE(SUM(CASE WHEN status = 'pago' AND pago_em >= date('now', 'start of month') THEN valor_centavos END), 0) AS recebido_mes, " +
+      "COALESCE(SUM(CASE WHEN status = 'pendente' AND vencimento IS NOT NULL AND vencimento < date('now') THEN valor_centavos END), 0) AS atrasado " +
+      "FROM cobrancas WHERE portal_id = ?"
+    ).bind(portal.id).first();
+    return resp({ cobrancas: r.results, resumo: resumo }, 200);
   }
 
   if (request.method !== "POST") return resp({ error: "Método não permitido" }, 405);
@@ -218,6 +255,49 @@ export async function tratarPortalDono(request, env, url) {
   }
 
   if (!portal) return resp({ error: "Crie o seu portal primeiro" }, 400);
+
+  if (caminho === "/api/portal/pagamento") {
+    // Como o cliente paga: chave PIX, banco, link fixo... Aparece para o cliente em toda cobrança.
+    const instrucoes = String(corpo.instrucoes || "").replace(/[\u0000-\u0009\u000b-\u001f]/g, " ").trim().slice(0, 500);
+    await env.DB.prepare("UPDATE portais SET instrucoes_pagamento = ? WHERE id = ?").bind(instrucoes || null, portal.id).run();
+    return resp({ ok: true }, 200);
+  }
+
+  if (caminho === "/api/portal/cobrancas/nova") {
+    const cli = await env.DB.prepare("SELECT id FROM portal_clientes WHERE id = ? AND portal_id = ?")
+      .bind(parseInt(corpo.cliente_id, 10) || 0, portal.id).first();
+    if (!cli) return resp({ error: "Escolha o cliente" }, 400);
+    let albumId = null;
+    if (corpo.album_id) {
+      const a = await env.DB.prepare("SELECT id FROM albuns WHERE id = ? AND portal_id = ? AND cliente_id = ?")
+        .bind(parseInt(corpo.album_id, 10) || 0, portal.id, cli.id).first();
+      if (!a) return resp({ error: "Esse álbum não é desse cliente" }, 400);
+      albumId = a.id;
+    }
+    const descricao = texto(corpo.descricao, 120);
+    if (descricao.length < 2) return resp({ error: "Descreva a cobrança (ex.: Saldo do casamento)" }, 400);
+    const valor = paraCentavos(corpo.valor);
+    if (valor === null) return resp({ error: "Valor inválido (entre R$ 1,00 e R$ 100.000,00)" }, 400);
+    const venc = String(corpo.vencimento || "");
+    if (venc && !/^\d{4}-\d{2}-\d{2}$/.test(venc)) return resp({ error: "Data de vencimento inválida" }, 400);
+    const link = String(corpo.link || "").trim();
+    if (link && (!/^https:\/\/[^\s<>"']+$/.test(link) || link.length > 300)) return resp({ error: "O link de pagamento precisa começar com https://" }, 400);
+    if (!link && !portal.instrucoes_pagamento) return resp({ error: "Informe um link de pagamento ou cadastre sua chave PIX em \"Como você recebe\"" }, 400);
+    const r = await env.DB.prepare(
+      "INSERT INTO cobrancas (portal_id, cliente_id, album_id, descricao, valor_centavos, vencimento, link_pagamento, bloqueia_album) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(portal.id, cli.id, albumId, descricao, valor, venc || null, link || null, albumId && corpo.bloqueia_album ? 1 : 0).run();
+    return resp({ ok: true, id: r.meta.last_row_id }, 200);
+  }
+
+  if (caminho === "/api/portal/cobrancas/status") {
+    const status = String(corpo.status || "");
+    if (["pago", "pendente", "cancelado"].indexOf(status) < 0) return resp({ error: "Situação inválida" }, 400);
+    const r = await env.DB.prepare(
+      "UPDATE cobrancas SET status = ?, pago_em = CASE WHEN ? = 'pago' THEN datetime('now') ELSE NULL END WHERE id = ? AND portal_id = ?"
+    ).bind(status, status, parseInt(corpo.id, 10) || 0, portal.id).run();
+    if (!r.meta.changes) return resp({ error: "Cobrança não encontrada" }, 404);
+    return resp({ ok: true }, 200);
+  }
 
   if (caminho === "/api/portal/clientes/novo") {
     const nome = texto(corpo.nome, 80);
@@ -355,13 +435,20 @@ export async function tratarPortalCliente(request, env, url) {
     const r = await env.DB.prepare(
       "SELECT a.id, a.titulo, a.tipo, a.created_at, " +
       "(SELECT COUNT(*) FROM files f WHERE f.album_id = a.id AND f.status = 'ready') AS arquivos, " +
-      "(SELECT COUNT(*) FROM favoritos v JOIN files f ON f.id = v.file_id WHERE f.album_id = a.id AND v.cliente_id = a.cliente_id) AS favoritas " +
+      "(SELECT COUNT(*) FROM favoritos v JOIN files f ON f.id = v.file_id WHERE f.album_id = a.id AND v.cliente_id = a.cliente_id) AS favoritas, " +
+      "EXISTS (SELECT 1 FROM cobrancas b WHERE b.album_id = a.id AND b.status = 'pendente' AND b.bloqueia_album = 1) AS trancado " +
       "FROM albuns a WHERE a.cliente_id = ? ORDER BY a.id DESC"
     ).bind(c.id).all();
+    const cob = await env.DB.prepare(
+      "SELECT b.id, b.descricao, b.valor_centavos, b.vencimento, b.link_pagamento, b.status, b.pago_em, a.titulo AS album " +
+      "FROM cobrancas b LEFT JOIN albuns a ON a.id = b.album_id WHERE b.cliente_id = ? AND b.status != 'cancelado' ORDER BY b.status DESC, b.id DESC"
+    ).bind(c.id).all();
+    const instr = await env.DB.prepare("SELECT instrucoes_pagamento FROM portais WHERE id = ?").bind(c.portal_id).first();
     return resp({
       nome: c.nome,
-      portal: { slug: c.slug, nome: c.portal_nome, cor: c.cor },
-      albuns: r.results
+      portal: { slug: c.slug, nome: c.portal_nome, cor: c.cor, instrucoes_pagamento: instr ? instr.instrucoes_pagamento : null },
+      albuns: r.results,
+      cobrancas: cob.results
     }, 200);
   }
 
@@ -375,16 +462,19 @@ export async function tratarPortalCliente(request, env, url) {
     const album = await albumDoCliente(url.searchParams.get("id"));
     if (!album) return resp({ error: "Álbum não encontrado" }, 404);
     const pagina = Math.max(0, parseInt(url.searchParams.get("pagina"), 10) || 0);
-    const dados = await paginaArquivos(env, album.id, c.id, pagina);
+    const trancado = await albumTrancado(env, album.id);
+    const dados = await paginaArquivos(env, album.id, c.id, pagina, trancado);
     dados.album = album;
+    dados.trancado = trancado;
     return resp(dados, 200);
   }
 
   if (caminho === "/api/p/baixar" && request.method === "GET") {
     const f = await env.DB.prepare(
-      "SELECT f.object_key, f.name FROM files f JOIN albuns a ON a.id = f.album_id WHERE f.id = ? AND a.cliente_id = ? AND f.status = 'ready'"
+      "SELECT f.object_key, f.name, f.album_id FROM files f JOIN albuns a ON a.id = f.album_id WHERE f.id = ? AND a.cliente_id = ? AND f.status = 'ready'"
     ).bind(parseInt(url.searchParams.get("id"), 10) || 0, c.id).first();
     if (!f) return resp({ error: "Arquivo não encontrado" }, 404);
+    if (await albumTrancado(env, f.album_id)) return resp({ error: "Este álbum será liberado assim que o pagamento for confirmado pelo estúdio." }, 402);
     return resp({ url: await urlArquivo(env, f.object_key, f.name, true, 300) }, 200);
   }
 
