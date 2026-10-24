@@ -1,9 +1,25 @@
-import { tratarArquivos } from "./arquivos.js";
+import { tratarArquivos, medirBucket, removerObjeto } from "./arquivos.js";
 const enc = new TextEncoder();
 const DIAS_SESSAO = 30;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 const MAX_TENTATIVAS_2FA = 5;
+const DIAS_PLANO = 30;
+// Backblaze B2 (pague pelo uso): US$ 6,95 por TB a cada 30 dias, primeiros 10 GB grátis.
+// Conferir em backblaze.com/cloud-storage/pricing se o preço mudar.
+const B2_US_POR_TB = 6.95;
+const B2_GRATIS_BYTES = 10e9;
+const DOLAR_RESERVA = 5.5;
+const MINUTOS_LINK_SENHA = 30;
+const MAX_PEDIDOS_SENHA_HORA = 3;
+const REMETENTE = "Master Nuvem <nao-responda@masternuvem.com.br>";
+const SITE = "https://masternuvem.com.br";
+// Limpeza automática (roda de hora em hora pelo Cron). Os Termos prometem 15 dias depois do vencimento.
+const DIAS_GUARDA_APOS_VENCER = 15;
+const DIAS_AVISO_ANTES = 3;
+// Limite de chamadas externas por execução (o plano grátis da Cloudflare permite 50 por vez).
+const MAX_EMAILS_POR_RODADA = 10;
+const MAX_APAGAR_POR_RODADA = 30;
 
 function calcularPreco(gb) {
   var valor;
@@ -192,13 +208,251 @@ function origemOk(request, url) {
   return !o || o === url.origin;
 }
 
+/* ---------- e-mail (Resend) ---------- */
+
+async function enviarEmail(env, para, assunto, html, texto) {
+  if (!env.RESEND_API_KEY) {
+    console.error("RESEND_API_KEY não configurado; e-mail não enviado para", para);
+    return false;
+  }
+  const r = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: REMETENTE, to: [para], subject: assunto, html: html, text: texto })
+  });
+  if (!r.ok) {
+    console.error("Resend recusou o e-mail:", r.status, (await r.text()).slice(0, 300));
+    return false;
+  }
+  return true;
+}
+
+function emailRecuperarSenha(nome, link) {
+  const ola = "Olá" + (nome ? ", " + nome.replace(/[<>&"]/g, "") : "") + "!";
+  const texto = ola + "\n\nRecebemos um pedido para criar uma nova senha na Master Nuvem.\n" +
+    "Abra este link (vale por " + MINUTOS_LINK_SENHA + " minutos e só pode ser usado uma vez):\n\n" + link +
+    "\n\nSe não foi você, ignore este e-mail: sua senha continua a mesma.\n\nMaster Nuvem";
+  const html = "<div style=\"font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#0f172a\">" +
+    "<h2 style=\"color:#0ea5e9\">Master Nuvem</h2><p>" + ola + "</p>" +
+    "<p>Recebemos um pedido para criar uma nova senha na sua conta.</p>" +
+    "<p style=\"margin:28px 0\"><a href=\"" + link + "\" style=\"background:#0ea5e9;color:#fff;padding:12px 22px;border-radius:10px;text-decoration:none;font-weight:bold\">Criar nova senha</a></p>" +
+    "<p style=\"font-size:13px;color:#475569\">O link vale por " + MINUTOS_LINK_SENHA + " minutos e só pode ser usado uma vez.<br>" +
+    "Se não foi você, ignore este e-mail: sua senha continua a mesma.</p></div>";
+  return { html: html, texto: texto };
+}
+
+/* ---------- planos / Mercado Pago ---------- */
+
+async function planoAtual(env, userId) {
+  return await env.DB.prepare(
+    "SELECT id, quota_gb, paid_until FROM subscriptions WHERE user_id = ? AND status = 'active' AND paid_until > datetime('now') ORDER BY id DESC LIMIT 1"
+  ).bind(userId).first();
+}
+
+// Confere a assinatura x-signature do Mercado Pago (só se MP_WEBHOOK_SECRET estiver configurado).
+async function assinaturaMpOk(request, env, dataId) {
+  if (!env.MP_WEBHOOK_SECRET) return true;
+  const cab = request.headers.get("x-signature") || "";
+  let ts = "";
+  let v1 = "";
+  for (const parte of cab.split(",")) {
+    const [k, v] = parte.split("=").map(function (s) { return s.trim(); });
+    if (k === "ts") ts = v || "";
+    if (k === "v1") v1 = v || "";
+  }
+  if (!ts || !v1) return false;
+  const reqId = request.headers.get("x-request-id") || "";
+  let manifesto = "id:" + String(dataId).toLowerCase() + ";";
+  if (reqId) manifesto += "request-id:" + reqId + ";";
+  manifesto += "ts:" + ts + ";";
+  const chave = await crypto.subtle.importKey("raw", enc.encode(env.MP_WEBHOOK_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const esperado = paraHex(await crypto.subtle.sign("HMAC", chave, enc.encode(manifesto)));
+  return iguais(esperado, v1);
+}
+
+// Aplica um pagamento consultado direto na API do Mercado Pago (nunca confia no corpo do aviso).
+async function aplicarPagamento(env, pg) {
+  const subId = parseInt(pg.external_reference, 10);
+  if (!subId) return "sem referência";
+
+  const sub = await env.DB.prepare(
+    "SELECT id, user_id, quota_gb, status, mp_payment_id FROM subscriptions WHERE id = ?"
+  ).bind(subId).first();
+  if (!sub) return "pedido não encontrado";
+
+  const idPg = String(pg.id);
+
+  if (pg.status === "approved") {
+    if (sub.status !== "pending") return "já processado";
+    const valor = Number(pg.transaction_amount || 0);
+    if (pg.currency_id !== "BRL" || valor + 0.01 < calcularPreco(sub.quota_gb)) {
+      console.error("Valor pago não confere", subId, valor, pg.currency_id);
+      return "valor não confere";
+    }
+
+    // Renovação do mesmo tamanho soma os dias que faltam; troca de tamanho começa hoje.
+    const anterior = await planoAtual(env, sub.user_id);
+    const inicio = anterior && anterior.quota_gb === sub.quota_gb ? anterior.paid_until : null;
+
+    const r = await env.DB.prepare(
+      "UPDATE subscriptions SET status = 'active', mp_payment_id = ?, paid_until = datetime(COALESCE(?, datetime('now')), ?) WHERE id = ? AND status = 'pending'"
+    ).bind(idPg, inicio, "+" + DIAS_PLANO + " days", sub.id).run();
+    if (!r.meta.changes) return "já processado";
+
+    await env.DB.prepare(
+      "UPDATE subscriptions SET status = 'replaced' WHERE user_id = ? AND status = 'active' AND id != ?"
+    ).bind(sub.user_id, sub.id).run();
+    return "plano ativado";
+  }
+
+  if ((pg.status === "refunded" || pg.status === "charged_back") && sub.mp_payment_id === idPg) {
+    // paid_until = agora: a contagem dos 15 dias de guarda dos arquivos começa no cancelamento.
+    await env.DB.prepare("UPDATE subscriptions SET status = 'cancelled', paid_until = datetime('now') WHERE id = ?").bind(sub.id).run();
+    return "plano cancelado";
+  }
+
+  return "status " + pg.status;
+}
+
+/* ---------- painel admin ---------- */
+
+async function tratarAdmin(request, env, url) {
+  const caminho = url.pathname;
+  const u = await usuarioLogado(request, env);
+  if (!u) return resposta({ error: "Não autenticado" }, 401);
+  if (u.role !== "admin") return resposta({ error: "Acesso restrito" }, 403);
+
+  if (caminho === "/api/admin/clientes") {
+    const r = await env.DB.prepare(
+      "SELECT u.id, u.email, u.name, u.role, u.created_at, u.totp_enabled, " +
+      "p.quota_gb, p.paid_until, p.mp_payment_id, " +
+      "(SELECT COALESCE(SUM(size_bytes), 0) FROM files f WHERE f.user_id = u.id AND f.status = 'ready') AS usado_bytes, " +
+      "(SELECT COUNT(*) FROM files f WHERE f.user_id = u.id AND f.status = 'ready') AS arquivos, " +
+      "(SELECT MAX(s.paid_until) FROM subscriptions s WHERE s.user_id = u.id AND s.status IN ('active', 'replaced', 'cancelled')) AS fim_plano, " +
+      "datetime((SELECT MAX(s.paid_until) FROM subscriptions s WHERE s.user_id = u.id AND s.status IN ('active', 'replaced', 'cancelled')), '+" + DIAS_GUARDA_APOS_VENCER + " days') AS apaga_em " +
+      "FROM users u LEFT JOIN subscriptions p ON p.id = (" +
+      "SELECT s.id FROM subscriptions s WHERE s.user_id = u.id AND s.status = 'active' AND s.paid_until > datetime('now') ORDER BY s.id DESC LIMIT 1) " +
+      "ORDER BY u.id DESC"
+    ).all();
+    const clientes = r.results.map(function (c) {
+      return {
+        id: c.id,
+        email: c.email,
+        nome: c.name,
+        role: c.role,
+        criado: c.created_at,
+        totp: !!c.totp_enabled,
+        // Pago = tem id numérico de pagamento do Mercado Pago; o resto (manual ou lançado direto no banco) é manual.
+        plano: c.quota_gb ? { quota_gb: c.quota_gb, paid_until: c.paid_until, manual: !/^\d+$/.test(String(c.mp_payment_id || "")) } : null,
+        usado_bytes: c.usado_bytes,
+        arquivos: c.arquivos,
+        fim_plano: c.fim_plano,
+        apaga_em: c.role === "admin" ? null : c.apaga_em
+      };
+    });
+    // Receita mensal estimada: só planos pagos pelo Mercado Pago (manuais não contam).
+    let receita = 0;
+    for (const c of clientes) {
+      if (c.plano && !c.plano.manual) receita += calcularPreco(c.plano.quota_gb);
+    }
+    return resposta({
+      clientes: clientes,
+      receita_mensal: Math.round(receita * 100) / 100,
+      apagar_arquivos: env.APAGAR_ARQUIVOS === "sim"
+    }, 200);
+  }
+
+  if (caminho === "/api/admin/backblaze") {
+    let medida;
+    try {
+      medida = await medirBucket(env);
+    } catch (e) {
+      console.error("Falha ao medir o bucket:", e.message);
+      return resposta({ error: "Não foi possível consultar o Backblaze" }, 502);
+    }
+    const reg = await env.DB.prepare(
+      "SELECT COALESCE(SUM(size_bytes), 0) AS bytes FROM files WHERE status = 'ready'"
+    ).first();
+    const vendido = await env.DB.prepare(
+      "SELECT COALESCE(SUM(quota_gb), 0) AS gb FROM subscriptions WHERE status = 'active' AND paid_until > datetime('now')"
+    ).first();
+
+    // Cotação do dólar (AwesomeAPI); se falhar, usa um valor de reserva.
+    let dolar = DOLAR_RESERVA;
+    let dolarAoVivo = false;
+    try {
+      const c = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL");
+      const v = parseFloat((await c.json()).USDBRL.bid);
+      if (v > 1 && v < 20) { dolar = v; dolarAoVivo = true; }
+    } catch (e) {}
+
+    const cobrado = Math.max(0, medida.bytes - B2_GRATIS_BYTES);
+    const custoUsd = cobrado / 1e12 * B2_US_POR_TB;
+    return resposta({
+      bucket_bytes: medida.bytes,
+      bucket_objetos: medida.objetos,
+      bucket_completo: medida.completo,
+      site_bytes: reg.bytes,
+      vendido_gb: vendido.gb,
+      preco_tb_usd: B2_US_POR_TB,
+      gratis_bytes: B2_GRATIS_BYTES,
+      dolar: Math.round(dolar * 100) / 100,
+      dolar_ao_vivo: dolarAoVivo,
+      custo_usd: Math.round(custoUsd * 100) / 100,
+      custo_brl: Math.round(custoUsd * dolar * 100) / 100,
+      custo_vendido_brl: Math.round(vendido.gb / 1000 * B2_US_POR_TB * dolar * 100) / 100
+    }, 200);
+  }
+
+  if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+  if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
+  const corpo = await lerJson(request);
+  if (!corpo) return resposta({ error: "JSON inválido" }, 400);
+
+  const alvo = await env.DB.prepare("SELECT id FROM users WHERE id = ?").bind(parseInt(corpo.user_id, 10) || 0).first();
+  if (!alvo) return resposta({ error: "Cliente não encontrado" }, 404);
+
+  if (caminho === "/api/admin/plano") {
+    const gb = parseInt(corpo.gb, 10);
+    const dias = parseInt(corpo.dias, 10);
+    if (!gb || gb < 1 || gb > 5000) return resposta({ error: "Quantidade de GB inválida (1 a 5000)" }, 400);
+    if (!dias || dias < 1 || dias > 3650) return resposta({ error: "Dias inválidos (1 a 3650)" }, 400);
+
+    const r = await env.DB.prepare(
+      "INSERT INTO subscriptions (user_id, quota_gb, status, paid_until, mp_payment_id) VALUES (?, ?, 'active', datetime('now', ?), ?)"
+    ).bind(alvo.id, gb, "+" + dias + " days", "manual:" + u.id).run();
+    await env.DB.prepare(
+      "UPDATE subscriptions SET status = 'replaced' WHERE user_id = ? AND status = 'active' AND id != ?"
+    ).bind(alvo.id, r.meta.last_row_id).run();
+    console.log("Admin", u.id, "deu plano", gb, "GB por", dias, "dias ao cliente", alvo.id);
+    return resposta({ ok: true }, 200);
+  }
+
+  if (caminho === "/api/admin/plano/remover") {
+    await env.DB.prepare(
+      "UPDATE subscriptions SET status = 'cancelled', paid_until = MIN(paid_until, datetime('now')) WHERE user_id = ? AND status = 'active'"
+    ).bind(alvo.id).run();
+    console.log("Admin", u.id, "removeu o plano do cliente", alvo.id);
+    return resposta({ ok: true }, 200);
+  }
+
+  return resposta({ error: "Rota não encontrada" }, 404);
+}
+
 async function tratarApi(request, env, url) {
   const caminho = url.pathname;
 
   if (caminho === "/api/me") {
     const u = await usuarioLogado(request, env);
     if (!u) return resposta({ error: "Não autenticado" }, 401);
-    return resposta({ email: u.email, nome: u.name, role: u.role, totp: !!u.totp_enabled }, 200);
+    const plano = await planoAtual(env, u.id);
+    return resposta({
+      email: u.email,
+      nome: u.name,
+      role: u.role,
+      totp: !!u.totp_enabled,
+      plano: plano ? { quota_gb: plano.quota_gb, paid_until: plano.paid_until } : null
+    }, 200);
   }
 
   if (caminho === "/api/register") {
@@ -218,6 +472,9 @@ async function tratarApi(request, env, url) {
     if (senha.length < 8 || senha.length > 100) {
       return resposta({ error: "A senha precisa ter de 8 a 100 caracteres" }, 400);
     }
+    if (corpo.aceite !== true) {
+      return resposta({ error: "Para criar a conta, aceite os Termos de uso e a Política de privacidade." }, 400);
+    }
 
     const salt = new Uint8Array(16);
     crypto.getRandomValues(salt);
@@ -226,7 +483,7 @@ async function tratarApi(request, env, url) {
     let userId;
     try {
       const r = await env.DB.prepare(
-        "INSERT INTO users (email, name, password_hash, password_salt) VALUES (?, ?, ?, ?)"
+        "INSERT INTO users (email, name, password_hash, password_salt, terms_accepted_at) VALUES (?, ?, ?, ?, datetime('now'))"
       ).bind(email, nome, hash, paraHex(salt)).run();
       userId = r.meta.last_row_id;
     } catch (e) {
@@ -272,6 +529,67 @@ async function tratarApi(request, env, url) {
 
     const token = await criarSessao(env, u.id, false);
     return resposta({ ok: true }, 200, cookieSessao(token, DIAS_SESSAO * 86400));
+  }
+
+  if (caminho === "/api/senha/esqueci") {
+    if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+    if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
+
+    const corpo = await lerJson(request);
+    if (!corpo) return resposta({ error: "JSON inválido" }, 400);
+    const email = String(corpo.email || "").trim().toLowerCase();
+
+    // Resposta é sempre a mesma, exista ou não a conta (não revela quem é cliente).
+    const u = EMAIL_OK.test(email) ? await env.DB.prepare("SELECT id, name FROM users WHERE email = ?").bind(email).first() : null;
+    if (u) {
+      const recentes = await env.DB.prepare(
+        "SELECT COUNT(*) AS n FROM password_resets WHERE user_id = ? AND created_at > datetime('now', '-1 hour')"
+      ).bind(u.id).first();
+      if (recentes.n < MAX_PEDIDOS_SENHA_HORA) {
+        const token = novoToken();
+        await env.DB.prepare(
+          "INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, datetime('now', ?))"
+        ).bind(await sha256Hex(token), u.id, "+" + MINUTOS_LINK_SENHA + " minutes").run();
+        const msg = emailRecuperarSenha(u.name, url.origin + "/redefinir?token=" + token);
+        await enviarEmail(env, email, "Criar nova senha - Master Nuvem", msg.html, msg.texto);
+      } else {
+        console.log("Limite de pedidos de senha atingido para o usuário", u.id);
+      }
+    }
+    return resposta({ ok: true }, 200);
+  }
+
+  if (caminho === "/api/senha/redefinir") {
+    if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+    if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
+
+    const corpo = await lerJson(request);
+    if (!corpo) return resposta({ error: "JSON inválido" }, 400);
+    const token = String(corpo.token || "");
+    const senha = String(corpo.senha || "");
+    if (senha.length < 8 || senha.length > 100) {
+      return resposta({ error: "A senha precisa ter de 8 a 100 caracteres" }, 400);
+    }
+    if (!/^[0-9a-f]{64}$/.test(token)) return resposta({ error: "Link inválido ou expirado. Peça um novo." }, 400);
+
+    const h = await sha256Hex(token);
+    // Marca como usado antes de trocar a senha: o mesmo link não funciona duas vezes.
+    const marcado = await env.DB.prepare(
+      "UPDATE password_resets SET used = 1 WHERE token_hash = ? AND used = 0 AND expires_at > datetime('now')"
+    ).bind(h).run();
+    if (!marcado.meta.changes) return resposta({ error: "Link inválido ou expirado. Peça um novo." }, 400);
+    const pedido = await env.DB.prepare("SELECT user_id FROM password_resets WHERE token_hash = ?").bind(h).first();
+
+    const salt = new Uint8Array(16);
+    crypto.getRandomValues(salt);
+    const hash = await derivarSenha(senha, salt);
+    await env.DB.prepare("UPDATE users SET password_hash = ?, password_salt = ? WHERE id = ?")
+      .bind(hash, paraHex(salt), pedido.user_id).run();
+    // Derruba todas as sessões abertas e invalida outros links pendentes.
+    await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(pedido.user_id).run();
+    await env.DB.prepare("UPDATE password_resets SET used = 1 WHERE user_id = ?").bind(pedido.user_id).run();
+    console.log("Senha redefinida pelo link de e-mail, usuário", pedido.user_id);
+    return resposta({ ok: true }, 200);
   }
 
   if (caminho === "/api/login/2fa") {
@@ -385,10 +703,14 @@ async function tratarApi(request, env, url) {
 
   if (caminho === "/api/checkout") {
     if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+    if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
     if (!env.MP_ACCESS_TOKEN) {
       console.error("MP_ACCESS_TOKEN não configurado");
       return resposta({ error: "Configuração ausente" }, 500);
     }
+
+    const u = await usuarioLogado(request, env);
+    if (!u) return resposta({ error: "Entre na sua conta para contratar", login: true }, 401);
 
     const corpo = await lerJson(request);
     if (!corpo) return resposta({ error: "JSON inválido" }, 400);
@@ -399,6 +721,15 @@ async function tratarApi(request, env, url) {
     }
 
     const nome = gb >= 1000 ? (gb / 1000).toFixed(2) + "TB" : gb + "GB";
+
+    // Pedido fica "pending" até o webhook confirmar o pagamento; pedidos abandonados com mais de 2 dias são limpos.
+    await env.DB.prepare(
+      "DELETE FROM subscriptions WHERE user_id = ? AND status = 'pending' AND created_at < datetime('now', '-2 days')"
+    ).bind(u.id).run();
+    const pedido = await env.DB.prepare(
+      "INSERT INTO subscriptions (user_id, quota_gb, status) VALUES (?, ?, 'pending')"
+    ).bind(u.id, gb).run();
+    const pedidoId = pedido.meta.last_row_id;
 
     try {
       const mp = await fetch("https://api.mercadopago.com/checkout/preferences", {
@@ -414,10 +745,13 @@ async function tratarApi(request, env, url) {
             currency_id: "BRL",
             unit_price: calcularPreco(gb)
           }],
+          payer: { email: u.email },
+          external_reference: String(pedidoId),
+          notification_url: url.origin + "/api/mp/webhook",
           back_urls: {
-            success: url.origin + "/?status=ok",
-            failure: url.origin + "/?status=erro",
-            pending: url.origin + "/?status=pendente"
+            success: url.origin + "/painel?pagamento=ok",
+            failure: url.origin + "/painel?pagamento=erro",
+            pending: url.origin + "/painel?pagamento=pendente"
           },
           auto_return: "approved"
         })
@@ -434,13 +768,178 @@ async function tratarApi(request, env, url) {
       return resposta({ error: "Falha ao criar pagamento" }, 502);
     }
   }
+
+  if (caminho === "/api/mp/webhook") {
+    if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+
+    const corpo = (await lerJson(request)) || {};
+    const tipo = url.searchParams.get("type") || url.searchParams.get("topic") || corpo.type || corpo.topic || "";
+    const dataId = url.searchParams.get("data.id") || url.searchParams.get("id") || (corpo.data && corpo.data.id) || "";
+    if (tipo !== "payment" || !/^\d+$/.test(String(dataId))) return resposta({ ok: true }, 200);
+
+    if (!(await assinaturaMpOk(request, env, dataId))) {
+      console.error("Webhook MP com assinatura inválida", dataId);
+      return resposta({ error: "Assinatura inválida" }, 401);
+    }
+
+    const mp = await fetch("https://api.mercadopago.com/v1/payments/" + dataId, {
+      headers: { "Authorization": "Bearer " + env.MP_ACCESS_TOKEN }
+    });
+    if (mp.status === 404) return resposta({ ok: true }, 200);
+    if (!mp.ok) {
+      console.error("Falha ao consultar pagamento", dataId, mp.status);
+      return resposta({ error: "Falha ao consultar pagamento" }, 502);
+    }
+
+    const resultado = await aplicarPagamento(env, await mp.json());
+    console.log("Webhook MP", dataId, resultado);
+    return resposta({ ok: true }, 200);
+  }
+
+  if (caminho.startsWith("/api/admin/")) {
+    return await tratarAdmin(request, env, url);
+  }
+
   if (caminho.startsWith("/api/files")) {
     return await tratarArquivos(request, env, url);
   }
   return resposta({ error: "Rota não encontrada" }, 404);
 }
 
+/* ---------- limpeza automática (Cron de hora em hora) ---------- */
+
+function emailAviso(nome, titulo, paragrafos, botao) {
+  const ola = "Olá" + (nome ? ", " + String(nome).replace(/[<>&"]/g, "") : "") + "!";
+  const texto = ola + "\n\n" + paragrafos.join("\n\n") + "\n\n" + botao.texto + ": " + botao.link + "\n\nMaster Nuvem";
+  const html = "<div style=\"font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#0f172a\">" +
+    "<h2 style=\"color:#0ea5e9\">Master Nuvem</h2><p>" + ola + "</p><p><strong>" + titulo + "</strong></p>" +
+    paragrafos.map(function (p) { return "<p>" + p + "</p>"; }).join("") +
+    "<p style=\"margin:28px 0\"><a href=\"" + botao.link + "\" style=\"background:#0ea5e9;color:#fff;padding:12px 22px;border-radius:10px;text-decoration:none;font-weight:bold\">" + botao.texto + "</a></p></div>";
+  return { html: html, texto: texto };
+}
+
+function dataBr(txt) {
+  const d = String(txt).slice(0, 10).split("-");
+  return d[2] + "/" + d[1] + "/" + d[0];
+}
+
+function espaco(gb) {
+  return gb >= 1000 ? String(+(gb / 1000).toFixed(2)) + " TB" : gb + " GB";
+}
+
+async function limpeza(env) {
+  const relatorio = { avisos: 0, apagados: 0, orfaos: 0, simulados: 0 };
+  // Só apaga arquivos de verdade quando APAGAR_ARQUIVOS = "sim" (variável na Cloudflare). Sem ela, só registra no log.
+  const apagarDeVerdade = env.APAGAR_ARQUIVOS === "sim";
+  let emails = 0;
+  let apagar = 0;
+
+  // 1) Avisos por e-mail. Cada aviso é registrado em "avisos" antes de enviar, para nunca repetir.
+  const tipos = [
+    {
+      tipo: "vence",
+      sql: "s.paid_until > datetime('now') AND s.paid_until <= datetime('now', '+" + DIAS_AVISO_ANTES + " days')",
+      montar: function (s) {
+        return emailAviso(s.name, "Seu plano de " + espaco(s.quota_gb) + " vence em " + dataBr(s.paid_until) + ".",
+          ["Para continuar enviando arquivos sem interrupção, renove antes do vencimento. Renovando o mesmo tamanho, os dias que faltam são somados ao novo período."],
+          { texto: "Renovar meu plano", link: SITE + "/?gb=" + s.quota_gb + "#calculadora" });
+      },
+      assunto: "Seu plano vence em breve - Master Nuvem"
+    },
+    {
+      tipo: "venceu",
+      // Só até começar a janela do "último aviso", para o cliente não receber os dois ao mesmo tempo.
+      sql: "s.paid_until <= datetime('now') AND s.paid_until > datetime('now', '-" + (DIAS_GUARDA_APOS_VENCER - DIAS_AVISO_ANTES) + " days')",
+      montar: function (s) {
+        return emailAviso(s.name, "Seu plano de " + espaco(s.quota_gb) + " venceu em " + dataBr(s.paid_until) + ".",
+          ["O envio de novos arquivos foi bloqueado. Seus arquivos continuam guardados e você ainda pode baixá-los por " + DIAS_GUARDA_APOS_VENCER + " dias.",
+           "Depois disso eles serão apagados definitivamente, conforme os Termos de uso. Renove para não perder nada."],
+          { texto: "Renovar meu plano", link: SITE + "/?gb=" + s.quota_gb + "#calculadora" });
+      },
+      assunto: "Seu plano venceu - Master Nuvem"
+    },
+    {
+      tipo: "ultimo",
+      sql: "s.paid_until <= datetime('now', '-" + (DIAS_GUARDA_APOS_VENCER - DIAS_AVISO_ANTES) + " days') AND s.paid_until > datetime('now', '-" + DIAS_GUARDA_APOS_VENCER + " days') " +
+        "AND EXISTS (SELECT 1 FROM files f WHERE f.user_id = s.user_id)",
+      montar: function (s) {
+        return emailAviso(s.name, "Último aviso: seus arquivos serão apagados em até " + DIAS_AVISO_ANTES + " dias.",
+          ["Seu plano venceu em " + dataBr(s.paid_until) + ". Se não for renovado, os arquivos guardados na Master Nuvem serão apagados definitivamente e não poderão ser recuperados.",
+           "Renove agora ou entre no painel e baixe o que precisar."],
+          { texto: "Renovar ou baixar meus arquivos", link: SITE + "/arquivos" });
+      },
+      assunto: "Último aviso: seus arquivos serão apagados - Master Nuvem"
+    }
+  ];
+
+  for (const t of tipos) {
+    if (emails >= MAX_EMAILS_POR_RODADA) break;
+    const r = await env.DB.prepare(
+      "SELECT s.id, s.quota_gb, s.paid_until, u.email, u.name FROM subscriptions s JOIN users u ON u.id = s.user_id " +
+      "WHERE s.status = 'active' AND " + t.sql + " AND NOT EXISTS (SELECT 1 FROM avisos a WHERE a.sub_id = s.id AND a.tipo = ?) " +
+      "ORDER BY s.paid_until LIMIT ?"
+    ).bind(t.tipo, MAX_EMAILS_POR_RODADA - emails).all();
+    for (const s of r.results) {
+      const marcou = await env.DB.prepare("INSERT OR IGNORE INTO avisos (sub_id, tipo) VALUES (?, ?)").bind(s.id, t.tipo).run();
+      if (!marcou.meta.changes) continue;
+      const msg = t.montar(s);
+      await enviarEmail(env, s.email, t.assunto, msg.html, msg.texto);
+      emails++;
+      relatorio.avisos++;
+    }
+  }
+
+  // 2) Arquivos de quem está sem plano há mais de 15 dias. Admin nunca é apagado.
+  //    "Fim" = maior paid_until entre os planos já pagos/ativos/cancelados (pedidos pendentes não contam).
+  const vencidos = await env.DB.prepare(
+    "SELECT f.id, f.user_id, f.object_key FROM files f JOIN users u ON u.id = f.user_id " +
+    "WHERE u.role != 'admin' " +
+    "AND NOT EXISTS (SELECT 1 FROM subscriptions s WHERE s.user_id = f.user_id AND s.status = 'active' AND s.paid_until > datetime('now')) " +
+    "AND (SELECT MAX(s.paid_until) FROM subscriptions s WHERE s.user_id = f.user_id AND s.status IN ('active', 'replaced', 'cancelled')) " +
+    "< datetime('now', '-" + DIAS_GUARDA_APOS_VENCER + " days') " +
+    "ORDER BY f.id LIMIT ?"
+  ).bind(MAX_APAGAR_POR_RODADA).all();
+  for (const f of vencidos.results) {
+    if (!apagarDeVerdade) {
+      console.log("[modo teste] apagaria o arquivo", f.id, "do usuário", f.user_id);
+      relatorio.simulados++;
+      continue;
+    }
+    const r = await removerObjeto(env, f.object_key);
+    if (!r.ok && r.status !== 404) {
+      console.error("Falha ao apagar no B2", f.id, r.status);
+      continue;
+    }
+    await env.DB.prepare("DELETE FROM files WHERE id = ?").bind(f.id).run();
+    apagar++;
+    relatorio.apagados++;
+  }
+
+  // 3) Envios que ficaram pela metade há mais de 1 dia (sobra no B2 que ninguém usa).
+  const orfaos = await env.DB.prepare(
+    "SELECT id, object_key FROM files WHERE status = 'pending' AND created_at < datetime('now', '-1 day') ORDER BY id LIMIT ?"
+  ).bind(Math.max(0, MAX_APAGAR_POR_RODADA - apagar)).all();
+  for (const f of orfaos.results) {
+    const r = await removerObjeto(env, f.object_key);
+    if (!r.ok && r.status !== 404) continue;
+    await env.DB.prepare("DELETE FROM files WHERE id = ?").bind(f.id).run();
+    relatorio.orfaos++;
+  }
+
+  // 4) Faxina do banco: sessões vencidas, links de senha velhos e pedidos de pagamento abandonados.
+  await env.DB.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')").run();
+  await env.DB.prepare("DELETE FROM password_resets WHERE expires_at < datetime('now', '-1 day')").run();
+  await env.DB.prepare("DELETE FROM subscriptions WHERE status = 'pending' AND created_at < datetime('now', '-2 days')").run();
+
+  console.log("Limpeza:", JSON.stringify(relatorio), apagarDeVerdade ? "" : "(arquivos em modo teste)");
+  return relatorio;
+}
+
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(limpeza(env));
+  },
+
   async fetch(request, env) {
     const url = new URL(request.url);
 

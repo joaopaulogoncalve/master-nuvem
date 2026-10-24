@@ -51,6 +51,11 @@ async function processarPagamento() {
       body: JSON.stringify({ gb: gb })
     });
     var data = await resp.json();
+    if (resp.status === 401 && data.login) {
+      // Precisa de conta: depois do login volta para cá com o mesmo tamanho escolhido.
+      window.location.href = "/entrar?volta=" + encodeURIComponent("/?gb=" + gb + "#calculadora");
+      return;
+    }
     if (data.init_point) {
       window.location.href = data.init_point;
       return;
@@ -69,6 +74,8 @@ function iniciar() {
   var btn = document.getElementById("checkoutBtn");
 
   if (slider) {
+    var gbUrl = parseInt(new URLSearchParams(window.location.search).get("gb"), 10);
+    if (gbUrl >= parseInt(slider.min, 10) && gbUrl <= parseInt(slider.max, 10)) slider.value = gbUrl;
     slider.addEventListener("input", atualizar);
     slider.addEventListener("change", atualizar);
   }
@@ -82,6 +89,17 @@ function iniciar() {
     btn.addEventListener("click", processarPagamento);
   }
   atualizar();
+
+  // Quem já está logado vê "Meu painel" no lugar de "Entrar".
+  var linkConta = document.getElementById("linkConta");
+  if (linkConta) {
+    fetch("/api/me").then(function (r) {
+      if (r.ok) {
+        linkConta.textContent = "Meu painel";
+        linkConta.href = "/painel";
+      }
+    }).catch(function () {});
+  }
 }
 
 if (document.readyState === "loading") {

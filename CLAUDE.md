@@ -25,13 +25,19 @@ Navegador ◄──► Backblaze B2 (S3)   → upload/download DIRETO por URL as
 - `wrangler.jsonc`: nome `master-nuvem`, entrada `src/worker.js`, assets em `./public`, D1 `master-nuvem-db`
   (id `b60c217f-b668-4f05-a94a-ba8a8620f085`), observability ligada.
 - Sem framework, sem build: JS puro nos dois lados. Tailwind via CDN no front.
+- Domínio: **masternuvem.com.br** (Registro.br, DNS na Cloudflare: brit/carlos.ns.cloudflare.com).
+  `masternuvem.com.br` e `www.` ligados ao Worker como Custom Domains pela API em 2026-10-21 (não estão no `wrangler.jsonc`).
+- E-mail: **contato@masternuvem.com.br** → `masternuvem.contato@gmail.com` (Cloudflare Email Routing, só recebe; testado em 2026-10-23).
+  Novos endereços: regra em Email → Email Routing (ou API). Responder como @masternuvem.com.br ainda não está configurado.
 - Deploy: `npx wrangler deploy` (ou integração Git da Cloudflare com o repositório `master-nuvem` no GitHub).
 
 ## 3. Segredos / variáveis (só nomes; valores ficam na Cloudflare → Settings → Variables and Secrets)
 | Nome | Para quê |
 |---|---|
-| `MP_ACCESS_TOKEN` | Token do Mercado Pago (checkout). **O atual é temporário — trocar pelo definitivo.** |
-| `B2_KEY_ID` | ID da chave de aplicação do Backblaze |
+| `MP_ACCESS_TOKEN` | Token do Mercado Pago (checkout e consulta de pagamentos no webhook). **O atual é temporário — trocar pelo definitivo.** |
+| `RESEND_API_KEY` | Envio de e-mail (Resend, remetente `nao-responda@masternuvem.com.br`). Gravar com `scripts\segredo.ps1 -Nome RESEND_API_KEY` |
+| `MP_WEBHOOK_SECRET` | Opcional. Se existir, o webhook exige a assinatura `x-signature` do MP. Só criar depois de confirmar que os avisos chegam assinados (senão nenhum plano ativa). A segurança principal é consultar o pagamento na API. |
+| `B2_KEY_ID` | ID da chave de aplicação do Backblaze (`site-master-nuvem`, só o bucket, Read and Write). A Master Key **não** funciona na API S3. Trocar: `scripts\b2-chave-site.ps1 -KeyId 005...` |
 | `B2_APP_KEY` | Chave secreta do Backblaze |
 | `B2_BUCKET` | `master-nuvem-cliente` (bucket **privado**) |
 | `B2_ENDPOINT` | `s3.us-east-005.backblazeb2.com` (a região é extraída do 2º pedaço do host) |
@@ -55,11 +61,18 @@ Local: usar `.dev.vars` (no `.gitignore`!) para rodar `wrangler dev`. Nunca comm
 | `/api/login` | POST | não | `{email,senha}` → cookie de sessão, ou `{need2fa:true}` com sessão pendente de 10 min |
 | `/api/login/2fa` | POST | sessão pendente | `{codigo}`; máx. 5 tentativas; anti-replay via `totp_last` |
 | `/api/logout` | POST | sim | apaga sessão |
+| `/api/senha/esqueci` | POST | não | `{email}` → sempre `{ok}`; se a conta existe, grava hash do token em `password_resets` (30 min, máx. 3/hora) e manda link `/redefinir?token=` pelo Resend |
+| `/api/senha/redefinir` | POST | token | `{token,senha}` → troca a senha, derruba todas as sessões e invalida outros links |
 | `/api/me` | GET | sim | `{email,nome,role,totp}` |
 | `/api/2fa/setup` | POST | sim | gera segredo e URI `otpauth://` |
 | `/api/2fa/enable` | POST | sim | confirma com 1º código |
 | `/api/2fa/disable` | POST | sim | exige senha + código |
-| `/api/checkout` | POST | **não** | `{gb}` → cria preferência no Mercado Pago, devolve `{init_point}` |
+| `/api/checkout` | POST | sim | `{gb}` → grava pedido `subscriptions` `pending`, cria preferência no MP (`external_reference` = id do pedido, `notification_url` = webhook), devolve `{init_point}`. Sem login: 401 `{login:true}` |
+| `/api/mp/webhook` | POST | não (MP) | Aviso do MP. Consulta o pagamento na API do MP; `approved` + valor certo → plano `active` por 30 dias (mesmo tamanho soma dias; outro tamanho começa hoje; anteriores viram `replaced`). Estorno → `cancelled` |
+| `/api/admin/clientes` | GET | admin | clientes com plano ativo, uso e nº de arquivos + `receita_mensal` estimada (sem planos manuais) |
+| `/api/admin/backblaze` | GET | admin | lista o bucket (S3 ListObjectsV2) e soma bytes; custo B2 (US$ 6,95/TB, 10 GB grátis, constantes no topo do worker) em US$/R$ (dólar AwesomeAPI, reserva 5,5); espaço vendido; diferença bucket × site = objetos órfãos |
+| `/api/admin/plano` | POST | admin | `{user_id,gb,dias}` → plano manual `active` (`mp_payment_id='manual:<adminId>'`); anteriores viram `replaced` |
+| `/api/admin/plano/remover` | POST | admin | `{user_id}` → planos ativos viram `cancelled` (arquivos ficam) |
 | `/api/files` | GET | sim | `{plano,quota_bytes,usado_bytes,max_arquivo,arquivos[]}` |
 | `/api/files/upload-url` | POST | sim | `{name,size}` → registra `pending` e devolve URL PUT assinada (1 h) |
 | `/api/files/complete` | POST | sim | `{id}` → faz HEAD no B2, confere tamanho real/cota, marca `ready` |
@@ -91,14 +104,27 @@ código de 2FA pronto (admin ainda **sem** 2FA ativado); fluxo de arquivos imple
    na API do MP, nunca confiar no corpo), inserir/renovar `subscriptions` (`status='active'`, `paid_until`, `quota_gb`).
 2. **Checkout sem login** — qualquer um gera link; decidir se exige conta antes de pagar (recomendado).
 3. **Renovação/expiração** — mensal? Definir ciclo, aviso de vencimento, e o que acontece com arquivos após `paid_until` (bloqueio de upload já existe; download/retenção não).
-4. **CORS do bucket B2** — upload/download direto do navegador precisa de regra CORS no bucket (origem do site, métodos PUT/GET/HEAD). Conferir se está configurado.
-5. **Painel admin** — existe `role` mas nenhuma rota/tela de admin (listar clientes, planos, uso, conceder plano manual, bloquear).
+4. ~~**CORS do bucket B2**~~ Resolvido em 2026-10-23 com `scripts\b2-cors.ps1` (regra personalizada: PUT/GET/HEAD para masternuvem.com.br, www e workers.dev).
+   **Não salvar nada na tela "Regras do CORS" do Backblaze**: ela só libera download e apaga a regra personalizada.
+   Upload/download testados no site com sucesso.
+   **Ciclo de vida do bucket: "Manter somente a última versão"** (desde 2026-10-23). Antes havia uma regra que ESCONDIA todo arquivo 1 dia após o envio — nunca usar regra com "Dias até ocultar" sem prefixo. Erro de chave no B2 aparece no navegador como "Falha de conexão... CORS".
+5. **Painel admin** — `/admin` (link no painel para `role='admin'`): lista clientes, plano, uso, receita estimada; dar/trocar/remover plano manual.
+   Falta: bloquear conta, apagar cliente, ver arquivos do cliente. Recomendado exigir 2FA para admin.
 6. **Ativar 2FA no admin** antes de vender de verdade.
-7. **Sem recuperação de senha** nem verificação de e-mail; **sem rate-limit** em login/cadastro (só o 2FA tem limite). Considerar Cloudflare Turnstile.
+7. ~~Sem recuperação de senha~~ "Esqueci minha senha" no ar desde 2026-10-23 (Resend, tabela `password_resets` via `migrations/0002`, aplicada com `d1 execute --remote --file`). Sem verificação de e-mail; **sem rate-limit** em login/cadastro (só o 2FA tem limite). Considerar Cloudflare Turnstile.
 8. **Preço duplicado** em `app.js` e `worker.js` (`calcularPreco`). O servidor é a fonte da verdade; manter igual ou expor o preço por endpoint.
 9. Arquivo máx. 4,5 GB (upload simples PUT). Maior que isso exige multipart upload.
 10. Limpeza: registros `pending` antigos só são apagados na próxima tentativa de upload do próprio usuário (e o objeto órfão no B2 não é removido) — criar tarefa agendada (Cron Trigger).
-11. Páginas legais (termos, privacidade/LGPD), política de reembolso, contato/WhatsApp.
+11. `/termos` e `/privacidade` (LGPD) criadas em 2026-10-23: plano de 30 dias sem renovação automática, arquivos guardados
+    **15 dias** após o vencimento e depois podem ser apagados, reembolso só nos 7 dias do CDC, foro Goiânia-GO.
+    Cadastro exige aceite (`users.terms_accepted_at`, `migrations/0003`). Falta: WhatsApp.
+12. **Limpeza automática** (`scheduled` no worker, Cron `0 * * * *`, função `limpeza`): e-mails "vence em 3 dias", "venceu"
+    e "último aviso" (3 dias antes de apagar), registrados em `avisos` (`migrations/0004`) para não repetir; apaga arquivos de
+    quem está sem plano há 15+ dias (nunca admin; "fim" = maior `paid_until` entre active/replaced/cancelled — cancelar grava
+    `paid_until = agora`); apaga envios `pending` com 1+ dia; faxina de sessões, links de senha e pedidos abandonados.
+    **Apagar arquivos de cliente só acontece com a variável `APAGAR_ARQUIVOS = "sim"`**; sem ela fica em modo teste (só log).
+    Limites por rodada: 10 e-mails e 30 exclusões (plano grátis = 50 subrequests).
+    Se mudar regra de cobrança/retenção no código, atualizar os textos também.
 
 **Ideias futuras:** bot de WhatsApp para suporte/venda; "Fase 2" com HD/NAS próprio para baratear; planos pré-definidos além do slider; e-mails transacionais.
 
@@ -116,7 +142,7 @@ código de 2FA pronto (admin ainda **sem** 2FA ativado); fluxo de arquivos imple
 1. ~~Versionar o esquema do D1 (`migrations/`).~~ Feito em 2026-10-21.
 2. Exigir login no checkout + `external_reference` + webhook do Mercado Pago → criar `subscriptions` automaticamente.
 3. Testar compra real de valor mínimo (PIX) ponta a ponta: pagar → plano ativo → enviar arquivo → baixar → apagar.
-4. Conferir CORS do B2; ativar 2FA do admin.
+4. ~~Conferir CORS do B2~~ (feito); ativar 2FA do admin (conta `masternuvem.contato@gmail.com`).
 5. Painel admin básico (clientes, uso, plano manual).
 6. Renovação mensal + avisos; Cron de limpeza.
 7. Termos/Privacidade, recuperação de senha, Turnstile.

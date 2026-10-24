@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Nova senha - Master Nuvem</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
+.glass{background:linear-gradient(160deg,#0c1a3dcc,#07102acc);border:1px solid #1e40af88;box-shadow:0 0 50px #38bdf822;backdrop-filter:blur(10px)}
+.grad{background:linear-gradient(90deg,#38bdf8,#818cf8,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.cta{background:linear-gradient(90deg,#0ea5e9,#6366f1);box-shadow:0 0 30px #38bdf866}
+.cta:hover{filter:brightness(1.15)}
+.cta:disabled{opacity:.6}
+.campo{width:100%;padding:12px 14px;border-radius:12px;background:#0a1633;border:1px solid #1e3a8a;color:#fff;outline:none}
+.campo:focus{border-color:#38bdf8}
+.olho{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:600;color:#93c5fd;padding:6px 8px}
+.olho:hover{color:#fff}
+</style>
+</head>
+<body class="text-white font-sans antialiased min-h-screen flex items-center justify-center px-4">
+
+<main class="glass w-full max-w-md rounded-3xl p-8">
+  <a href="/" class="block text-center font-bold text-2xl mb-6">Master<span class="grad">Nuvem</span></a>
+
+  <div id="etapaForm">
+    <h1 class="text-lg font-bold text-center mb-2">Criar nova senha</h1>
+    <p class="text-sm text-slate-400 text-center mb-5">Escolha uma senha nova com pelo menos 8 caracteres.</p>
+    <form id="formulario" class="space-y-4">
+      <div>
+        <label for="senha" class="text-sm text-slate-300">Nova senha</label>
+        <div class="relative mt-1">
+          <input id="senha" type="password" class="campo" style="padding-right:84px" autocomplete="new-password" minlength="8" maxlength="100" required>
+          <button type="button" id="olho" class="olho" aria-label="Mostrar ou ocultar a senha">Mostrar</button>
+        </div>
+      </div>
+      <div>
+        <label for="senha2" class="text-sm text-slate-300">Repita a nova senha</label>
+        <input id="senha2" type="password" class="campo mt-1" autocomplete="new-password" minlength="8" maxlength="100" required>
+      </div>
+      <p id="erro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+      <button type="submit" id="botao" class="cta w-full font-bold py-3 rounded-xl transition">Salvar nova senha</button>
+    </form>
+  </div>
+
+  <div id="etapaOk" class="hidden text-center space-y-4">
+    <p class="text-emerald-300 font-semibold">Senha alterada!</p>
+    <p class="text-sm text-slate-400">Por segurança, saímos da sua conta em todos os aparelhos. Entre de novo com a senha nova.</p>
+    <a href="/entrar" class="cta inline-block font-bold px-6 py-3 rounded-xl transition">Entrar</a>
+  </div>
+
+  <div id="etapaSemLink" class="hidden text-center space-y-4">
+    <p class="text-red-300 font-semibold">Link inválido.</p>
+    <p class="text-sm text-slate-400">Abra o link que chegou no seu e-mail, ou peça um novo em "Esqueci minha senha".</p>
+    <a href="/entrar" class="cta inline-block font-bold px-6 py-3 rounded-xl transition">Ir para o login</a>
+  </div>
+</main>
+
+<script>
+var token = new URLSearchParams(window.location.search).get("token") || "";
+// Tira o token da barra de endereço (não fica no histórico nem em print de tela).
+if (token) history.replaceState(null, "", "/redefinir");
+if (!/^[0-9a-f]{64}$/.test(token)) {
+  document.getElementById("etapaForm").classList.add("hidden");
+  document.getElementById("etapaSemLink").classList.remove("hidden");
+}
+
+document.getElementById("olho").addEventListener("click", function () {
+  var campo = document.getElementById("senha");
+  var visivel = campo.type === "text";
+  campo.type = visivel ? "password" : "text";
+  this.textContent = visivel ? "Mostrar" : "Ocultar";
+});
+
+document.getElementById("formulario").addEventListener("submit", async function (ev) {
+  ev.preventDefault();
+  var erro = document.getElementById("erro");
+  var botao = document.getElementById("botao");
+  var senha = document.getElementById("senha").value;
+  erro.textContent = "";
+  if (senha !== document.getElementById("senha2").value) {
+    erro.textContent = "As duas senhas não são iguais.";
+    return;
+  }
+  botao.disabled = true;
+  try {
+    var resp = await fetch("/api/senha/redefinir", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: token, senha: senha })
+    });
+    var json = await resp.json();
+    if (resp.ok) {
+      document.getElementById("etapaForm").classList.add("hidden");
+      document.getElementById("etapaOk").classList.remove("hidden");
+      return;
+    }
+    erro.textContent = json.error || "Não foi possível alterar a senha.";
+  } catch (e) {
+    erro.textContent = "Erro de conexão. Tente novamente.";
+  }
+  botao.disabled = false;
+});
+</script>
+</body>
+</html>
