@@ -144,6 +144,12 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
         </div>
         <button type="button" id="checkoutBtn" class="cta w-full sm:w-auto font-bold px-8 py-3.5 rounded-xl transition active:scale-95">Pagar com PIX ou cartão</button>
       </div>
+      <div class="flex flex-wrap items-center justify-end gap-2 mt-4">
+        <span class="text-sm text-slate-400">Tem cupom?</span>
+        <input id="cupomCalc" class="campo uppercase" style="max-width:190px;padding:9px 12px" maxlength="30" placeholder="Digite o cupom" autocomplete="off">
+        <button type="button" id="btnCupomCalc" class="font-semibold text-sm text-cyan-200 border border-cyan-400/50 px-4 py-2.5 rounded-xl hover:bg-cyan-500/10">Aplicar</button>
+      </div>
+      <p id="erroCupomCalc" class="text-sm text-red-400 text-right min-h-[1.25rem]"></p>
       <p class="text-xs text-slate-500 mt-4">Pagamento seguro pelo Mercado Pago. O plano ativa sozinho assim que o pagamento é aprovado.</p>
     </div>
   </div>
@@ -276,17 +282,22 @@ document.getElementById("linkCupom").addEventListener("click", function () {
   document.getElementById("cupom").focus();
 });
 
-async function usarCupom(codigo, botao) {
-  var erro = document.getElementById("erroCupom");
+async function usarCupom(codigo, botao, idErro) {
+  var erro = document.getElementById(idErro || "erroCupom");
   erro.textContent = "";
   botao.disabled = true;
   var r = await postar("/api/cupom", { codigo: codigo });
   botao.disabled = false;
   if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível ativar."; return; }
+  // Cupom de preço: vai direto para o pagamento no Mercado Pago.
+  if (r.dados.init_point) { window.location.href = r.dados.init_point; return; }
   window.location.href = "/painel";
 }
 document.getElementById("btnTesteGratis").addEventListener("click", function () { usarCupom("NUVEM1DIA", this); });
 document.getElementById("btnCupom").addEventListener("click", function () { usarCupom(document.getElementById("cupom").value, this); });
+// Cupom ao lado do botão de pagar: cupom de preço vai para o pagamento; cupom de teste ativa o teste.
+document.getElementById("btnCupomCalc").addEventListener("click", function () { usarCupom(document.getElementById("cupomCalc").value, this, "erroCupomCalc"); });
+document.getElementById("cupomCalc").addEventListener("keydown", function (e) { if (e.key === "Enter") document.getElementById("btnCupomCalc").click(); });
 
 /* ---------- carregar ---------- */
 
@@ -354,5 +365,6 @@ document.getElementById("sair").addEventListener("click", function () {
 });
 </script>
 <script src="/app.js"></script>
+<script src="/assistente.js" defer></script>
 </body>
 </html>

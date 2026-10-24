@@ -177,6 +177,10 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
    receita; não recebe aviso "vence em breve"). Admin: `/api/admin/cupons`, `/cupons/salvar`, `/cupons/ativo` + seção no `/admin`.
    Painel: campo "Tem um cupom?"; link de divulgação `masternuvem.com.br/painel?cupom=NUVEM1DIA` (passa pelo login e já preenche).
    Cupom criado em produção: **NUVEM1DIA = 20 MB por 24 horas, sem limite de usos**.
+   **Cupom de preço (2026-10-24, `migrations/0009_cupom_preco.sql`)**: `cupons.preco_centavos` + `so_user_id`; o cupom leva ao
+   pagamento de quota_mb (≥ 1 GB) por esse preço (função `criarPagamento`, reaproveitada pelo `/api/checkout`).
+   `subscriptions.valor_centavos` guarda o valor cobrado e o webhook confere contra ele (pedidos antigos: preço da calculadora).
+   Criado `PIX1REAL` = 1 GB por R$ 1,00, 1 uso, só para a conta de teste do João (para testar o PIX real).
    **Acesso livre × cobrar + tabela de preços — 2026-10-24** (`migrations/0008_tabela_precos.sql`): `portais.cobrar` (0 = acesso
    livre: nada tranca e o cliente não vê cobranças; 1 = usa a central), tabela `precos` (nome, unidade foto/edicao/video/minuto/
    hora/pacote/km, valor), `cobrancas.itens` (JSON com cópia do preço). `/api/portal/precos/salvar|remover`; `/cobrancas/nova`
@@ -185,6 +189,13 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
    foto definido pelo fotógrafo com desconto por quantidade, paga e baixa sem marca d'água. Prévia com marca d'água (logo do
    fotógrafo) gerada no navegador do fotógrafo ao enviar (canvas), original só depois de pago. QR code/aviso de direitos autorais
    na marca d'água ajuda como aviso, mas NÃO impede uma IA de remover a marca — a proteção real é só entregar o original após pagar.
+   **Assistente "Nuvem" (chat) — 2026-10-24** (`migrations/0010_assistente.sql`, `public/assistente.js`): botão flutuante com o
+   mascote em quase todas as páginas (não no admin nem no portal do fotógrafo). Respostas da tabela `faq` (29 iniciais; busca por
+   `palavras` sem acento, no navegador). Toda pergunta vai para `perguntas_chat` (faq_id NULL = não soube; guardadas 180 dias);
+   o que não souber vira chamado (`chamados`) com e-mail para contato@ e confirmação para a pessoa; prazo prometido: 48 horas.
+   Limite por IP (hash do dia) em `assistente_limite`: 40 perguntas e 3 chamados por hora. Admin: seção "Assistente" no /admin
+   (chamados, perguntas sem resposta com "Ensinar resposta", editar/desligar respostas). Rotas `/api/assistente/*` e
+   `/api/admin/assistente|faq/salvar|faq/remover|chamados/status`. Painel: campo de cupom também ao lado do "Pagar".
    **Ideias do João para o Portal (2026-10-24, ainda não feitas):**
    - v1.1: seleção "Para o álbum impresso" com limite do pacote (ex.: 32/60), prévia em páginas duplas, "enviar seleção"
      (trava); botão "Pedir edição" por foto com comentário e status "feito".

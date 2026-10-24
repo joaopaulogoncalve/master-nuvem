@@ -277,7 +277,7 @@ async function aplicarPagamento(env, pg) {
   if (!subId) return "sem referência";
 
   const sub = await env.DB.prepare(
-    "SELECT id, user_id, quota_gb, status, mp_payment_id FROM subscriptions WHERE id = ?"
+    "SELECT id, user_id, quota_gb, status, mp_payment_id, valor_centavos FROM subscriptions WHERE id = ?"
   ).bind(subId).first();
   if (!sub) return "pedido não encontrado";
 
@@ -286,7 +286,9 @@ async function aplicarPagamento(env, pg) {
   if (pg.status === "approved") {
     if (sub.status !== "pending") return "já processado";
     const valor = Number(pg.transaction_amount || 0);
-    if (pg.currency_id !== "BRL" || valor + 0.01 < calcularPreco(sub.quota_gb)) {
+    // Pedidos novos guardam o valor cobrado (pode ter cupom); pedidos antigos usam o preço da calculadora.
+    const esperado = sub.valor_centavos !== null && sub.valor_centavos !== undefined ? sub.valor_centavos / 100 : calcularPreco(sub.quota_gb);
+    if (pg.currency_id !== "BRL" || valor + 0.01 < esperado) {
       console.error("Valor pago não confere", subId, valor, pg.currency_id);
       return "valor não confere";
     }
@@ -363,9 +365,32 @@ async function tratarAdmin(request, env, url) {
     }, 200);
   }
 
+  if (caminho === "/api/admin/assistente" && request.method === "GET") {
+    const faq = await env.DB.prepare(
+      "SELECT f.id, f.pergunta, f.palavras, f.resposta, f.ordem, f.ativo, " +
+      "(SELECT COUNT(*) FROM perguntas_chat p WHERE p.faq_id = f.id AND p.created_at > datetime('now', '-30 days')) AS usos_30d " +
+      "FROM faq f ORDER BY f.ordem, f.id"
+    ).all();
+    // Perguntas que a nuvem não soube responder (agrupadas pelo texto), dos últimos 30 dias.
+    const sem = await env.DB.prepare(
+      "SELECT LOWER(texto) AS texto, COUNT(*) AS vezes, MAX(created_at) AS ultima FROM perguntas_chat " +
+      "WHERE faq_id IS NULL AND created_at > datetime('now', '-30 days') GROUP BY LOWER(texto) ORDER BY vezes DESC, ultima DESC LIMIT 50"
+    ).all();
+    const chamados = await env.DB.prepare(
+      "SELECT id, nome, email, mensagem, pagina, status, created_at, resolvido_em FROM chamados " +
+      "ORDER BY CASE status WHEN 'aberto' THEN 0 ELSE 1 END, id DESC LIMIT 100"
+    ).all();
+    const total = await env.DB.prepare(
+      "SELECT COUNT(*) AS perguntas, COALESCE(SUM(CASE WHEN faq_id IS NOT NULL THEN 1 ELSE 0 END), 0) AS respondidas " +
+      "FROM perguntas_chat WHERE created_at > datetime('now', '-30 days')"
+    ).first();
+    return resposta({ faq: faq.results, sem_resposta: sem.results, chamados: chamados.results, total: total }, 200);
+  }
+
   if (caminho === "/api/admin/cupons" && request.method === "GET") {
     const r = await env.DB.prepare(
-      "SELECT codigo, quota_mb, horas, max_usos, usos, valido_ate, ativo, created_at FROM cupons ORDER BY created_at DESC"
+      "SELECT c.codigo, c.quota_mb, c.horas, c.max_usos, c.usos, c.valido_ate, c.ativo, c.created_at, c.preco_centavos, u.email AS so_email " +
+      "FROM cupons c LEFT JOIN users u ON u.id = c.so_user_id ORDER BY c.created_at DESC"
     ).all();
     return resposta({ cupons: r.results }, 200);
   }
@@ -417,6 +442,41 @@ async function tratarAdmin(request, env, url) {
   const corpo = await lerJson(request);
   if (!corpo) return resposta({ error: "JSON inválido" }, 400);
 
+  if (caminho === "/api/admin/faq/salvar") {
+    const pergunta = limparTexto(corpo.pergunta, 150);
+    const resp = String(corpo.resposta || "").replace(/[\u0000-\u0009\u000b-\u001f]/g, " ").trim().slice(0, 1500);
+    // Palavras-chave: sem acento, minúsculas, separadas por vírgula.
+    const palavras = String(corpo.palavras || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+      .split(",").map(function (p) { return p.trim(); }).filter(function (p) { return p.length > 1; }).slice(0, 40).join(", ");
+    const ordem = parseInt(corpo.ordem, 10) || 100;
+    if (pergunta.length < 3) return resposta({ error: "Escreva a pergunta" }, 400);
+    if (resp.length < 3) return resposta({ error: "Escreva a resposta" }, 400);
+    if (!palavras) return resposta({ error: "Coloque palavras-chave separadas por vírgula" }, 400);
+    const id = parseInt(corpo.id, 10) || 0;
+    if (id) {
+      const r = await env.DB.prepare("UPDATE faq SET pergunta = ?, palavras = ?, resposta = ?, ordem = ?, ativo = ? WHERE id = ?")
+        .bind(pergunta, palavras, resp, ordem, corpo.ativo === false ? 0 : 1, id).run();
+      if (!r.meta.changes) return resposta({ error: "Pergunta não encontrada" }, 404);
+    } else {
+      await env.DB.prepare("INSERT INTO faq (pergunta, palavras, resposta, ordem) VALUES (?, ?, ?, ?)").bind(pergunta, palavras, resp, ordem).run();
+    }
+    return resposta({ ok: true }, 200);
+  }
+
+  if (caminho === "/api/admin/faq/remover") {
+    await env.DB.prepare("DELETE FROM faq WHERE id = ?").bind(parseInt(corpo.id, 10) || 0).run();
+    return resposta({ ok: true }, 200);
+  }
+
+  if (caminho === "/api/admin/chamados/status") {
+    const status = corpo.status === "resolvido" ? "resolvido" : "aberto";
+    const r = await env.DB.prepare(
+      "UPDATE chamados SET status = ?, resolvido_em = CASE WHEN ? = 'resolvido' THEN datetime('now') ELSE NULL END WHERE id = ?"
+    ).bind(status, status, parseInt(corpo.id, 10) || 0).run();
+    if (!r.meta.changes) return resposta({ error: "Chamado não encontrado" }, 404);
+    return resposta({ ok: true }, 200);
+  }
+
   if (caminho === "/api/admin/cupons/salvar") {
     const codigo = String(corpo.codigo || "").trim().toUpperCase();
     const mb = parseInt(corpo.quota_mb, 10);
@@ -428,10 +488,26 @@ async function tratarAdmin(request, env, url) {
     if (!horas || horas < 1 || horas > 24 * 90) return resposta({ error: "Duração inválida (1 hora a 90 dias)" }, 400);
     if (max !== null && (!max || max < 1)) return resposta({ error: "Limite de usos inválido" }, 400);
     if (ate && !/^\d{4}-\d{2}-\d{2}$/.test(ate)) return resposta({ error: "Data inválida" }, 400);
+    // Preço fixo (opcional): vira cupom de pagamento (ex.: 1000 MB por R$ 1,00) em vez de teste grátis.
+    let preco = null;
+    const precoTxt = String(corpo.preco || "").trim().replace(/^R\$\s*/i, "").replace(/\./g, "").replace(",", ".");
+    if (precoTxt) {
+      preco = Math.round(parseFloat(precoTxt) * 100);
+      if (!(preco >= 100 && preco <= 10000000)) return resposta({ error: "Preço inválido (mínimo R$ 1,00)" }, 400);
+      if (mb < 1000) return resposta({ error: "Cupom com preço precisa ser de pelo menos 1000 MB (1 GB)" }, 400);
+    }
+    let soUser = null;
+    const soEmail = String(corpo.so_email || "").trim().toLowerCase();
+    if (soEmail) {
+      const dono = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(soEmail).first();
+      if (!dono) return resposta({ error: "Nenhuma conta com esse e-mail" }, 400);
+      soUser = dono.id;
+    }
     await env.DB.prepare(
-      "INSERT INTO cupons (codigo, quota_mb, horas, max_usos, valido_ate, ativo) VALUES (?, ?, ?, ?, ?, 1) " +
-      "ON CONFLICT(codigo) DO UPDATE SET quota_mb = excluded.quota_mb, horas = excluded.horas, max_usos = excluded.max_usos, valido_ate = excluded.valido_ate"
-    ).bind(codigo, mb, horas, max, ate || null).run();
+      "INSERT INTO cupons (codigo, quota_mb, horas, max_usos, valido_ate, ativo, preco_centavos, so_user_id) VALUES (?, ?, ?, ?, ?, 1, ?, ?) " +
+      "ON CONFLICT(codigo) DO UPDATE SET quota_mb = excluded.quota_mb, horas = excluded.horas, max_usos = excluded.max_usos, " +
+      "valido_ate = excluded.valido_ate, preco_centavos = excluded.preco_centavos, so_user_id = excluded.so_user_id"
+    ).bind(codigo, mb, horas, max, ate || null, preco, soUser).run();
     return resposta({ ok: true }, 200);
   }
 
@@ -470,6 +546,143 @@ async function tratarAdmin(request, env, url) {
   }
 
   return resposta({ error: "Rota não encontrada" }, 404);
+}
+
+/* ---------- assistente (chat da nuvenzinha) ---------- */
+
+const EMAIL_SUPORTE = "contato@masternuvem.com.br";
+const PRAZO_CHAMADO = "48 horas";
+const MAX_PERGUNTAS_HORA = 40;
+const MAX_CHAMADOS_HORA = 3;
+
+// Limite por IP (só o hash do IP do dia fica guardado). Devolve false se passou do limite.
+async function dentroDoLimite(env, request, tipo, maximo) {
+  const ip = request.headers.get("CF-Connecting-IP") || "desconhecido";
+  const chave = await sha256Hex(ip + "|" + new Date().toISOString().slice(0, 10));
+  const n = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM assistente_limite WHERE chave = ? AND tipo = ? AND created_at > datetime('now', '-1 hour')"
+  ).bind(chave, tipo).first();
+  if (n.n >= maximo) return false;
+  await env.DB.prepare("INSERT INTO assistente_limite (chave, tipo) VALUES (?, ?)").bind(chave, tipo).run();
+  return true;
+}
+
+function limparTexto(v, max) {
+  return String(v || "").replace(/[\u0000-\u0009\u000b-\u001f]/g, " ").trim().slice(0, max);
+}
+
+function escaparHtml(t) {
+  return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+async function tratarAssistente(request, env, url) {
+  const caminho = url.pathname;
+
+  if (caminho === "/api/assistente/faq" && request.method === "GET") {
+    const r = await env.DB.prepare("SELECT id, pergunta, palavras, resposta FROM faq WHERE ativo = 1 ORDER BY ordem, id").all();
+    return new Response(JSON.stringify({ faq: r.results, prazo: PRAZO_CHAMADO, email: EMAIL_SUPORTE }), {
+      status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=300" }
+    });
+  }
+
+  if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+  if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
+  const corpo = await lerJson(request);
+  if (!corpo) return resposta({ error: "JSON inválido" }, 400);
+
+  // Guarda o que perguntaram (e se a nuvem achou resposta) para o João ensinar respostas novas.
+  if (caminho === "/api/assistente/pergunta") {
+    const texto = limparTexto(corpo.texto, 300);
+    if (texto.length < 2) return resposta({ ok: true }, 200);
+    if (!(await dentroDoLimite(env, request, "pergunta", MAX_PERGUNTAS_HORA))) return resposta({ ok: true }, 200);
+    const faqId = parseInt(corpo.faq_id, 10) || null;
+    const existe = faqId ? await env.DB.prepare("SELECT id FROM faq WHERE id = ?").bind(faqId).first() : null;
+    await env.DB.prepare("INSERT INTO perguntas_chat (texto, faq_id) VALUES (?, ?)").bind(texto, existe ? existe.id : null).run();
+    return resposta({ ok: true }, 200);
+  }
+
+  if (caminho === "/api/assistente/chamado") {
+    const nome = limparTexto(corpo.nome, 80);
+    const email = String(corpo.email || "").trim().toLowerCase();
+    const mensagem = String(corpo.mensagem || "").replace(/[\u0000-\u0009\u000b-\u001f]/g, " ").trim().slice(0, 2000);
+    const pagina = limparTexto(corpo.pagina, 100);
+    if (nome.length < 2) return resposta({ error: "Digite seu nome" }, 400);
+    if (!EMAIL_OK.test(email) || email.length > 120) return resposta({ error: "E-mail inválido" }, 400);
+    if (mensagem.length < 5) return resposta({ error: "Conte um pouco mais sobre a sua dúvida" }, 400);
+    if (!(await dentroDoLimite(env, request, "chamado", MAX_CHAMADOS_HORA))) {
+      return resposta({ error: "Muitos chamados em pouco tempo. Tente de novo mais tarde ou escreva para " + EMAIL_SUPORTE }, 429);
+    }
+    const u = await usuarioLogado(request, env);
+    const r = await env.DB.prepare(
+      "INSERT INTO chamados (nome, email, mensagem, pagina, user_id) VALUES (?, ?, ?, ?, ?)"
+    ).bind(nome, email, mensagem, pagina || null, u ? u.id : null).run();
+    const protocolo = r.meta.last_row_id;
+
+    // Aviso para o suporte (contato@ cai no Gmail da empresa) e confirmação para a pessoa.
+    const corpoSuporte = "<p><strong>Chamado nº " + protocolo + "</strong></p><p>Nome: " + escaparHtml(nome) + "<br>E-mail: " + escaparHtml(email) +
+      "<br>Página: " + escaparHtml(pagina || "-") + (u ? "<br>Conta: " + escaparHtml(u.email) : "<br>Conta: (não estava logado)") +
+      "</p><p style=\"white-space:pre-line\">" + escaparHtml(mensagem) + "</p>";
+    await enviarEmail(env, EMAIL_SUPORTE, "Chamado nº " + protocolo + " - " + nome, corpoSuporte,
+      "Chamado nº " + protocolo + "\nNome: " + nome + "\nE-mail: " + email + "\nPágina: " + (pagina || "-") + "\n\n" + mensagem);
+    const conf = emailAviso(nome.split(" ")[0], "Recebemos o seu chamado nº " + protocolo + ".",
+      ["Vamos responder neste e-mail em até " + PRAZO_CHAMADO + ".", "Sua mensagem: \"" + escaparHtml(mensagem.slice(0, 500)) + "\""],
+      { texto: "Voltar para a Master Nuvem", link: SITE });
+    await enviarEmail(env, email, "Recebemos seu chamado nº " + protocolo + " - Master Nuvem", conf.html, conf.texto);
+    return resposta({ ok: true, protocolo: protocolo, prazo: PRAZO_CHAMADO }, 200);
+  }
+
+  return resposta({ error: "Rota não encontrada" }, 404);
+}
+
+// Cria o pedido "pending" (com o valor cobrado) e o link de pagamento no Mercado Pago.
+async function criarPagamento(env, url, u, gb, precoCentavos) {
+  const nome = gb >= 1000 ? (gb / 1000).toFixed(2) + "TB" : gb + "GB";
+
+  // Pedido fica "pending" até o webhook confirmar o pagamento; pedidos abandonados com mais de 2 dias são limpos.
+  await env.DB.prepare(
+    "DELETE FROM subscriptions WHERE user_id = ? AND status = 'pending' AND created_at < datetime('now', '-2 days')"
+  ).bind(u.id).run();
+  const pedido = await env.DB.prepare(
+    "INSERT INTO subscriptions (user_id, quota_gb, status, valor_centavos) VALUES (?, ?, 'pending', ?)"
+  ).bind(u.id, gb, precoCentavos).run();
+  const pedidoId = pedido.meta.last_row_id;
+
+  try {
+    const mp = await fetch("https://api.mercadopago.com/checkout/preferences", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + env.MP_ACCESS_TOKEN,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        items: [{
+          title: "Master Nuvem - " + nome + " Armazenamento",
+          quantity: 1,
+          currency_id: "BRL",
+          unit_price: precoCentavos / 100
+        }],
+        payer: { email: u.email },
+        external_reference: String(pedidoId),
+        notification_url: url.origin + "/api/mp/webhook",
+        back_urls: {
+          success: url.origin + "/painel?pagamento=ok",
+          failure: url.origin + "/painel?pagamento=erro",
+          pending: url.origin + "/painel?pagamento=pendente"
+        },
+        auto_return: "approved"
+      })
+    });
+
+    const dados = await mp.json();
+    if (!dados.init_point) {
+      console.error("Mercado Pago recusou:", JSON.stringify(dados));
+      return resposta({ error: "Falha ao criar pagamento" }, 502);
+    }
+    return resposta({ init_point: dados.init_point }, 200);
+  } catch (e) {
+    console.error("Erro ao chamar Mercado Pago:", e.message);
+    return resposta({ error: "Falha ao criar pagamento" }, 502);
+  }
 }
 
 async function tratarApi(request, env, url) {
@@ -745,11 +958,21 @@ async function tratarApi(request, env, url) {
     const codigo = String(corpo.codigo || "").trim().toUpperCase().replace(/\s+/g, "");
     const cupom = /^[A-Z0-9_-]{3,30}$/.test(codigo)
       ? await env.DB.prepare(
-          "SELECT codigo, quota_mb, horas FROM cupons WHERE codigo = ? AND ativo = 1 " +
+          "SELECT codigo, quota_mb, horas, preco_centavos, so_user_id FROM cupons WHERE codigo = ? AND ativo = 1 " +
           "AND (valido_ate IS NULL OR valido_ate >= date('now', '-3 hours')) AND (max_usos IS NULL OR usos < max_usos)"
         ).bind(codigo).first()
       : null;
-    if (!cupom) return resposta({ error: "Cupom inválido ou esgotado" }, 400);
+    if (!cupom || (cupom.so_user_id && cupom.so_user_id !== u.id)) return resposta({ error: "Cupom inválido ou esgotado" }, 400);
+
+    // Cupom de preço: leva ao pagamento do plano de quota_mb por preco_centavos (ex.: 1 GB por R$ 1,00).
+    if (cupom.preco_centavos !== null && cupom.preco_centavos !== undefined) {
+      if (!env.MP_ACCESS_TOKEN) return resposta({ error: "Configuração ausente" }, 500);
+      const gbCupom = Math.max(1, Math.round(cupom.quota_mb / 1000));
+      await env.DB.prepare("UPDATE cupons SET usos = usos + 1 WHERE codigo = ?").bind(cupom.codigo).run();
+      console.log("Cupom de preço", cupom.codigo, "usado pelo usuário", u.id);
+      return await criarPagamento(env, url, u, gbCupom, cupom.preco_centavos);
+    }
+
     if (await planoAtual(env, u.id)) return resposta({ error: "Você já tem um plano ativo. O cupom é para quem ainda não tem plano." }, 400);
 
     // Registra o uso primeiro (chave = user_id): a mesma conta não usa dois cupons, nem clicando duas vezes.
@@ -782,53 +1005,7 @@ async function tratarApi(request, env, url) {
       return resposta({ error: "Quantidade inválida" }, 400);
     }
 
-    const nome = gb >= 1000 ? (gb / 1000).toFixed(2) + "TB" : gb + "GB";
-
-    // Pedido fica "pending" até o webhook confirmar o pagamento; pedidos abandonados com mais de 2 dias são limpos.
-    await env.DB.prepare(
-      "DELETE FROM subscriptions WHERE user_id = ? AND status = 'pending' AND created_at < datetime('now', '-2 days')"
-    ).bind(u.id).run();
-    const pedido = await env.DB.prepare(
-      "INSERT INTO subscriptions (user_id, quota_gb, status) VALUES (?, ?, 'pending')"
-    ).bind(u.id, gb).run();
-    const pedidoId = pedido.meta.last_row_id;
-
-    try {
-      const mp = await fetch("https://api.mercadopago.com/checkout/preferences", {
-        method: "POST",
-        headers: {
-          "Authorization": "Bearer " + env.MP_ACCESS_TOKEN,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          items: [{
-            title: "Master Nuvem - " + nome + " Armazenamento",
-            quantity: 1,
-            currency_id: "BRL",
-            unit_price: calcularPreco(gb)
-          }],
-          payer: { email: u.email },
-          external_reference: String(pedidoId),
-          notification_url: url.origin + "/api/mp/webhook",
-          back_urls: {
-            success: url.origin + "/painel?pagamento=ok",
-            failure: url.origin + "/painel?pagamento=erro",
-            pending: url.origin + "/painel?pagamento=pendente"
-          },
-          auto_return: "approved"
-        })
-      });
-
-      const dados = await mp.json();
-      if (!dados.init_point) {
-        console.error("Mercado Pago recusou:", JSON.stringify(dados));
-        return resposta({ error: "Falha ao criar pagamento" }, 502);
-      }
-      return resposta({ init_point: dados.init_point }, 200);
-    } catch (e) {
-      console.error("Erro ao chamar Mercado Pago:", e.message);
-      return resposta({ error: "Falha ao criar pagamento" }, 502);
-    }
+    return await criarPagamento(env, url, u, gb, Math.round(calcularPreco(gb) * 100));
   }
 
   if (caminho === "/api/mp/webhook") {
@@ -864,6 +1041,10 @@ async function tratarApi(request, env, url) {
 
   if (caminho === "/api/portal" || caminho.startsWith("/api/portal/")) {
     return await tratarPortalDono(request, env, url);
+  }
+
+  if (caminho.startsWith("/api/assistente/")) {
+    return await tratarAssistente(request, env, url);
   }
 
   if (caminho.startsWith("/api/p/")) {
@@ -1002,6 +1183,8 @@ async function limpeza(env) {
   // 4) Faxina do banco: sessões vencidas, links de senha velhos e pedidos de pagamento abandonados.
   await env.DB.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')").run();
   await env.DB.prepare("DELETE FROM portal_sessoes WHERE expires_at < datetime('now')").run();
+  await env.DB.prepare("DELETE FROM assistente_limite WHERE created_at < datetime('now', '-1 day')").run();
+  await env.DB.prepare("DELETE FROM perguntas_chat WHERE created_at < datetime('now', '-180 days')").run();
   await env.DB.prepare("DELETE FROM password_resets WHERE expires_at < datetime('now', '-1 day')").run();
   await env.DB.prepare("DELETE FROM subscriptions WHERE status = 'pending' AND created_at < datetime('now', '-2 days')").run();
 

@@ -65,10 +65,47 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         <label class="text-xs text-slate-400">Duração (horas)<input id="cupHoras" type="number" min="1" class="campo mt-1" value="24"></label>
         <label class="text-xs text-slate-400">Máx. de usos<input id="cupMax" type="number" min="1" class="campo mt-1" placeholder="sem limite"></label>
         <label class="text-xs text-slate-400">Válido até<input id="cupAte" type="date" class="campo mt-1"></label>
+        <label class="text-xs text-slate-400 md:col-span-2">Preço fixo (R$, opcional)<input id="cupPreco" class="campo mt-1" inputmode="decimal" placeholder="vazio = teste grátis"></label>
+        <label class="text-xs text-slate-400 md:col-span-3">Só para a conta (e-mail, opcional)<input id="cupEmail" type="email" class="campo mt-1" placeholder="vazio = qualquer conta"></label>
       </div>
+      <p class="text-xs text-slate-500 mt-2">Com preço fixo, o cupom leva ao pagamento do espaço escolhido por esse valor, por 30 dias (ex.: 1000 MB por R$ 1,00 para testar o PIX).</p>
       <p id="cupErro" class="text-sm text-red-400 mt-2 min-h-[1.25rem]"></p>
       <button type="button" id="btnCupomSalvar" class="cta font-bold px-4 py-2.5 rounded-xl text-sm">Salvar cupom</button>
       <div id="listaCupons" class="mt-4 space-y-2"></div>
+    </div>
+
+    <div class="glass rounded-3xl p-6 space-y-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-lg font-bold">☁️ Assistente (chat da nuvem)</h2>
+        <p id="assResumo" class="text-sm text-slate-400"></p>
+      </div>
+
+      <div>
+        <p class="font-semibold">Chamados</p>
+        <div id="listaChamados" class="space-y-2 mt-2"></div>
+      </div>
+
+      <div>
+        <p class="font-semibold">Perguntas que a nuvem não soube responder <span class="text-xs text-slate-400 font-normal">(últimos 30 dias)</span></p>
+        <div id="listaSemResposta" class="space-y-1 mt-2"></div>
+      </div>
+
+      <div id="formFaq" class="bg-slate-900/50 rounded-2xl p-4 space-y-2">
+        <p class="font-semibold" id="faqTitulo">Ensinar uma resposta nova</p>
+        <input id="faqPergunta" class="campo" maxlength="150" placeholder="Pergunta (ex.: Vocês emitem nota fiscal?)">
+        <input id="faqPalavras" class="campo" maxlength="600" placeholder="Palavras-chave separadas por vírgula (ex.: nota fiscal, nf, nfe, recibo)">
+        <textarea id="faqResposta" class="campo h-24" maxlength="1500" placeholder="Resposta. Para link: [texto](/painel) ou [e-mail](mailto:contato@masternuvem.com.br)"></textarea>
+        <p id="faqErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+        <div class="flex gap-4 items-center">
+          <button type="button" id="btnFaqSalvar" class="cta font-bold px-4 py-2.5 rounded-xl text-sm">Salvar resposta</button>
+          <button type="button" id="btnFaqCancelar" class="hidden text-sm text-slate-400 hover:text-white">Cancelar edição</button>
+        </div>
+      </div>
+
+      <details>
+        <summary class="cursor-pointer font-semibold">Respostas cadastradas (<span id="faqQtd">0</span>)</summary>
+        <div id="listaFaq" class="space-y-2 mt-3"></div>
+      </details>
     </div>
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -322,8 +359,10 @@ async function carregarCupons() {
     var linha = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/50 rounded-xl px-4 py-3" + (c.ativo ? "" : " opacity-50"));
     var info = el("div");
     info.appendChild(el("p", "font-mono font-bold", c.codigo + (c.ativo ? "" : " (pausado)")));
-    info.appendChild(el("p", "text-xs text-slate-400", c.quota_mb + " MB por " + c.horas + " h · usado " + c.usos + (c.max_usos ? " de " + c.max_usos : "") + " vez(es)" +
-      (c.valido_ate ? " · válido até " + formatarData(c.valido_ate) : "")));
+    info.appendChild(el("p", "text-xs text-slate-400",
+      (c.preco_centavos !== null ? c.quota_mb + " MB por R$ " + (c.preco_centavos / 100).toFixed(2).replace(".", ",") + " (30 dias)" : c.quota_mb + " MB grátis por " + c.horas + " h") +
+      " · usado " + c.usos + (c.max_usos ? " de " + c.max_usos : "") + " vez(es)" +
+      (c.valido_ate ? " · válido até " + formatarData(c.valido_ate) : "") + (c.so_email ? " · só para " + c.so_email : "")));
     linha.appendChild(info);
     var b = el("button", c.ativo ? "text-sm font-semibold text-red-300" : "text-sm font-semibold text-cyan-300", c.ativo ? "Pausar" : "Reativar");
     b.type = "button";
@@ -336,6 +375,130 @@ async function carregarCupons() {
   });
 }
 
+/* ---------- assistente ---------- */
+
+var faqEditando = 0;
+
+function limparFormFaq() {
+  faqEditando = 0;
+  ["faqPergunta", "faqPalavras", "faqResposta"].forEach(function (id) { document.getElementById(id).value = ""; });
+  document.getElementById("faqTitulo").textContent = "Ensinar uma resposta nova";
+  document.getElementById("btnFaqCancelar").classList.add("hidden");
+  document.getElementById("faqErro").textContent = "";
+}
+
+function editarFaq(f) {
+  faqEditando = f.id;
+  document.getElementById("faqPergunta").value = f.pergunta;
+  document.getElementById("faqPalavras").value = f.palavras;
+  document.getElementById("faqResposta").value = f.resposta;
+  document.getElementById("faqTitulo").textContent = "Editando a resposta";
+  document.getElementById("btnFaqCancelar").classList.remove("hidden");
+  document.getElementById("formFaq").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+async function carregarAssistente() {
+  var resp = await fetch("/api/admin/assistente");
+  if (!resp.ok) return;
+  var d = await resp.json();
+  var abertos = d.chamados.filter(function (c) { return c.status === "aberto"; }).length;
+  var t = d.total || { perguntas: 0, respondidas: 0 };
+  document.getElementById("assResumo").textContent = t.perguntas + " pergunta(s) em 30 dias · " +
+    (t.perguntas ? Math.round(t.respondidas / t.perguntas * 100) : 0) + "% respondidas · " + abertos + " chamado(s) aberto(s)";
+
+  var lc = document.getElementById("listaChamados");
+  lc.innerHTML = "";
+  if (!d.chamados.length) lc.appendChild(el("p", "text-sm text-slate-400", "Nenhum chamado ainda."));
+  d.chamados.forEach(function (c) {
+    var caixa = el("div", "bg-slate-900/50 rounded-xl px-4 py-3" + (c.status === "resolvido" ? " opacity-60" : ""));
+    var topo = el("div", "flex flex-wrap items-center justify-between gap-2");
+    topo.appendChild(el("p", "font-semibold text-sm", "Nº " + c.id + " · " + c.nome + " · " + formatarData(c.created_at) +
+      (c.status === "aberto" ? " · ABERTO" : " · resolvido")));
+    var acoes = el("div", "flex gap-4 text-sm font-semibold");
+    var responder = el("a", "text-cyan-300", "Responder por e-mail");
+    responder.href = "mailto:" + encodeURIComponent(c.email) + "?subject=" + encodeURIComponent("Re: Chamado nº " + c.id + " - Master Nuvem");
+    acoes.appendChild(responder);
+    var mudar = el("button", c.status === "aberto" ? "text-emerald-300" : "text-slate-300", c.status === "aberto" ? "✔ Resolvido" : "Reabrir");
+    mudar.type = "button";
+    mudar.addEventListener("click", async function () {
+      await postar("/api/admin/chamados/status", { id: c.id, status: c.status === "aberto" ? "resolvido" : "aberto" });
+      carregarAssistente();
+    });
+    acoes.appendChild(mudar);
+    topo.appendChild(acoes);
+    caixa.appendChild(topo);
+    caixa.appendChild(el("p", "text-xs text-slate-400 break-all", c.email + (c.pagina ? " · página " + c.pagina : "")));
+    caixa.appendChild(el("p", "text-sm text-slate-200 mt-1 whitespace-pre-line break-words", c.mensagem));
+    lc.appendChild(caixa);
+  });
+
+  var ls = document.getElementById("listaSemResposta");
+  ls.innerHTML = "";
+  if (!d.sem_resposta.length) ls.appendChild(el("p", "text-sm text-slate-400", "Nenhuma — a nuvem respondeu tudo! 🎉"));
+  d.sem_resposta.forEach(function (p) {
+    var linha = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/40 rounded-lg px-3 py-2 text-sm");
+    linha.appendChild(el("span", "break-words", "“" + p.texto + "”" + (p.vezes > 1 ? " · " + p.vezes + "x" : "")));
+    var ens = el("button", "text-cyan-300 font-semibold", "Ensinar resposta");
+    ens.type = "button";
+    ens.addEventListener("click", function () {
+      limparFormFaq();
+      document.getElementById("faqPergunta").value = p.texto.charAt(0).toUpperCase() + p.texto.slice(1);
+      document.getElementById("faqPalavras").value = p.texto;
+      document.getElementById("faqResposta").focus();
+      document.getElementById("formFaq").scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    linha.appendChild(ens);
+    ls.appendChild(linha);
+  });
+
+  var lf = document.getElementById("listaFaq");
+  lf.innerHTML = "";
+  document.getElementById("faqQtd").textContent = d.faq.length;
+  d.faq.forEach(function (f) {
+    var caixa = el("div", "bg-slate-900/40 rounded-xl px-4 py-3" + (f.ativo ? "" : " opacity-50"));
+    var topo = el("div", "flex flex-wrap items-center justify-between gap-2");
+    topo.appendChild(el("p", "font-semibold text-sm", f.pergunta + (f.ativo ? "" : " (desligada)") + " · usada " + f.usos_30d + "x em 30 dias"));
+    var acoes = el("div", "flex gap-4 text-sm font-semibold");
+    var ed = el("button", "text-cyan-300", "Editar");
+    ed.type = "button";
+    ed.addEventListener("click", function () { editarFaq(f); });
+    var liga = el("button", "text-slate-300", f.ativo ? "Desligar" : "Ligar");
+    liga.type = "button";
+    liga.addEventListener("click", async function () {
+      await postar("/api/admin/faq/salvar", { id: f.id, pergunta: f.pergunta, palavras: f.palavras, resposta: f.resposta, ordem: f.ordem, ativo: !f.ativo });
+      carregarAssistente();
+    });
+    var rm = el("button", "text-red-300", "Apagar");
+    rm.type = "button";
+    rm.addEventListener("click", async function () {
+      if (!confirm("Apagar a resposta \"" + f.pergunta + "\"?")) return;
+      await postar("/api/admin/faq/remover", { id: f.id });
+      carregarAssistente();
+    });
+    [ed, liga, rm].forEach(function (b) { acoes.appendChild(b); });
+    topo.appendChild(acoes);
+    caixa.appendChild(topo);
+    caixa.appendChild(el("p", "text-xs text-slate-500 mt-1 break-words", "Palavras: " + f.palavras));
+    caixa.appendChild(el("p", "text-sm text-slate-300 mt-1 break-words", f.resposta));
+    lf.appendChild(caixa);
+  });
+}
+
+document.getElementById("btnFaqSalvar").addEventListener("click", async function () {
+  var erro = document.getElementById("faqErro");
+  erro.textContent = "";
+  var r = await postar("/api/admin/faq/salvar", {
+    id: faqEditando || undefined,
+    pergunta: document.getElementById("faqPergunta").value,
+    palavras: document.getElementById("faqPalavras").value,
+    resposta: document.getElementById("faqResposta").value
+  });
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
+  limparFormFaq();
+  carregarAssistente();
+});
+document.getElementById("btnFaqCancelar").addEventListener("click", limparFormFaq);
+
 document.getElementById("btnCupomSalvar").addEventListener("click", async function () {
   var erro = document.getElementById("cupErro");
   erro.textContent = "";
@@ -344,7 +507,9 @@ document.getElementById("btnCupomSalvar").addEventListener("click", async functi
     quota_mb: document.getElementById("cupMb").value,
     horas: document.getElementById("cupHoras").value,
     max_usos: document.getElementById("cupMax").value,
-    valido_ate: document.getElementById("cupAte").value
+    valido_ate: document.getElementById("cupAte").value,
+    preco: document.getElementById("cupPreco").value,
+    so_email: document.getElementById("cupEmail").value
   });
   if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
   document.getElementById("cupCodigo").value = "";
@@ -355,6 +520,7 @@ document.getElementById("busca").addEventListener("input", desenhar);
 document.getElementById("btnB2").addEventListener("click", carregarB2);
 carregarB2();
 carregarCupons();
+carregarAssistente();
 document.getElementById("sair").addEventListener("click", function () {
   postar("/api/logout").then(function () { window.location.href = "/entrar"; });
 });
