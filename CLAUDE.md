@@ -177,6 +177,14 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
    receita; não recebe aviso "vence em breve"). Admin: `/api/admin/cupons`, `/cupons/salvar`, `/cupons/ativo` + seção no `/admin`.
    Painel: campo "Tem um cupom?"; link de divulgação `masternuvem.com.br/painel?cupom=NUVEM1DIA` (passa pelo login e já preenche).
    Cupom criado em produção: **NUVEM1DIA = 20 MB por 24 horas, sem limite de usos**.
+   **Acesso livre × cobrar + tabela de preços — 2026-10-24** (`migrations/0008_tabela_precos.sql`): `portais.cobrar` (0 = acesso
+   livre: nada tranca e o cliente não vê cobranças; 1 = usa a central), tabela `precos` (nome, unidade foto/edicao/video/minuto/
+   hora/pacote/km, valor), `cobrancas.itens` (JSON com cópia do preço). `/api/portal/precos/salvar|remover`; `/cobrancas/nova`
+   aceita `itens:[{preco_id,qtd}]` (preço sempre do banco) + `valor` avulso; descrição automática pelos itens.
+   **Ideia seguinte do João: fotógrafo de rua/corrida/evento** — galeria pública do evento, cliente escolhe as fotos, preço por
+   foto definido pelo fotógrafo com desconto por quantidade, paga e baixa sem marca d'água. Prévia com marca d'água (logo do
+   fotógrafo) gerada no navegador do fotógrafo ao enviar (canvas), original só depois de pago. QR code/aviso de direitos autorais
+   na marca d'água ajuda como aviso, mas NÃO impede uma IA de remover a marca — a proteção real é só entregar o original após pagar.
    **Ideias do João para o Portal (2026-10-24, ainda não feitas):**
    - v1.1: seleção "Para o álbum impresso" com limite do pacote (ex.: 32/60), prévia em páginas duplas, "enviar seleção"
      (trava); botão "Pedir edição" por foto com comentário e status "feito".

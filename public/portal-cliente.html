@@ -168,6 +168,16 @@ function mostrarCobrancas(me) {
     topo.appendChild(el("span", "text-xs font-semibold px-3 py-1 rounded-full " + (pago ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"),
       pago ? "Pago em " + dataBr(b.pago_em) : (b.vencimento ? "Vence em " + dataBr(b.vencimento) : "Pendente")));
     c.appendChild(topo);
+    if (b.itens && b.itens.length) {
+      var tab = el("div", "text-sm text-slate-600 border-t border-slate-100 pt-2 space-y-1");
+      b.itens.forEach(function (i) {
+        var l = el("div", "flex justify-between gap-3");
+        l.appendChild(el("span", "", (i.unidade === "avulso" ? "" : i.qtd + " × ") + i.nome + (i.unidade === "avulso" || i.qtd === 1 ? "" : " (" + reais(i.valor_centavos) + " cada)")));
+        l.appendChild(el("span", "font-semibold whitespace-nowrap", reais(i.valor_centavos * i.qtd)));
+        tab.appendChild(l);
+      });
+      c.appendChild(tab);
+    }
     if (!pago) {
       if (b.link_pagamento) {
         var a = el("a", "btn inline-block", "Pagar agora");

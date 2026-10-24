@@ -12,6 +12,11 @@ const SLUG_OK = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
 const COR_OK = /^#[0-9a-fA-F]{6}$/;
 const IMAGEM = /\.(jpe?g|png|webp|gif|avif|jfif)$/i;
 const VIDEO = /\.(mp4|mov|m4v|webm|avi|mkv)$/i;
+// Como o fotógrafo cobra cada serviço da tabela de preços.
+export const UNIDADES = {
+  foto: "por foto", edicao: "por foto editada", video: "por vídeo", minuto: "por minuto de vídeo",
+  hora: "por hora", pacote: "por pacote/serviço", km: "por km"
+};
 export const TIPOS_FOTO = [
   "Casamento", "Pré-wedding", "Ensaio de casal", "Bodas", "15 anos", "Aniversário infantil", "Aniversário adulto",
   "Smash the cake", "Chá revelação / chá de bebê", "Gestante", "Newborn", "Ensaio de família", "Ensaio pet", "Batizado",
@@ -111,7 +116,7 @@ function paraCentavos(v) {
 // Álbum trancado = tem cobrança pendente marcada para segurar o álbum até o pagamento.
 async function albumTrancado(env, albumId) {
   const r = await env.DB.prepare(
-    "SELECT 1 AS t FROM cobrancas WHERE album_id = ? AND status = 'pendente' AND bloqueia_album = 1 LIMIT 1"
+    "SELECT 1 AS t FROM cobrancas b JOIN portais p ON p.id = b.portal_id WHERE b.album_id = ? AND b.status = 'pendente' AND b.bloqueia_album = 1 AND p.cobrar = 1 LIMIT 1"
   ).bind(albumId).first();
   return !!r;
 }
@@ -164,7 +169,7 @@ export async function tratarPortalDono(request, env, url) {
   const u = await usuarioLogado(request, env);
   if (!u) return resp({ error: "Não autenticado" }, 401);
 
-  const portal = await env.DB.prepare("SELECT id, slug, nome, cor, ramo, instrucoes_pagamento FROM portais WHERE user_id = ?").bind(u.id).first();
+  const portal = await env.DB.prepare("SELECT id, slug, nome, cor, ramo, instrucoes_pagamento, cobrar FROM portais WHERE user_id = ?").bind(u.id).first();
 
   if (caminho === "/api/portal" && request.method === "GET") {
     return resp({ portal: portal, plano: await temPlano(env, u.id), tipos: TIPOS_FOTO }, 200);
@@ -186,7 +191,7 @@ export async function tratarPortalDono(request, env, url) {
       "(SELECT COUNT(*) FROM files f WHERE f.album_id = a.id AND f.status = 'ready') AS arquivos, " +
       "(SELECT COALESCE(SUM(size_bytes), 0) FROM files f WHERE f.album_id = a.id AND f.status = 'ready') AS bytes, " +
       "(SELECT COUNT(*) FROM favoritos v JOIN files f ON f.id = v.file_id WHERE f.album_id = a.id) AS favoritas, " +
-      "EXISTS (SELECT 1 FROM cobrancas b WHERE b.album_id = a.id AND b.status = 'pendente' AND b.bloqueia_album = 1) AS trancado " +
+      "EXISTS (SELECT 1 FROM cobrancas b JOIN portais p ON p.id = b.portal_id WHERE b.album_id = a.id AND b.status = 'pendente' AND b.bloqueia_album = 1 AND p.cobrar = 1) AS trancado " +
       "FROM albuns a JOIN portal_clientes c ON c.id = a.cliente_id WHERE a.portal_id = ? ORDER BY a.id DESC"
     ).bind(portal.id).all();
     return resp({ albuns: r.results }, 200);
@@ -214,7 +219,7 @@ export async function tratarPortalDono(request, env, url) {
   if (caminho === "/api/portal/cobrancas" && request.method === "GET") {
     if (!portal) return resp({ cobrancas: [], resumo: null }, 200);
     const r = await env.DB.prepare(
-      "SELECT b.id, b.descricao, b.valor_centavos, b.vencimento, b.link_pagamento, b.bloqueia_album, b.status, b.pago_em, b.created_at, " +
+      "SELECT b.id, b.descricao, b.valor_centavos, b.vencimento, b.link_pagamento, b.bloqueia_album, b.status, b.pago_em, b.created_at, b.itens, " +
       "b.cliente_id, c.nome AS cliente, b.album_id, a.titulo AS album " +
       "FROM cobrancas b JOIN portal_clientes c ON c.id = b.cliente_id LEFT JOIN albuns a ON a.id = b.album_id " +
       "WHERE b.portal_id = ? ORDER BY CASE b.status WHEN 'pendente' THEN 0 WHEN 'pago' THEN 1 ELSE 2 END, b.id DESC LIMIT 300"
@@ -225,7 +230,8 @@ export async function tratarPortalDono(request, env, url) {
       "COALESCE(SUM(CASE WHEN status = 'pendente' AND vencimento IS NOT NULL AND vencimento < date('now') THEN valor_centavos END), 0) AS atrasado " +
       "FROM cobrancas WHERE portal_id = ?"
     ).bind(portal.id).first();
-    return resp({ cobrancas: r.results, resumo: resumo }, 200);
+    const precos = await env.DB.prepare("SELECT id, nome, unidade, valor_centavos FROM precos WHERE portal_id = ? ORDER BY id").bind(portal.id).all();
+    return resp({ cobrancas: r.results, resumo: resumo, precos: precos.results, unidades: UNIDADES }, 200);
   }
 
   if (request.method !== "POST") return resp({ error: "Método não permitido" }, 405);
@@ -258,8 +264,39 @@ export async function tratarPortalDono(request, env, url) {
 
   if (caminho === "/api/portal/pagamento") {
     // Como o cliente paga: chave PIX, banco, link fixo... Aparece para o cliente em toda cobrança.
-    const instrucoes = String(corpo.instrucoes || "").replace(/[\u0000-\u0009\u000b-\u001f]/g, " ").trim().slice(0, 500);
-    await env.DB.prepare("UPDATE portais SET instrucoes_pagamento = ? WHERE id = ?").bind(instrucoes || null, portal.id).run();
+    // "cobrar" = 1: usa a central de cobranças; 0: acesso livre (o cliente vê e baixa tudo, nada fica trancado).
+    if (corpo.cobrar !== undefined) {
+      await env.DB.prepare("UPDATE portais SET cobrar = ? WHERE id = ?").bind(corpo.cobrar ? 1 : 0, portal.id).run();
+    }
+    if (corpo.instrucoes !== undefined) {
+      const instrucoes = String(corpo.instrucoes || "").replace(/[\u0000-\u0009\u000b-\u001f]/g, " ").trim().slice(0, 500);
+      await env.DB.prepare("UPDATE portais SET instrucoes_pagamento = ? WHERE id = ?").bind(instrucoes || null, portal.id).run();
+    }
+    return resp({ ok: true }, 200);
+  }
+
+  if (caminho === "/api/portal/precos/salvar") {
+    const nome = texto(corpo.nome, 60);
+    const unidade = String(corpo.unidade || "");
+    const valor = paraCentavos(corpo.valor);
+    if (nome.length < 2) return resp({ error: "Dê um nome ao serviço (ex.: Foto extra)" }, 400);
+    if (!UNIDADES[unidade]) return resp({ error: "Escolha como cobra (por foto, por vídeo...)" }, 400);
+    if (valor === null) return resp({ error: "Preço inválido (entre R$ 1,00 e R$ 100.000,00)" }, 400);
+    const id = parseInt(corpo.id, 10) || 0;
+    if (id) {
+      const r = await env.DB.prepare("UPDATE precos SET nome = ?, unidade = ?, valor_centavos = ? WHERE id = ? AND portal_id = ?")
+        .bind(nome, unidade, valor, id, portal.id).run();
+      if (!r.meta.changes) return resp({ error: "Preço não encontrado" }, 404);
+    } else {
+      const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM precos WHERE portal_id = ?").bind(portal.id).first();
+      if (n.n >= 50) return resp({ error: "Limite de 50 itens na tabela" }, 400);
+      await env.DB.prepare("INSERT INTO precos (portal_id, nome, unidade, valor_centavos) VALUES (?, ?, ?, ?)").bind(portal.id, nome, unidade, valor).run();
+    }
+    return resp({ ok: true }, 200);
+  }
+
+  if (caminho === "/api/portal/precos/remover") {
+    await env.DB.prepare("DELETE FROM precos WHERE id = ? AND portal_id = ?").bind(parseInt(corpo.id, 10) || 0, portal.id).run();
     return resp({ ok: true }, 200);
   }
 
@@ -274,18 +311,39 @@ export async function tratarPortalDono(request, env, url) {
       if (!a) return resp({ error: "Esse álbum não é desse cliente" }, 400);
       albumId = a.id;
     }
-    const descricao = texto(corpo.descricao, 120);
-    if (descricao.length < 2) return resp({ error: "Descreva a cobrança (ex.: Saldo do casamento)" }, 400);
-    const valor = paraCentavos(corpo.valor);
-    if (valor === null) return resp({ error: "Valor inválido (entre R$ 1,00 e R$ 100.000,00)" }, 400);
+    // Itens da tabela de preços (o preço vem do banco, nunca do navegador) + valor avulso opcional.
+    const itens = [];
+    let valor = 0;
+    for (const it of Array.isArray(corpo.itens) ? corpo.itens.slice(0, 30) : []) {
+      const qtd = parseInt(it.qtd, 10);
+      if (!qtd || qtd < 1 || qtd > 10000) return resp({ error: "Quantidade inválida" }, 400);
+      const p = await env.DB.prepare("SELECT nome, unidade, valor_centavos FROM precos WHERE id = ? AND portal_id = ?")
+        .bind(parseInt(it.preco_id, 10) || 0, portal.id).first();
+      if (!p) return resp({ error: "Item da tabela não encontrado" }, 400);
+      itens.push({ nome: p.nome, unidade: p.unidade, qtd: qtd, valor_centavos: p.valor_centavos });
+      valor += p.valor_centavos * qtd;
+    }
+    if (corpo.valor !== undefined && corpo.valor !== null && String(corpo.valor).trim() !== "") {
+      const avulso = paraCentavos(corpo.valor);
+      if (avulso === null) return resp({ error: "Valor inválido (entre R$ 1,00 e R$ 100.000,00)" }, 400);
+      if (itens.length) itens.push({ nome: texto(corpo.descricao, 60) || "Outros", unidade: "avulso", qtd: 1, valor_centavos: avulso });
+      valor += avulso;
+    }
+    if (valor < 100 || valor > 10000000) return resp({ error: "Adicione itens da tabela ou um valor (total entre R$ 1,00 e R$ 100.000,00)" }, 400);
+    let descricao = texto(corpo.descricao, 120);
+    if (descricao.length < 2) {
+      if (!itens.length) return resp({ error: "Descreva a cobrança (ex.: Saldo do casamento)" }, 400);
+      descricao = itens.map(function (i) { return i.qtd + "x " + i.nome; }).join(", ").slice(0, 120);
+    }
     const venc = String(corpo.vencimento || "");
     if (venc && !/^\d{4}-\d{2}-\d{2}$/.test(venc)) return resp({ error: "Data de vencimento inválida" }, 400);
     const link = String(corpo.link || "").trim();
     if (link && (!/^https:\/\/[^\s<>"']+$/.test(link) || link.length > 300)) return resp({ error: "O link de pagamento precisa começar com https://" }, 400);
     if (!link && !portal.instrucoes_pagamento) return resp({ error: "Informe um link de pagamento ou cadastre sua chave PIX em \"Como você recebe\"" }, 400);
     const r = await env.DB.prepare(
-      "INSERT INTO cobrancas (portal_id, cliente_id, album_id, descricao, valor_centavos, vencimento, link_pagamento, bloqueia_album) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    ).bind(portal.id, cli.id, albumId, descricao, valor, venc || null, link || null, albumId && corpo.bloqueia_album ? 1 : 0).run();
+      "INSERT INTO cobrancas (portal_id, cliente_id, album_id, descricao, valor_centavos, vencimento, link_pagamento, bloqueia_album, itens) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(portal.id, cli.id, albumId, descricao, valor, venc || null, link || null, albumId && corpo.bloqueia_album ? 1 : 0,
+      itens.length ? JSON.stringify(itens) : null).run();
     return resp({ ok: true, id: r.meta.last_row_id }, 200);
   }
 
@@ -436,19 +494,25 @@ export async function tratarPortalCliente(request, env, url) {
       "SELECT a.id, a.titulo, a.tipo, a.created_at, " +
       "(SELECT COUNT(*) FROM files f WHERE f.album_id = a.id AND f.status = 'ready') AS arquivos, " +
       "(SELECT COUNT(*) FROM favoritos v JOIN files f ON f.id = v.file_id WHERE f.album_id = a.id AND v.cliente_id = a.cliente_id) AS favoritas, " +
-      "EXISTS (SELECT 1 FROM cobrancas b WHERE b.album_id = a.id AND b.status = 'pendente' AND b.bloqueia_album = 1) AS trancado " +
+      "EXISTS (SELECT 1 FROM cobrancas b JOIN portais p ON p.id = b.portal_id WHERE b.album_id = a.id AND b.status = 'pendente' AND b.bloqueia_album = 1 AND p.cobrar = 1) AS trancado " +
       "FROM albuns a WHERE a.cliente_id = ? ORDER BY a.id DESC"
     ).bind(c.id).all();
     const cob = await env.DB.prepare(
-      "SELECT b.id, b.descricao, b.valor_centavos, b.vencimento, b.link_pagamento, b.status, b.pago_em, a.titulo AS album " +
+      "SELECT b.id, b.descricao, b.valor_centavos, b.vencimento, b.link_pagamento, b.status, b.pago_em, b.itens, a.titulo AS album " +
       "FROM cobrancas b LEFT JOIN albuns a ON a.id = b.album_id WHERE b.cliente_id = ? AND b.status != 'cancelado' ORDER BY b.status DESC, b.id DESC"
     ).bind(c.id).all();
-    const instr = await env.DB.prepare("SELECT instrucoes_pagamento FROM portais WHERE id = ?").bind(c.portal_id).first();
+    const instr = await env.DB.prepare("SELECT instrucoes_pagamento, cobrar FROM portais WHERE id = ?").bind(c.portal_id).first();
     return resp({
       nome: c.nome,
       portal: { slug: c.slug, nome: c.portal_nome, cor: c.cor, instrucoes_pagamento: instr ? instr.instrucoes_pagamento : null },
       albuns: r.results,
-      cobrancas: cob.results
+      // Acesso livre (cobrar = 0): o cliente não vê cobranças.
+      cobrancas: instr && instr.cobrar ? cob.results.map(function (b) {
+        let itens = [];
+        try { itens = b.itens ? JSON.parse(b.itens) : []; } catch (e) {}
+        b.itens = itens;
+        return b;
+      }) : []
     }, 200);
   }
 

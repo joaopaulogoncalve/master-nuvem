@@ -100,9 +100,23 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
   <!-- 4. Cobranças -->
   <section id="secCobrancas" class="hidden glass rounded-3xl p-6 space-y-5">
     <div>
-      <h2 class="text-lg font-bold">4. Cobranças</h2>
-      <p class="text-sm text-slate-400 mt-1">O dinheiro vai <strong class="text-white">direto para você</strong> (seu PIX ou o link da sua maquininha). Aqui você organiza quem pagou e pode trancar o álbum até o pagamento.</p>
+      <h2 class="text-lg font-bold">4. Acesso e cobranças</h2>
+      <p class="text-sm text-slate-400 mt-1">Como os seus clientes recebem as fotos?</p>
     </div>
+    <div class="grid md:grid-cols-2 gap-3">
+      <label class="cursor-pointer bg-slate-900/50 rounded-2xl p-4 border-2 border-transparent has-[:checked]:border-cyan-400 flex gap-3">
+        <input type="radio" name="modoCobrar" value="0" class="mt-1">
+        <span><span class="font-bold block">🔓 Acesso livre</span><span class="text-sm text-slate-400">O cliente vê e baixa tudo. Você combina o pagamento por fora, do seu jeito.</span></span>
+      </label>
+      <label class="cursor-pointer bg-slate-900/50 rounded-2xl p-4 border-2 border-transparent has-[:checked]:border-cyan-400 flex gap-3">
+        <input type="radio" name="modoCobrar" value="1" class="mt-1">
+        <span><span class="font-bold block">💰 Cobrar pelo portal</span><span class="text-sm text-slate-400">Monte sua tabela de preços, envie cobranças e, se quiser, tranque o álbum até o pagamento.</span></span>
+      </label>
+    </div>
+    <p id="modoOk" class="hidden text-sm text-emerald-300">Salvo!</p>
+
+    <div id="blocoCobrar" class="hidden space-y-5">
+    <p class="text-sm text-slate-400">O dinheiro vai <strong class="text-white">direto para você</strong> (seu PIX ou o link da sua maquininha). Aqui você organiza quem pagou.</p>
     <div class="grid grid-cols-3 gap-3">
       <div class="bg-slate-900/50 rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">A receber</p><p id="resReceber" class="text-xl font-bold mt-1">-</p></div>
       <div class="bg-slate-900/50 rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">Atrasado</p><p id="resAtrasado" class="text-xl font-bold mt-1 text-red-300">-</p></div>
@@ -115,21 +129,50 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <button type="button" id="btnInstrucoes" class="link mt-1">Salvar forma de recebimento</button>
       <span id="instrOk" class="hidden text-sm text-emerald-300 ml-2">Salvo!</span>
     </div>
-    <div class="grid md:grid-cols-3 gap-3 items-end">
-      <label class="text-sm text-slate-300">Cliente<select id="cobCliente" class="campo mt-1"></select></label>
-      <label class="text-sm text-slate-300">Álbum (opcional)<select id="cobAlbum" class="campo mt-1"></select></label>
-      <label class="text-sm text-slate-300">Descrição<input id="cobDescricao" class="campo mt-1" maxlength="120" placeholder="Saldo do casamento"></label>
-      <label class="text-sm text-slate-300">Valor (R$)<input id="cobValor" class="campo mt-1" inputmode="decimal" placeholder="800,00"></label>
-      <label class="text-sm text-slate-300">Vencimento (opcional)<input id="cobVenc" type="date" class="campo mt-1"></label>
-      <label class="text-sm text-slate-300">Link de pagamento (opcional)<input id="cobLink" class="campo mt-1" maxlength="300" placeholder="https://..."></label>
+
+    <!-- Tabela de preços -->
+    <div class="bg-slate-900/40 rounded-2xl p-4 space-y-3">
+      <p class="font-bold">Sua tabela de preços</p>
+      <p class="text-xs text-slate-400">Toque numa sugestão para preencher, ajuste o preço e adicione:</p>
+      <div id="sugestoes" class="flex flex-wrap gap-2"></div>
+      <div class="grid md:grid-cols-4 gap-2 items-end">
+        <label class="text-xs text-slate-400 md:col-span-2">Serviço<input id="preNome" class="campo mt-1" maxlength="60" placeholder="Foto extra"></label>
+        <label class="text-xs text-slate-400">Como cobra<select id="preUnidade" class="campo mt-1"></select></label>
+        <label class="text-xs text-slate-400">Preço (R$)<input id="preValor" class="campo mt-1" inputmode="decimal" placeholder="15,00"></label>
+      </div>
+      <p id="preErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+      <button type="button" id="btnPreco" class="link">+ Adicionar à tabela</button>
+      <div id="listaPrecos" class="space-y-1"></div>
     </div>
-    <label id="blocoTrancar" class="hidden flex items-start gap-2 text-sm text-slate-300">
-      <input id="cobTrancar" type="checkbox" class="mt-1">
-      <span>🔒 Trancar o álbum até eu marcar como pago (o cliente não vê nem baixa as fotos até lá)</span>
-    </label>
-    <p id="cobErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
-    <button type="button" id="btnCobranca" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Criar cobrança</button>
+
+    <!-- Nova cobrança -->
+    <div class="bg-slate-900/40 rounded-2xl p-4 space-y-3">
+      <p class="font-bold">Nova cobrança</p>
+      <div class="grid md:grid-cols-2 gap-3">
+        <label class="text-sm text-slate-300">Cliente<select id="cobCliente" class="campo mt-1"></select></label>
+        <label class="text-sm text-slate-300">Álbum (opcional)<select id="cobAlbum" class="campo mt-1"></select></label>
+      </div>
+      <div>
+        <p class="text-sm text-slate-300 mb-1">Itens da tabela</p>
+        <div id="itensCobranca" class="space-y-2"></div>
+        <button type="button" id="btnItem" class="link mt-2">+ Adicionar item</button>
+      </div>
+      <div class="grid md:grid-cols-2 gap-3">
+        <label class="text-sm text-slate-300">Descrição (opcional se usar itens)<input id="cobDescricao" class="campo mt-1" maxlength="120" placeholder="Saldo do casamento"></label>
+        <label class="text-sm text-slate-300">Outro valor (R$, opcional)<input id="cobValor" class="campo mt-1" inputmode="decimal" placeholder="ex.: 800,00"></label>
+        <label class="text-sm text-slate-300">Vencimento (opcional)<input id="cobVenc" type="date" class="campo mt-1"></label>
+        <label class="text-sm text-slate-300">Link de pagamento (opcional)<input id="cobLink" class="campo mt-1" maxlength="300" placeholder="https://..."></label>
+      </div>
+      <label id="blocoTrancar" class="hidden flex items-start gap-2 text-sm text-slate-300">
+        <input id="cobTrancar" type="checkbox" class="mt-1">
+        <span>🔒 Trancar o álbum até eu marcar como pago (o cliente não vê nem baixa as fotos até lá)</span>
+      </label>
+      <p class="text-lg font-bold">Total: <span id="cobTotal" class="text-cyan-300">R$ 0,00</span></p>
+      <p id="cobErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+      <button type="button" id="btnCobranca" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Criar cobrança</button>
+    </div>
     <div id="listaCobrancas" class="space-y-2"></div>
+    </div>
   </section>
 
   <!-- Álbum aberto -->
@@ -264,15 +307,176 @@ function preencherAlbunsCobranca() {
   mostrar("blocoTrancar", !!sel.value);
 }
 
+/* ---------- acesso livre × cobrar ---------- */
+
+function aplicarModo(cobrar) {
+  document.querySelectorAll("input[name=modoCobrar]").forEach(function (x) { x.checked = x.value === (cobrar ? "1" : "0"); });
+  mostrar("blocoCobrar", !!cobrar);
+}
+
+document.querySelectorAll("input[name=modoCobrar]").forEach(function (x) {
+  x.addEventListener("change", async function () {
+    var cobrar = this.value === "1";
+    var r = await api("/api/portal/pagamento", { cobrar: cobrar });
+    if (!r.ok) { alert(r.dados.error || "Não foi possível salvar."); return; }
+    dados.portal.cobrar = cobrar ? 1 : 0;
+    aplicarModo(cobrar);
+    mostrar("modoOk", true);
+    setTimeout(function () { mostrar("modoOk", false); }, 2000);
+    carregarAlbuns();
+  });
+});
+
+/* ---------- tabela de preços ---------- */
+
+var SUGESTOES = [
+  ["Foto extra", "foto", "15,00"], ["Edição de foto", "edicao", "25,00"], ["Vídeo editado", "video", "300,00"],
+  ["Minuto de vídeo", "minuto", "80,00"], ["Hora de cobertura", "hora", "250,00"], ["Ensaio (pacote)", "pacote", "600,00"],
+  ["Álbum impresso", "pacote", "450,00"], ["Deslocamento", "km", "2,50"]
+];
+var precoEditando = 0;
+
+function desenharTabela() {
+  var sel = document.getElementById("preUnidade");
+  if (!sel.options.length) Object.keys(dados.unidades || {}).forEach(function (k) { sel.appendChild(new Option(dados.unidades[k], k)); });
+  var sug = document.getElementById("sugestoes");
+  if (!sug.childNodes.length) SUGESTOES.forEach(function (s) {
+    var b = el("button", "text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-800 text-blue-200 hover:border-cyan-400", s[0]);
+    b.type = "button";
+    b.addEventListener("click", function () {
+      precoEditando = 0;
+      document.getElementById("preNome").value = s[0];
+      document.getElementById("preUnidade").value = s[1];
+      document.getElementById("preValor").value = s[2];
+      document.getElementById("btnPreco").textContent = "+ Adicionar à tabela";
+      document.getElementById("preValor").focus();
+    });
+    sug.appendChild(b);
+  });
+  var lista = document.getElementById("listaPrecos");
+  lista.innerHTML = "";
+  if (!dados.precos.length) lista.appendChild(el("p", "text-sm text-slate-500", "Sua tabela está vazia. Adicione seus serviços acima."));
+  dados.precos.forEach(function (p) {
+    var linha = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/60 rounded-xl px-3 py-2 text-sm");
+    linha.appendChild(el("span", "", p.nome + " · " + reais(p.valor_centavos) + " " + (dados.unidades[p.unidade] || "")));
+    var acoes = el("span", "flex gap-3");
+    var ed = el("button", "link", "Editar");
+    ed.type = "button";
+    ed.addEventListener("click", function () {
+      precoEditando = p.id;
+      document.getElementById("preNome").value = p.nome;
+      document.getElementById("preUnidade").value = p.unidade;
+      document.getElementById("preValor").value = (p.valor_centavos / 100).toFixed(2).replace(".", ",");
+      document.getElementById("btnPreco").textContent = "Salvar alteração";
+    });
+    var rm = el("button", "perigo", "Remover");
+    rm.type = "button";
+    rm.addEventListener("click", async function () {
+      if (!confirm("Remover \"" + p.nome + "\" da tabela? (cobranças já criadas não mudam)")) return;
+      await api("/api/portal/precos/remover", { id: p.id });
+      carregarCobrancas();
+    });
+    acoes.appendChild(ed);
+    acoes.appendChild(rm);
+    linha.appendChild(acoes);
+    lista.appendChild(linha);
+  });
+  // atualiza as opções das linhas de item já abertas
+  document.querySelectorAll("#itensCobranca select").forEach(function (s) { preencherOpcoesItem(s); });
+  calcularTotal();
+}
+
+document.getElementById("btnPreco").addEventListener("click", async function () {
+  var erro = document.getElementById("preErro");
+  erro.textContent = "";
+  var r = await api("/api/portal/precos/salvar", {
+    id: precoEditando || undefined,
+    nome: document.getElementById("preNome").value,
+    unidade: document.getElementById("preUnidade").value,
+    valor: document.getElementById("preValor").value
+  });
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
+  precoEditando = 0;
+  document.getElementById("preNome").value = "";
+  document.getElementById("preValor").value = "";
+  this.textContent = "+ Adicionar à tabela";
+  carregarCobrancas();
+});
+
+/* ---------- itens da cobrança ---------- */
+
+function preencherOpcoesItem(sel) {
+  var antes = sel.value;
+  sel.innerHTML = "";
+  sel.appendChild(new Option("Escolha um serviço", ""));
+  dados.precos.forEach(function (p) { sel.appendChild(new Option(p.nome + " (" + reais(p.valor_centavos) + " " + dados.unidades[p.unidade] + ")", p.id)); });
+  sel.value = antes;
+}
+
+function novaLinhaItem() {
+  if (!dados.precos.length) { alert("Primeiro adicione serviços na sua tabela de preços."); return; }
+  var linha = el("div", "flex flex-wrap items-center gap-2");
+  var sel = el("select", "campo flex-1");
+  sel.style.minWidth = "200px";
+  preencherOpcoesItem(sel);
+  var qtd = el("input", "campo");
+  qtd.type = "number";
+  qtd.min = 1;
+  qtd.value = 1;
+  qtd.style.width = "90px";
+  qtd.title = "Quantidade";
+  var sub = el("span", "text-sm text-slate-300 w-28 text-right", "R$ 0,00");
+  var rm = el("button", "perigo", "×");
+  rm.type = "button";
+  rm.addEventListener("click", function () { linha.remove(); calcularTotal(); });
+  [sel, qtd].forEach(function (x) { x.addEventListener("input", calcularTotal); x.addEventListener("change", calcularTotal); });
+  linha.appendChild(sel);
+  linha.appendChild(qtd);
+  linha.appendChild(sub);
+  linha.appendChild(rm);
+  document.getElementById("itensCobranca").appendChild(linha);
+  calcularTotal();
+}
+
+function itensEscolhidos() {
+  var out = [];
+  document.querySelectorAll("#itensCobranca > div").forEach(function (linha) {
+    var sel = linha.querySelector("select"), qtd = linha.querySelector("input");
+    var p = dados.precos.find(function (x) { return String(x.id) === sel.value; });
+    var q = parseInt(qtd.value, 10) || 0;
+    linha.querySelector("span").textContent = p && q > 0 ? reais(p.valor_centavos * q) : "R$ 0,00";
+    if (p && q > 0) out.push({ preco_id: p.id, qtd: q, centavos: p.valor_centavos * q });
+  });
+  return out;
+}
+
+function calcularTotal() {
+  var total = itensEscolhidos().reduce(function (s, i) { return s + i.centavos; }, 0);
+  var v = document.getElementById("cobValor").value.trim().replace(/^R\$\s*/i, "");
+  if (v) {
+    var n = parseFloat(v.indexOf(",") > -1 ? v.replace(/\./g, "").replace(",", ".") : v);
+    if (n > 0) total += Math.round(n * 100);
+  }
+  document.getElementById("cobTotal").textContent = reais(total);
+}
+
+document.getElementById("btnItem").addEventListener("click", novaLinhaItem);
+document.getElementById("cobValor").addEventListener("input", calcularTotal);
+
 async function carregarCobrancas() {
   var selCli = document.getElementById("cobCliente");
   var antes = selCli.value;
   selCli.innerHTML = "";
+  if (!dados.clientes.length) selCli.appendChild(new Option("Crie um cliente primeiro (passo 2)", ""));
   dados.clientes.forEach(function (c) { selCli.appendChild(new Option(c.nome, c.id)); });
   if (antes) selCli.value = antes;
   preencherAlbunsCobranca();
+  aplicarModo(dados.portal && dados.portal.cobrar);
 
   var r = await api("/api/portal/cobrancas");
+  dados.precos = r.dados.precos || [];
+  dados.unidades = r.dados.unidades || {};
+  desenharTabela();
   var res = r.dados.resumo || { a_receber: 0, atrasado: 0, recebido_mes: 0 };
   document.getElementById("resReceber").textContent = reais(res.a_receber);
   document.getElementById("resAtrasado").textContent = reais(res.atrasado);
@@ -294,6 +498,11 @@ async function carregarCobrancas() {
       : atrasada ? ["Atrasada", "text-red-200 bg-red-500/20"] : ["Pendente", "text-amber-200 bg-amber-500/20"];
     topo.appendChild(el("span", "text-xs font-semibold px-2 py-0.5 rounded-full " + selo[1], selo[0]));
     info.appendChild(topo);
+    var itens = [];
+    try { itens = b.itens ? JSON.parse(b.itens) : []; } catch (e) {}
+    if (itens.length) info.appendChild(el("p", "text-xs text-slate-300", itens.map(function (i) {
+      return (i.unidade === "avulso" ? "" : i.qtd + "x ") + i.nome + " " + reais(i.valor_centavos * i.qtd);
+    }).join(" · ")));
     info.appendChild(el("p", "text-xs text-slate-400", b.cliente + (b.album ? " · " + b.album : "") +
       (b.vencimento ? " · vence " + dataBr(b.vencimento) : "") + (b.bloqueia_album && b.status === "pendente" ? " · 🔒 álbum trancado" : "")));
     linha.appendChild(info);
@@ -354,6 +563,7 @@ document.getElementById("btnCobranca").addEventListener("click", async function 
     cliente_id: document.getElementById("cobCliente").value,
     album_id: document.getElementById("cobAlbum").value || null,
     descricao: document.getElementById("cobDescricao").value,
+    itens: itensEscolhidos().map(function (i) { return { preco_id: i.preco_id, qtd: i.qtd }; }),
     valor: document.getElementById("cobValor").value,
     vencimento: document.getElementById("cobVenc").value,
     link: document.getElementById("cobLink").value,
@@ -362,6 +572,8 @@ document.getElementById("btnCobranca").addEventListener("click", async function 
   if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível criar."; return; }
   ["cobDescricao", "cobValor", "cobVenc", "cobLink"].forEach(function (id) { document.getElementById(id).value = ""; });
   document.getElementById("cobTrancar").checked = false;
+  document.getElementById("itensCobranca").innerHTML = "";
+  calcularTotal();
   await carregarCobrancas();
   carregarAlbuns();
 });
