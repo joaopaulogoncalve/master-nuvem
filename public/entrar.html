@@ -145,7 +145,8 @@ async function enviar(ev) {
       return;
     }
     if (resp.ok) {
-      window.location.href = destino();
+      // Conta nova: o painel mostra a dica de ativar a verificação em duas etapas.
+      window.location.href = modo === "criar" && destino() === "/painel" ? "/painel?bemvindo=1" : destino();
       return;
     }
     erro.textContent = json.error || "Não foi possível continuar.";

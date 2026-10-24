@@ -12,6 +12,7 @@ function calcularPreco(gb) {
 }
 
 function formatarEspaco(gb) {
+  if (gb < 1) return Math.round(gb * 1000) + " MB";
   if (gb >= 1000) return String(+(gb / 1000).toFixed(2)) + " TB";
   return gb + " GB";
 }

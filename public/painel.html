@@ -17,6 +17,12 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
 .cta:disabled{opacity:.6}
 .campo{width:100%;padding:12px 14px;border-radius:12px;background:#0a1633;border:1px solid #1e3a8a;color:#fff;outline:none}
 .campo:focus{border-color:#38bdf8}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:9999px;outline:none;cursor:pointer;background:linear-gradient(90deg,#38bdf8 var(--p,0%),#12224a var(--p,0%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;border:5px solid #38bdf8;box-shadow:0 0 20px #38bdf8}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:5px solid #38bdf8;box-shadow:0 0 20px #38bdf8}
+.chip{padding:6px 14px;border-radius:9999px;border:1px solid #1e40af;background:#0c1a3d;color:#93c5fd;font-size:13px;font-weight:600;transition:.2s}
+.chip:hover{border-color:#38bdf8;color:#fff}
+.chip-on{background:linear-gradient(90deg,#0ea5e9,#6366f1);border-color:transparent;color:#fff;box-shadow:0 0 16px #38bdf866}
 #qr{display:inline-block;padding:10px;background:#fff;border-radius:12px}
 </style>
 </head>
@@ -32,61 +38,113 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
 <main class="max-w-4xl mx-auto px-4 py-10 space-y-6">
   <div id="avisoPagamento" class="hidden glass rounded-2xl p-5 text-sm"></div>
 
-  <div class="glass rounded-3xl p-8">
+  <!-- 1. Quem é + segurança -->
+  <div class="glass rounded-3xl p-6 sm:p-8">
     <div class="flex items-center gap-3 flex-wrap">
       <h1 id="ola" class="text-2xl font-bold">Carregando...</h1>
       <span id="papel" class="hidden text-xs font-semibold text-violet-200 bg-violet-500/20 px-3 py-1 rounded-full">Administrador</span>
     </div>
-    <p id="email" class="text-slate-400 mt-1"></p>
-    <a href="/arquivos" class="cta inline-block mt-6 font-bold px-6 py-3 rounded-xl transition">Meus arquivos</a>
-    <a href="/meu-portal" class="inline-block mt-6 ml-3 font-semibold text-cyan-200 border border-cyan-400/40 px-6 py-3 rounded-xl hover:bg-cyan-500/10">📸 Meu portal de clientes</a>
-    <a id="linkAdmin" href="/admin" class="hidden inline-block mt-6 ml-3 font-semibold text-violet-200 border border-violet-400/40 px-6 py-3 rounded-xl hover:bg-violet-500/10">Painel admin</a>
-  </div>
+    <p id="email" class="text-slate-400 mt-1 break-all"></p>
 
-  <div class="glass rounded-3xl p-8">
-    <h2 class="text-xl font-bold mb-1">Meu plano</h2>
-    <p id="textoPlano" class="text-slate-300">Carregando...</p>
-    <div id="blocoCupom" class="hidden mt-5">
-      <p class="text-sm text-slate-300 mb-2">Tem um cupom de teste? Experimente grátis:</p>
-      <div class="flex flex-wrap gap-2" style="max-width:420px">
-        <input id="cupom" class="campo flex-1 uppercase" maxlength="30" placeholder="Ex.: NUVEM1DIA" autocomplete="off">
-        <button type="button" id="btnCupom" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Ativar</button>
-      </div>
-      <p id="erroCupom" class="text-sm text-red-400 mt-2 min-h-[1.25rem]"></p>
-    </div>
-    <a id="linkContratar" href="/#calculadora" class="hidden inline-block mt-4 text-sm font-semibold text-cyan-300 hover:text-white">Contratar ou renovar plano →</a>
-  </div>
-
-  <div class="glass rounded-3xl p-8">
-    <h2 class="text-xl font-bold mb-1">Segurança</h2>
-    <p class="text-sm text-slate-400 mb-5">Verificação em duas etapas com aplicativo autenticador.</p>
-
-    <div id="blocoAtivar" class="hidden">
-      <p class="text-slate-300 mb-4">Desativada. Ative para proteger a sua conta com um código extra a cada login.</p>
-      <button type="button" id="btnAtivar" class="cta font-bold px-6 py-3 rounded-xl transition">Ativar verificação em duas etapas</button>
+    <div class="mt-4">
+      <button type="button" id="btnSeguranca" class="hidden text-sm font-semibold text-red-300 border border-red-400/50 bg-red-500/10 hover:bg-red-500/20 px-4 py-2 rounded-xl">🔒 Quero mais segurança: ativar a verificação em duas etapas</button>
+      <p id="dicaSeguranca" class="hidden text-xs text-slate-400 mt-2">Recomendado: com ela, além da senha, a sua conta pede um código do celular para entrar. É opcional; a escolha é sua.</p>
+      <button type="button" id="seloSeguranca" class="hidden text-sm font-semibold text-emerald-300">✔ Conta protegida com verificação em duas etapas <span class="text-slate-400 font-normal underline">gerenciar</span></button>
     </div>
 
-    <div id="blocoSetup" class="hidden space-y-4">
-      <p class="text-slate-300">1. No celular, abra o Google Authenticator (ou Microsoft Authenticator) e escaneie o QR code:</p>
+    <!-- Ativar (passo a passo) -->
+    <div id="blocoSetup" class="hidden mt-5 space-y-4 bg-slate-900/50 rounded-2xl p-5">
+      <p class="text-slate-300">1. No celular, abra o <strong>Google Authenticator</strong> (grátis) e toque em <strong>+</strong> → <strong>Ler código QR</strong>:</p>
       <div id="qr"></div>
-      <p class="text-sm text-slate-400">Se não conseguir escanear, digite esta chave no aplicativo:</p>
+      <p class="text-sm text-slate-400">Se não conseguir escanear, digite esta chave no aplicativo (guarde-a num lugar seguro):</p>
       <p id="chave" class="font-mono text-cyan-300 break-all"></p>
-      <p class="text-slate-300">2. Digite o código de 6 dígitos que o aplicativo mostrar:</p>
+      <p class="text-slate-300">2. Digite o código de 6 números que aparecer no aplicativo:</p>
       <input id="codigoAtivar" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" class="campo text-center text-xl tracking-widest" style="max-width:220px">
       <p id="erroAtivar" class="text-sm text-red-400 min-h-[1.25rem]"></p>
-      <button type="button" id="btnConfirmar" class="cta font-bold px-6 py-3 rounded-xl transition">Confirmar e ativar</button>
+      <div class="flex flex-wrap gap-4 items-center">
+        <button type="button" id="btnConfirmar" class="cta font-bold px-6 py-3 rounded-xl transition">Confirmar e ativar</button>
+        <button type="button" id="btnCancelarSetup" class="text-sm text-slate-400 hover:text-white">Agora não</button>
+      </div>
     </div>
 
-    <div id="blocoAtivo" class="hidden space-y-4">
-      <p class="text-emerald-300 font-semibold">Verificação em duas etapas ativada.</p>
+    <!-- Desativar -->
+    <div id="blocoAtivo" class="hidden mt-5 space-y-4 bg-slate-900/50 rounded-2xl p-5">
       <p class="text-sm text-slate-400">Para desativar, confirme a sua senha e um código do aplicativo.</p>
       <div class="relative" style="max-width:320px">
         <input id="senhaDesativar" type="password" placeholder="Sua senha" autocomplete="current-password" class="campo" style="padding-right:84px">
         <button type="button" id="olhoDesativar" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-300 hover:text-white px-2 py-1">Mostrar</button>
       </div>
-      <input id="codigoDesativar" type="text" inputmode="numeric" maxlength="6" placeholder="Código de 6 dígitos" autocomplete="one-time-code" class="campo" style="max-width:320px">
+      <input id="codigoDesativar" type="text" inputmode="numeric" maxlength="6" placeholder="Código de 6 números" autocomplete="one-time-code" class="campo" style="max-width:320px">
       <p id="erroDesativar" class="text-sm text-red-400 min-h-[1.25rem]"></p>
       <button type="button" id="btnDesativar" class="font-semibold text-red-300 border border-red-400/40 px-5 py-2.5 rounded-xl hover:bg-red-500/10">Desativar</button>
+    </div>
+
+    <div class="flex flex-wrap gap-3 mt-6">
+      <a href="/arquivos" class="cta inline-block font-bold px-6 py-3 rounded-xl transition">Meus arquivos</a>
+      <a href="/meu-portal" class="inline-block font-semibold text-cyan-200 border border-cyan-400/40 px-6 py-3 rounded-xl hover:bg-cyan-500/10">📸 Meu portal de clientes</a>
+      <a id="linkAdmin" href="/admin" class="hidden inline-block font-semibold text-violet-200 border border-violet-400/40 px-6 py-3 rounded-xl hover:bg-violet-500/10">Painel admin</a>
+    </div>
+  </div>
+
+  <!-- 2. Plano -->
+  <div class="glass rounded-3xl p-6 sm:p-8">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <p class="text-sm text-slate-400">Seu plano</p>
+        <p id="planoTamanho" class="text-3xl font-extrabold">…</p>
+        <p id="planoDetalhe" class="text-sm text-slate-400 mt-1"></p>
+      </div>
+      <button type="button" id="btnContratar" class="cta font-bold px-8 py-3.5 rounded-xl transition">Contratar</button>
+    </div>
+
+    <!-- Sem plano: escolher entre testar ou contratar -->
+    <div id="blocoOpcoes" class="hidden mt-6 pt-6 border-t border-blue-900/60">
+      <div class="grid sm:grid-cols-2 gap-3">
+        <button type="button" id="btnTesteGratis" class="text-left bg-slate-900/50 hover:bg-slate-900 border border-cyan-400/40 rounded-2xl p-4">
+          <span class="block font-bold text-cyan-200">🎁 Testar grátis por 24 horas</span>
+          <span class="block text-xs text-slate-400 mt-1">Sem cartão: 20 MB para testar o envio de fotos e o portal de clientes.</span>
+        </button>
+        <button type="button" id="btnQueroContratar" class="text-left bg-slate-900/50 hover:bg-slate-900 border border-indigo-400/40 rounded-2xl p-4">
+          <span class="block font-bold text-indigo-200">💳 Quero contratar já</span>
+          <span class="block text-xs text-slate-400 mt-1">Escolha os GB e pague por PIX ou cartão. Ativa na hora.</span>
+        </button>
+      </div>
+      <button type="button" id="linkCupom" class="text-xs text-slate-400 hover:text-white underline mt-3">Tenho um cupom</button>
+      <div id="blocoCupom" class="hidden mt-3 flex flex-wrap gap-2" style="max-width:420px">
+        <input id="cupom" class="campo flex-1 uppercase" maxlength="30" placeholder="Digite o cupom" autocomplete="off">
+        <button type="button" id="btnCupom" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Ativar</button>
+      </div>
+      <p id="erroCupom" class="text-sm text-red-400 mt-2 min-h-[1.25rem]"></p>
+    </div>
+
+    <!-- Calculadora (usa o /app.js da página inicial) -->
+    <div id="blocoCalculadora" class="hidden mt-6 pt-6 border-t border-blue-900/60">
+      <div class="flex justify-between items-center mb-4">
+        <label for="gbSlider" class="text-sm font-semibold text-slate-200">Quanto espaço você precisa?</label>
+        <span id="gbDisplay" class="text-2xl font-extrabold grad">50 GB</span>
+      </div>
+      <input type="range" id="gbSlider" min="1" max="5000" step="1" value="50">
+      <div class="flex flex-wrap gap-2 mt-5">
+        <button type="button" class="chip" data-gb="1">1 GB</button>
+        <button type="button" class="chip" data-gb="50">50 GB</button>
+        <button type="button" class="chip" data-gb="200">200 GB</button>
+        <button type="button" class="chip" data-gb="500">500 GB</button>
+        <button type="button" class="chip" data-gb="1000">1 TB</button>
+        <button type="button" class="chip" data-gb="2000">2 TB</button>
+        <button type="button" class="chip" data-gb="5000">5 TB</button>
+      </div>
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-5 mt-6">
+        <div>
+          <span class="text-xs text-slate-400 uppercase tracking-wider block">Valor mensal</span>
+          <div class="flex items-baseline gap-1">
+            <span class="text-sm font-semibold text-slate-300">R$</span>
+            <span id="priceDisplay" class="text-3xl font-extrabold">-</span>
+            <span class="text-xs text-slate-400">/mês</span>
+          </div>
+        </div>
+        <button type="button" id="checkoutBtn" class="cta w-full sm:w-auto font-bold px-8 py-3.5 rounded-xl transition active:scale-95">Pagar com PIX ou cartão</button>
+      </div>
+      <p class="text-xs text-slate-500 mt-4">Pagamento seguro pelo Mercado Pago. O plano ativa sozinho assim que o pagamento é aprovado.</p>
     </div>
   </div>
 </main>
@@ -107,10 +165,18 @@ function mostrar(id, sim) {
   document.getElementById(id).classList.toggle("hidden", !sim);
 }
 
+var parametros = new URLSearchParams(window.location.search);
+var usuario = null;
+var planoAtual = null;
+
+/* ---------- segurança (2 etapas) ---------- */
+
 function estadoSeguranca(ativo) {
-  mostrar("blocoAtivar", !ativo);
+  mostrar("btnSeguranca", !ativo);
+  mostrar("dicaSeguranca", !ativo && parametros.get("bemvindo") === "1");
+  mostrar("seloSeguranca", ativo);
   mostrar("blocoSetup", false);
-  mostrar("blocoAtivo", ativo);
+  mostrar("blocoAtivo", false);
 }
 
 async function iniciarSetup() {
@@ -119,7 +185,6 @@ async function iniciarSetup() {
     alert(r.dados.error || "Não foi possível iniciar.");
     return;
   }
-  mostrar("blocoAtivar", false);
   mostrar("blocoSetup", true);
   document.getElementById("chave").textContent = r.dados.secret;
   var caixa = document.getElementById("qr");
@@ -129,6 +194,7 @@ async function iniciarSetup() {
   } else {
     caixa.textContent = "QR code indisponível. Use a chave abaixo.";
   }
+  document.getElementById("blocoSetup").scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 async function confirmarSetup() {
@@ -136,7 +202,7 @@ async function confirmarSetup() {
   erro.textContent = "";
   var r = await postar("/api/2fa/enable", { codigo: document.getElementById("codigoAtivar").value });
   if (r.ok) {
-    window.location.reload();
+    window.location.href = "/painel";
     return;
   }
   erro.textContent = r.dados.error || "Código incorreto.";
@@ -156,9 +222,76 @@ async function desativar() {
   erro.textContent = r.dados.error || "Não foi possível desativar.";
 }
 
-// Link de divulgação: /painel?cupom=NUVEM1DIA já deixa o cupom preenchido (passando pelo login, se precisar).
-var cupomUrl = new URLSearchParams(window.location.search).get("cupom");
-if (cupomUrl) document.getElementById("cupom").value = cupomUrl.toUpperCase();
+/* ---------- plano ---------- */
+
+function formatarEspaco(gb) {
+  if (gb < 1) return Math.round(gb * 1000) + " MB";
+  if (gb >= 1000) return String(+(gb / 1000).toFixed(2)) + " TB";
+  return gb + " GB";
+}
+
+function mostrarPlano(plano) {
+  planoAtual = plano;
+  var tamanho = document.getElementById("planoTamanho");
+  var detalhe = document.getElementById("planoDetalhe");
+  var botao = document.getElementById("btnContratar");
+  if (plano && plano.teste) {
+    // Teste grátis por cupom (paid_until vem em UTC).
+    var fim = new Date(plano.paid_until.replace(" ", "T") + "Z");
+    var horas = Math.max(0, Math.round((fim - Date.now()) / 3600000));
+    tamanho.textContent = formatarEspaco(plano.quota_gb);
+    tamanho.className = "text-3xl font-extrabold text-amber-300";
+    detalhe.textContent = "Teste grátis · termina em cerca de " + horas + " hora(s), às " +
+      fim.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) + " de " + fim.toLocaleDateString("pt-BR") + ".";
+    botao.textContent = "Contratar plano";
+  } else if (plano) {
+    var d = plano.paid_until.slice(0, 10).split("-");
+    tamanho.textContent = formatarEspaco(plano.quota_gb);
+    tamanho.className = "text-3xl font-extrabold text-emerald-300";
+    detalhe.textContent = "Ativo até " + d[2] + "/" + d[1] + "/" + d[0] + ".";
+    botao.textContent = "Renovar ou aumentar";
+  } else {
+    tamanho.textContent = "0 GB";
+    tamanho.className = "text-3xl font-extrabold";
+    detalhe.textContent = "Você ainda não tem espaço contratado.";
+    botao.textContent = "Contratar";
+  }
+}
+
+function abrirCalculadora() {
+  mostrar("blocoOpcoes", false);
+  mostrar("blocoCalculadora", true);
+  document.getElementById("blocoCalculadora").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+// "Contratar": sem plano, pergunta se quer testar ou contratar; com plano (pago ou teste), vai direto para a calculadora.
+document.getElementById("btnContratar").addEventListener("click", function () {
+  if (planoAtual) { abrirCalculadora(); return; }
+  mostrar("blocoCalculadora", false);
+  mostrar("blocoOpcoes", true);
+});
+document.getElementById("btnQueroContratar").addEventListener("click", abrirCalculadora);
+document.getElementById("linkCupom").addEventListener("click", function () {
+  mostrar("blocoCupom", true);
+  document.getElementById("cupom").focus();
+});
+
+async function usarCupom(codigo, botao) {
+  var erro = document.getElementById("erroCupom");
+  erro.textContent = "";
+  botao.disabled = true;
+  var r = await postar("/api/cupom", { codigo: codigo });
+  botao.disabled = false;
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível ativar."; return; }
+  window.location.href = "/painel";
+}
+document.getElementById("btnTesteGratis").addEventListener("click", function () { usarCupom("NUVEM1DIA", this); });
+document.getElementById("btnCupom").addEventListener("click", function () { usarCupom(document.getElementById("cupom").value, this); });
+
+/* ---------- carregar ---------- */
+
+// Link de divulgação: /painel?cupom=CODIGO já abre as opções com o cupom preenchido (passando pelo login, se precisar).
+var cupomUrl = parametros.get("cupom");
 
 fetch("/api/me").then(function (r) {
   if (!r.ok) {
@@ -168,55 +301,25 @@ fetch("/api/me").then(function (r) {
   return r.json();
 }).then(function (u) {
   if (!u) return;
+  usuario = u;
   document.getElementById("ola").textContent = "Olá, " + (u.nome || "cliente") + "!";
   document.getElementById("email").textContent = u.email;
   if (u.role === "admin") {
-    document.getElementById("papel").classList.remove("hidden");
-    document.getElementById("linkAdmin").classList.remove("hidden");
+    mostrar("papel", true);
+    mostrar("linkAdmin", true);
   }
   estadoSeguranca(u.totp);
   mostrarPlano(u.plano);
-});
-
-function formatarEspaco(gb) {
-  if (gb < 1) return Math.round(gb * 1000) + " MB";
-  if (gb >= 1000) return String(+(gb / 1000).toFixed(2)) + " TB";
-  return gb + " GB";
-}
-
-function mostrarPlano(plano) {
-  var texto = document.getElementById("textoPlano");
-  if (plano && plano.teste) {
-    // Teste grátis por cupom: mostra as horas que faltam (paid_until vem em UTC).
-    var fim = new Date(plano.paid_until.replace(" ", "T") + "Z");
-    var horas = Math.max(0, Math.round((fim - Date.now()) / 3600000));
-    texto.innerHTML = "<span class=\"text-amber-300 font-semibold\">Teste grátis: " + formatarEspaco(plano.quota_gb) +
-      "</span> · termina em cerca de " + horas + " hora(s), às " + fim.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) +
-      " de " + fim.toLocaleDateString("pt-BR") + ". Gostou? Contrate um plano para continuar.";
-  } else if (plano) {
-    var d = plano.paid_until.slice(0, 10).split("-");
-    texto.innerHTML = "<span class=\"text-emerald-300 font-semibold\">" + formatarEspaco(plano.quota_gb) +
-      "</span> ativo até " + d[2] + "/" + d[1] + "/" + d[0] + ".";
-  } else {
-    texto.textContent = "Você ainda não tem um plano ativo.";
+  if (cupomUrl && !u.plano) {
+    mostrar("blocoOpcoes", true);
+    mostrar("blocoCupom", true);
+    document.getElementById("cupom").value = cupomUrl.toUpperCase();
   }
-  mostrar("blocoCupom", !plano);
-  mostrar("linkContratar", true);
-}
-
-document.getElementById("btnCupom").addEventListener("click", async function () {
-  var erro = document.getElementById("erroCupom");
-  erro.textContent = "";
-  this.disabled = true;
-  var r = await postar("/api/cupom", { codigo: document.getElementById("cupom").value });
-  this.disabled = false;
-  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível usar o cupom."; return; }
-  window.location.reload();
 });
 
 // Volta do Mercado Pago: o plano é ativado pelo aviso (webhook), que pode levar alguns segundos.
 (function () {
-  var pg = new URLSearchParams(window.location.search).get("pagamento");
+  var pg = parametros.get("pagamento");
   var caixa = document.getElementById("avisoPagamento");
   if (!pg) return;
   var textos = {
@@ -231,7 +334,11 @@ document.getElementById("btnCupom").addEventListener("click", async function () 
   caixa.classList.remove("hidden");
 })();
 
-document.getElementById("btnAtivar").addEventListener("click", iniciarSetup);
+document.getElementById("btnSeguranca").addEventListener("click", iniciarSetup);
+document.getElementById("btnCancelarSetup").addEventListener("click", function () { mostrar("blocoSetup", false); });
+document.getElementById("seloSeguranca").addEventListener("click", function () {
+  mostrar("blocoAtivo", document.getElementById("blocoAtivo").classList.contains("hidden"));
+});
 document.getElementById("btnConfirmar").addEventListener("click", confirmarSetup);
 document.getElementById("btnDesativar").addEventListener("click", desativar);
 document.getElementById("olhoDesativar").addEventListener("click", function () {
@@ -246,5 +353,6 @@ document.getElementById("sair").addEventListener("click", function () {
   });
 });
 </script>
+<script src="/app.js"></script>
 </body>
 </html>
