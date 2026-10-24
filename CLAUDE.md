@@ -171,6 +171,12 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
    `bloqueia_album`, status pendente/pago/cancelado). Rotas: `/api/portal/pagamento`, `/api/portal/cobrancas` (lista + resumo
    a receber/atrasado/recebido no mês), `/cobrancas/nova`, `/cobrancas/status`. Álbum trancado = cobrança pendente com
    `bloqueia_album=1`: o cliente não recebe prévia nem link de download (402). O cliente vê as cobranças em `/p/<slug>`.
+   **Cupons de teste grátis — 2026-10-24** (`migrations/0007_cupons.sql`): tabela `cupons` (codigo maiúsculo, quota_mb, horas,
+   max_usos, usos, valido_ate, ativo) e `cupom_usos` (1 cupom por conta). `POST /api/cupom {codigo}` (logado, sem plano ativo) cria
+   `subscriptions` com `quota_gb = quota_mb/1000` (ex.: 0.02 = 20 MB) e `mp_payment_id = 'cupom:<CODIGO>'` (conta como manual, fora da
+   receita; não recebe aviso "vence em breve"). Admin: `/api/admin/cupons`, `/cupons/salvar`, `/cupons/ativo` + seção no `/admin`.
+   Painel: campo "Tem um cupom?"; link de divulgação `masternuvem.com.br/painel?cupom=NUVEM1DIA` (passa pelo login e já preenche).
+   Cupom criado em produção: **NUVEM1DIA = 20 MB por 24 horas, sem limite de usos**.
    **Ideias do João para o Portal (2026-10-24, ainda não feitas):**
    - v1.1: seleção "Para o álbum impresso" com limite do pacote (ex.: 32/60), prévia em páginas duplas, "enviar seleção"
      (trava); botão "Pedir edição" por foto com comentário e status "feito".

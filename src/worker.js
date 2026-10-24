@@ -246,7 +246,7 @@ function emailRecuperarSenha(nome, link) {
 
 async function planoAtual(env, userId) {
   return await env.DB.prepare(
-    "SELECT id, quota_gb, paid_until FROM subscriptions WHERE user_id = ? AND status = 'active' AND paid_until > datetime('now') ORDER BY id DESC LIMIT 1"
+    "SELECT id, quota_gb, paid_until, mp_payment_id FROM subscriptions WHERE user_id = ? AND status = 'active' AND paid_until > datetime('now') ORDER BY id DESC LIMIT 1"
   ).bind(userId).first();
 }
 
@@ -363,6 +363,13 @@ async function tratarAdmin(request, env, url) {
     }, 200);
   }
 
+  if (caminho === "/api/admin/cupons" && request.method === "GET") {
+    const r = await env.DB.prepare(
+      "SELECT codigo, quota_mb, horas, max_usos, usos, valido_ate, ativo, created_at FROM cupons ORDER BY created_at DESC"
+    ).all();
+    return resposta({ cupons: r.results }, 200);
+  }
+
   if (caminho === "/api/admin/backblaze") {
     let medida;
     try {
@@ -410,6 +417,31 @@ async function tratarAdmin(request, env, url) {
   const corpo = await lerJson(request);
   if (!corpo) return resposta({ error: "JSON inválido" }, 400);
 
+  if (caminho === "/api/admin/cupons/salvar") {
+    const codigo = String(corpo.codigo || "").trim().toUpperCase();
+    const mb = parseInt(corpo.quota_mb, 10);
+    const horas = parseInt(corpo.horas, 10);
+    const max = corpo.max_usos === "" || corpo.max_usos === null || corpo.max_usos === undefined ? null : parseInt(corpo.max_usos, 10);
+    const ate = String(corpo.valido_ate || "");
+    if (!/^[A-Z0-9_-]{3,30}$/.test(codigo)) return resposta({ error: "Código: 3 a 30 letras, números, - ou _" }, 400);
+    if (!mb || mb < 1 || mb > 100000) return resposta({ error: "Espaço inválido (1 a 100.000 MB)" }, 400);
+    if (!horas || horas < 1 || horas > 24 * 90) return resposta({ error: "Duração inválida (1 hora a 90 dias)" }, 400);
+    if (max !== null && (!max || max < 1)) return resposta({ error: "Limite de usos inválido" }, 400);
+    if (ate && !/^\d{4}-\d{2}-\d{2}$/.test(ate)) return resposta({ error: "Data inválida" }, 400);
+    await env.DB.prepare(
+      "INSERT INTO cupons (codigo, quota_mb, horas, max_usos, valido_ate, ativo) VALUES (?, ?, ?, ?, ?, 1) " +
+      "ON CONFLICT(codigo) DO UPDATE SET quota_mb = excluded.quota_mb, horas = excluded.horas, max_usos = excluded.max_usos, valido_ate = excluded.valido_ate"
+    ).bind(codigo, mb, horas, max, ate || null).run();
+    return resposta({ ok: true }, 200);
+  }
+
+  if (caminho === "/api/admin/cupons/ativo") {
+    const r = await env.DB.prepare("UPDATE cupons SET ativo = ? WHERE codigo = ?")
+      .bind(corpo.ativo ? 1 : 0, String(corpo.codigo || "").toUpperCase()).run();
+    if (!r.meta.changes) return resposta({ error: "Cupom não encontrado" }, 404);
+    return resposta({ ok: true }, 200);
+  }
+
   const alvo = await env.DB.prepare("SELECT id FROM users WHERE id = ?").bind(parseInt(corpo.user_id, 10) || 0).first();
   if (!alvo) return resposta({ error: "Cliente não encontrado" }, 404);
 
@@ -452,7 +484,7 @@ async function tratarApi(request, env, url) {
       nome: u.name,
       role: u.role,
       totp: !!u.totp_enabled,
-      plano: plano ? { quota_gb: plano.quota_gb, paid_until: plano.paid_until } : null
+      plano: plano ? { quota_gb: plano.quota_gb, paid_until: plano.paid_until, teste: String(plano.mp_payment_id || "").indexOf("cupom:") === 0 } : null
     }, 200);
   }
 
@@ -702,6 +734,35 @@ async function tratarApi(request, env, url) {
     return resposta({ ok: true }, 200, cookieSessao("", 0));
   }
 
+  if (caminho === "/api/cupom") {
+    if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+    if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
+    const u = await usuarioLogado(request, env);
+    if (!u) return resposta({ error: "Entre na sua conta para usar o cupom", login: true }, 401);
+    const corpo = await lerJson(request);
+    if (!corpo) return resposta({ error: "JSON inválido" }, 400);
+
+    const codigo = String(corpo.codigo || "").trim().toUpperCase().replace(/\s+/g, "");
+    const cupom = /^[A-Z0-9_-]{3,30}$/.test(codigo)
+      ? await env.DB.prepare(
+          "SELECT codigo, quota_mb, horas FROM cupons WHERE codigo = ? AND ativo = 1 " +
+          "AND (valido_ate IS NULL OR valido_ate >= date('now', '-3 hours')) AND (max_usos IS NULL OR usos < max_usos)"
+        ).bind(codigo).first()
+      : null;
+    if (!cupom) return resposta({ error: "Cupom inválido ou esgotado" }, 400);
+    if (await planoAtual(env, u.id)) return resposta({ error: "Você já tem um plano ativo. O cupom é para quem ainda não tem plano." }, 400);
+
+    // Registra o uso primeiro (chave = user_id): a mesma conta não usa dois cupons, nem clicando duas vezes.
+    const marcou = await env.DB.prepare("INSERT OR IGNORE INTO cupom_usos (user_id, codigo) VALUES (?, ?)").bind(u.id, cupom.codigo).run();
+    if (!marcou.meta.changes) return resposta({ error: "Esta conta já usou um cupom de teste" }, 400);
+    await env.DB.prepare("UPDATE cupons SET usos = usos + 1 WHERE codigo = ?").bind(cupom.codigo).run();
+    await env.DB.prepare(
+      "INSERT INTO subscriptions (user_id, quota_gb, status, paid_until, mp_payment_id) VALUES (?, ?, 'active', datetime('now', ?), ?)"
+    ).bind(u.id, cupom.quota_mb / 1000, "+" + cupom.horas + " hours", "cupom:" + cupom.codigo).run();
+    console.log("Cupom", cupom.codigo, "usado pelo usuário", u.id);
+    return resposta({ ok: true, quota_mb: cupom.quota_mb, horas: cupom.horas }, 200);
+  }
+
   if (caminho === "/api/checkout") {
     if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
     if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
@@ -833,6 +894,7 @@ function dataBr(txt) {
 }
 
 function espaco(gb) {
+  if (gb < 1) return Math.round(gb * 1000) + " MB";
   return gb >= 1000 ? String(+(gb / 1000).toFixed(2)) + " TB" : gb + " GB";
 }
 
@@ -847,7 +909,9 @@ async function limpeza(env) {
   const tipos = [
     {
       tipo: "vence",
-      sql: "s.paid_until > datetime('now') AND s.paid_until <= datetime('now', '+" + DIAS_AVISO_ANTES + " days')",
+      // Teste grátis por cupom dura poucas horas: não manda "vence em breve" logo depois de ativar.
+      sql: "s.paid_until > datetime('now') AND s.paid_until <= datetime('now', '+" + DIAS_AVISO_ANTES + " days') " +
+        "AND COALESCE(s.mp_payment_id, '') NOT LIKE 'cupom:%'",
       montar: function (s) {
         return emailAviso(s.name, "Seu plano de " + espaco(s.quota_gb) + " vence em " + dataBr(s.paid_until) + ".",
           ["Para continuar enviando arquivos sem interrupção, renove antes do vencimento. Renovando o mesmo tamanho, os dias que faltam são somados ao novo período."],

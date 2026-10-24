@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Entrar - Master Nuvem</title>
+<link rel="icon" type="image/png" href="/marca/icone-64.png">
+<link rel="apple-touch-icon" href="/marca/icone-180.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
@@ -18,12 +20,15 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
 .aba-on{background:linear-gradient(90deg,#0ea5e9,#6366f1);color:#fff}
 .olho{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:600;color:#93c5fd;padding:6px 8px}
 .olho:hover{color:#fff}
+.mascote-entrar{animation:flutuar 5s ease-in-out infinite;filter:drop-shadow(0 0 24px #38bdf855)}
+@keyframes flutuar{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@media (prefers-reduced-motion:reduce){.mascote-entrar{animation:none}}
 </style>
 </head>
 <body class="text-white font-sans antialiased min-h-screen flex items-center justify-center px-4">
 
 <main class="glass w-full max-w-md rounded-3xl p-8">
-  <a href="/" class="block text-center font-bold text-2xl mb-6">Master<span class="grad">Nuvem</span></a>
+  <a href="/" class="block text-center mb-6"><img src="/marca/mascote.svg" alt="" class="h-20 w-auto mx-auto mascote-entrar"><span class="font-bold text-2xl">Master<span class="grad">Nuvem</span></span></a>
 
   <div id="etapaSenha">
     <p id="avisoVolta" class="hidden text-sm text-cyan-300 text-center mb-4">Entre ou crie sua conta para contratar o plano.</p>

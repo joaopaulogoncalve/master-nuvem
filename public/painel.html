@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Meu painel - Master Nuvem</title>
+<link rel="icon" type="image/png" href="/marca/icone-64.png">
+<link rel="apple-touch-icon" href="/marca/icone-180.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
@@ -22,7 +24,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
 
 <nav class="border-b border-blue-900/50 bg-slate-950/60 backdrop-blur">
   <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-    <a href="/" class="font-bold text-xl">Master<span class="grad">Nuvem</span></a>
+    <a href="/" class="flex items-center gap-2 font-bold text-xl"><img src="/marca/mascote.svg" alt="" class="h-8 w-auto">Master<span class="grad">Nuvem</span></a>
     <button type="button" id="sair" class="text-sm font-semibold text-blue-300 hover:text-white">Sair</button>
   </div>
 </nav>
@@ -44,6 +46,14 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
   <div class="glass rounded-3xl p-8">
     <h2 class="text-xl font-bold mb-1">Meu plano</h2>
     <p id="textoPlano" class="text-slate-300">Carregando...</p>
+    <div id="blocoCupom" class="hidden mt-5">
+      <p class="text-sm text-slate-300 mb-2">Tem um cupom de teste? Experimente grátis:</p>
+      <div class="flex flex-wrap gap-2" style="max-width:420px">
+        <input id="cupom" class="campo flex-1 uppercase" maxlength="30" placeholder="Ex.: NUVEM1DIA" autocomplete="off">
+        <button type="button" id="btnCupom" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Ativar</button>
+      </div>
+      <p id="erroCupom" class="text-sm text-red-400 mt-2 min-h-[1.25rem]"></p>
+    </div>
     <a id="linkContratar" href="/#calculadora" class="hidden inline-block mt-4 text-sm font-semibold text-cyan-300 hover:text-white">Contratar ou renovar plano →</a>
   </div>
 
@@ -146,9 +156,13 @@ async function desativar() {
   erro.textContent = r.dados.error || "Não foi possível desativar.";
 }
 
+// Link de divulgação: /painel?cupom=NUVEM1DIA já deixa o cupom preenchido (passando pelo login, se precisar).
+var cupomUrl = new URLSearchParams(window.location.search).get("cupom");
+if (cupomUrl) document.getElementById("cupom").value = cupomUrl.toUpperCase();
+
 fetch("/api/me").then(function (r) {
   if (!r.ok) {
-    window.location.href = "/entrar";
+    window.location.href = "/entrar" + (cupomUrl ? "?volta=" + encodeURIComponent("/painel?cupom=" + cupomUrl) : "");
     return null;
   }
   return r.json();
@@ -165,21 +179,40 @@ fetch("/api/me").then(function (r) {
 });
 
 function formatarEspaco(gb) {
+  if (gb < 1) return Math.round(gb * 1000) + " MB";
   if (gb >= 1000) return String(+(gb / 1000).toFixed(2)) + " TB";
   return gb + " GB";
 }
 
 function mostrarPlano(plano) {
   var texto = document.getElementById("textoPlano");
-  if (plano) {
+  if (plano && plano.teste) {
+    // Teste grátis por cupom: mostra as horas que faltam (paid_until vem em UTC).
+    var fim = new Date(plano.paid_until.replace(" ", "T") + "Z");
+    var horas = Math.max(0, Math.round((fim - Date.now()) / 3600000));
+    texto.innerHTML = "<span class=\"text-amber-300 font-semibold\">Teste grátis: " + formatarEspaco(plano.quota_gb) +
+      "</span> · termina em cerca de " + horas + " hora(s), às " + fim.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) +
+      " de " + fim.toLocaleDateString("pt-BR") + ". Gostou? Contrate um plano para continuar.";
+  } else if (plano) {
     var d = plano.paid_until.slice(0, 10).split("-");
     texto.innerHTML = "<span class=\"text-emerald-300 font-semibold\">" + formatarEspaco(plano.quota_gb) +
       "</span> ativo até " + d[2] + "/" + d[1] + "/" + d[0] + ".";
   } else {
     texto.textContent = "Você ainda não tem um plano ativo.";
   }
+  mostrar("blocoCupom", !plano);
   mostrar("linkContratar", true);
 }
+
+document.getElementById("btnCupom").addEventListener("click", async function () {
+  var erro = document.getElementById("erroCupom");
+  erro.textContent = "";
+  this.disabled = true;
+  var r = await postar("/api/cupom", { codigo: document.getElementById("cupom").value });
+  this.disabled = false;
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível usar o cupom."; return; }
+  window.location.reload();
+});
 
 // Volta do Mercado Pago: o plano é ativado pelo aviso (webhook), que pode levar alguns segundos.
 (function () {

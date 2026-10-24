@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
 <title>Painel admin - Master Nuvem</title>
+<link rel="icon" type="image/png" href="/marca/icone-64.png">
+<link rel="apple-touch-icon" href="/marca/icone-180.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
@@ -23,7 +25,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
 
 <nav class="border-b border-blue-900/50 bg-slate-950/60 backdrop-blur">
   <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-    <a href="/" class="font-bold text-xl">Master<span class="grad">Nuvem</span> <span class="text-sm text-violet-300 font-semibold">admin</span></a>
+    <a href="/" class="flex items-center gap-2 font-bold text-xl"><img src="/marca/mascote.svg" alt="" class="h-8 w-auto">Master<span class="grad">Nuvem</span> <span class="text-sm text-violet-300 font-semibold">admin</span></a>
     <div class="flex gap-5 text-sm font-semibold text-blue-300">
       <a href="/painel" class="hover:text-white">Painel</a>
       <button type="button" id="sair" class="hover:text-white">Sair</button>
@@ -52,6 +54,21 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         <p id="b2Rodape" class="text-xs text-slate-500 mt-4"></p>
       </div>
       <p id="b2Erro" class="hidden text-sm text-red-400"></p>
+    </div>
+
+    <div class="glass rounded-3xl p-6">
+      <h2 class="text-lg font-bold">Cupons de teste grátis</h2>
+      <p class="text-sm text-slate-400 mt-1">A pessoa cria a conta e digita o cupom no Painel. Cada conta usa só 1 cupom. Link pronto: <span class="text-cyan-300">masternuvem.com.br/painel?cupom=CODIGO</span></p>
+      <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mt-4 items-end">
+        <label class="text-xs text-slate-400 md:col-span-2">Código<input id="cupCodigo" class="campo mt-1 uppercase" maxlength="30" placeholder="NUVEM1DIA"></label>
+        <label class="text-xs text-slate-400">Espaço (MB)<input id="cupMb" type="number" min="1" class="campo mt-1" value="20"></label>
+        <label class="text-xs text-slate-400">Duração (horas)<input id="cupHoras" type="number" min="1" class="campo mt-1" value="24"></label>
+        <label class="text-xs text-slate-400">Máx. de usos<input id="cupMax" type="number" min="1" class="campo mt-1" placeholder="sem limite"></label>
+        <label class="text-xs text-slate-400">Válido até<input id="cupAte" type="date" class="campo mt-1"></label>
+      </div>
+      <p id="cupErro" class="text-sm text-red-400 mt-2 min-h-[1.25rem]"></p>
+      <button type="button" id="btnCupomSalvar" class="cta font-bold px-4 py-2.5 rounded-xl text-sm">Salvar cupom</button>
+      <div id="listaCupons" class="mt-4 space-y-2"></div>
     </div>
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -97,6 +114,7 @@ function formatarBytes(b) {
 }
 
 function formatarEspaco(gb) {
+  if (gb < 1) return Math.round(gb * 1000) + " MB";
   if (gb >= 1000) return String(+(gb / 1000).toFixed(2)) + " TB";
   return gb + " GB";
 }
@@ -293,9 +311,50 @@ async function carregarB2() {
   btn.disabled = false;
 }
 
+async function carregarCupons() {
+  var resp = await fetch("/api/admin/cupons");
+  if (!resp.ok) return;
+  var d = await resp.json();
+  var lista = document.getElementById("listaCupons");
+  lista.innerHTML = "";
+  if (!d.cupons.length) lista.appendChild(el("p", "text-sm text-slate-400", "Nenhum cupom ainda."));
+  d.cupons.forEach(function (c) {
+    var linha = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/50 rounded-xl px-4 py-3" + (c.ativo ? "" : " opacity-50"));
+    var info = el("div");
+    info.appendChild(el("p", "font-mono font-bold", c.codigo + (c.ativo ? "" : " (pausado)")));
+    info.appendChild(el("p", "text-xs text-slate-400", c.quota_mb + " MB por " + c.horas + " h · usado " + c.usos + (c.max_usos ? " de " + c.max_usos : "") + " vez(es)" +
+      (c.valido_ate ? " · válido até " + formatarData(c.valido_ate) : "")));
+    linha.appendChild(info);
+    var b = el("button", c.ativo ? "text-sm font-semibold text-red-300" : "text-sm font-semibold text-cyan-300", c.ativo ? "Pausar" : "Reativar");
+    b.type = "button";
+    b.addEventListener("click", async function () {
+      await postar("/api/admin/cupons/ativo", { codigo: c.codigo, ativo: !c.ativo });
+      carregarCupons();
+    });
+    linha.appendChild(b);
+    lista.appendChild(linha);
+  });
+}
+
+document.getElementById("btnCupomSalvar").addEventListener("click", async function () {
+  var erro = document.getElementById("cupErro");
+  erro.textContent = "";
+  var r = await postar("/api/admin/cupons/salvar", {
+    codigo: document.getElementById("cupCodigo").value,
+    quota_mb: document.getElementById("cupMb").value,
+    horas: document.getElementById("cupHoras").value,
+    max_usos: document.getElementById("cupMax").value,
+    valido_ate: document.getElementById("cupAte").value
+  });
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
+  document.getElementById("cupCodigo").value = "";
+  carregarCupons();
+});
+
 document.getElementById("busca").addEventListener("input", desenhar);
 document.getElementById("btnB2").addEventListener("click", carregarB2);
 carregarB2();
+carregarCupons();
 document.getElementById("sair").addEventListener("click", function () {
   postar("/api/logout").then(function () { window.location.href = "/entrar"; });
 });
