@@ -117,7 +117,13 @@ código de 2FA pronto (admin ainda **sem** 2FA ativado); fluxo de arquivos imple
 10. Limpeza: registros `pending` antigos só são apagados na próxima tentativa de upload do próprio usuário (e o objeto órfão no B2 não é removido) — criar tarefa agendada (Cron Trigger).
 11. `/termos` e `/privacidade` (LGPD) criadas em 2026-10-23: plano de 30 dias sem renovação automática, arquivos guardados
     **15 dias** após o vencimento e depois podem ser apagados, reembolso só nos 7 dias do CDC, foro Goiânia-GO.
-    Cadastro exige aceite (`users.terms_accepted_at`, `migrations/0003`). Falta: **apagar de fato** após 15 dias (Cron), WhatsApp.
+    Cadastro exige aceite (`users.terms_accepted_at`, `migrations/0003`). Falta: WhatsApp.
+12. **Limpeza automática** (`scheduled` no worker, Cron `0 * * * *`, função `limpeza`): e-mails "vence em 3 dias", "venceu"
+    e "último aviso" (3 dias antes de apagar), registrados em `avisos` (`migrations/0004`) para não repetir; apaga arquivos de
+    quem está sem plano há 15+ dias (nunca admin; "fim" = maior `paid_until` entre active/replaced/cancelled — cancelar grava
+    `paid_until = agora`); apaga envios `pending` com 1+ dia; faxina de sessões, links de senha e pedidos abandonados.
+    **Apagar arquivos de cliente só acontece com a variável `APAGAR_ARQUIVOS = "sim"`**; sem ela fica em modo teste (só log).
+    Limites por rodada: 10 e-mails e 30 exclusões (plano grátis = 50 subrequests).
     Se mudar regra de cobrança/retenção no código, atualizar os textos também.
 
 **Ideias futuras:** bot de WhatsApp para suporte/venda; "Fase 2" com HD/NAS próprio para baratear; planos pré-definidos além do slider; e-mails transacionais.

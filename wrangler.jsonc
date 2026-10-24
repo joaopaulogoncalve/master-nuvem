@@ -17,5 +17,6 @@
     { "pattern": "masternuvem.com.br", "custom_domain": true },
     { "pattern": "www.masternuvem.com.br", "custom_domain": true }
   ],
+  "triggers": { "crons": ["0 * * * *"] },
   "observability": { "enabled": true }
 }

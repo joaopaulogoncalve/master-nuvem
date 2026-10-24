@@ -1,4 +1,4 @@
-import { tratarArquivos, medirBucket } from "./arquivos.js";
+import { tratarArquivos, medirBucket, removerObjeto } from "./arquivos.js";
 const enc = new TextEncoder();
 const DIAS_SESSAO = 30;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -13,6 +13,13 @@ const DOLAR_RESERVA = 5.5;
 const MINUTOS_LINK_SENHA = 30;
 const MAX_PEDIDOS_SENHA_HORA = 3;
 const REMETENTE = "Master Nuvem <nao-responda@masternuvem.com.br>";
+const SITE = "https://masternuvem.com.br";
+// Limpeza automática (roda de hora em hora pelo Cron). Os Termos prometem 15 dias depois do vencimento.
+const DIAS_GUARDA_APOS_VENCER = 15;
+const DIAS_AVISO_ANTES = 3;
+// Limite de chamadas externas por execução (o plano grátis da Cloudflare permite 50 por vez).
+const MAX_EMAILS_POR_RODADA = 10;
+const MAX_APAGAR_POR_RODADA = 30;
 
 function calcularPreco(gb) {
   var valor;
@@ -299,7 +306,8 @@ async function aplicarPagamento(env, pg) {
   }
 
   if ((pg.status === "refunded" || pg.status === "charged_back") && sub.mp_payment_id === idPg) {
-    await env.DB.prepare("UPDATE subscriptions SET status = 'cancelled' WHERE id = ?").bind(sub.id).run();
+    // paid_until = agora: a contagem dos 15 dias de guarda dos arquivos começa no cancelamento.
+    await env.DB.prepare("UPDATE subscriptions SET status = 'cancelled', paid_until = datetime('now') WHERE id = ?").bind(sub.id).run();
     return "plano cancelado";
   }
 
@@ -319,7 +327,9 @@ async function tratarAdmin(request, env, url) {
       "SELECT u.id, u.email, u.name, u.role, u.created_at, u.totp_enabled, " +
       "p.quota_gb, p.paid_until, p.mp_payment_id, " +
       "(SELECT COALESCE(SUM(size_bytes), 0) FROM files f WHERE f.user_id = u.id AND f.status = 'ready') AS usado_bytes, " +
-      "(SELECT COUNT(*) FROM files f WHERE f.user_id = u.id AND f.status = 'ready') AS arquivos " +
+      "(SELECT COUNT(*) FROM files f WHERE f.user_id = u.id AND f.status = 'ready') AS arquivos, " +
+      "(SELECT MAX(s.paid_until) FROM subscriptions s WHERE s.user_id = u.id AND s.status IN ('active', 'replaced', 'cancelled')) AS fim_plano, " +
+      "datetime((SELECT MAX(s.paid_until) FROM subscriptions s WHERE s.user_id = u.id AND s.status IN ('active', 'replaced', 'cancelled')), '+" + DIAS_GUARDA_APOS_VENCER + " days') AS apaga_em " +
       "FROM users u LEFT JOIN subscriptions p ON p.id = (" +
       "SELECT s.id FROM subscriptions s WHERE s.user_id = u.id AND s.status = 'active' AND s.paid_until > datetime('now') ORDER BY s.id DESC LIMIT 1) " +
       "ORDER BY u.id DESC"
@@ -335,7 +345,9 @@ async function tratarAdmin(request, env, url) {
         // Pago = tem id numérico de pagamento do Mercado Pago; o resto (manual ou lançado direto no banco) é manual.
         plano: c.quota_gb ? { quota_gb: c.quota_gb, paid_until: c.paid_until, manual: !/^\d+$/.test(String(c.mp_payment_id || "")) } : null,
         usado_bytes: c.usado_bytes,
-        arquivos: c.arquivos
+        arquivos: c.arquivos,
+        fim_plano: c.fim_plano,
+        apaga_em: c.role === "admin" ? null : c.apaga_em
       };
     });
     // Receita mensal estimada: só planos pagos pelo Mercado Pago (manuais não contam).
@@ -343,7 +355,11 @@ async function tratarAdmin(request, env, url) {
     for (const c of clientes) {
       if (c.plano && !c.plano.manual) receita += calcularPreco(c.plano.quota_gb);
     }
-    return resposta({ clientes: clientes, receita_mensal: Math.round(receita * 100) / 100 }, 200);
+    return resposta({
+      clientes: clientes,
+      receita_mensal: Math.round(receita * 100) / 100,
+      apagar_arquivos: env.APAGAR_ARQUIVOS === "sim"
+    }, 200);
   }
 
   if (caminho === "/api/admin/backblaze") {
@@ -414,7 +430,7 @@ async function tratarAdmin(request, env, url) {
 
   if (caminho === "/api/admin/plano/remover") {
     await env.DB.prepare(
-      "UPDATE subscriptions SET status = 'cancelled' WHERE user_id = ? AND status = 'active'"
+      "UPDATE subscriptions SET status = 'cancelled', paid_until = MIN(paid_until, datetime('now')) WHERE user_id = ? AND status = 'active'"
     ).bind(alvo.id).run();
     console.log("Admin", u.id, "removeu o plano do cliente", alvo.id);
     return resposta({ ok: true }, 200);
@@ -790,7 +806,140 @@ async function tratarApi(request, env, url) {
   return resposta({ error: "Rota não encontrada" }, 404);
 }
 
+/* ---------- limpeza automática (Cron de hora em hora) ---------- */
+
+function emailAviso(nome, titulo, paragrafos, botao) {
+  const ola = "Olá" + (nome ? ", " + String(nome).replace(/[<>&"]/g, "") : "") + "!";
+  const texto = ola + "\n\n" + paragrafos.join("\n\n") + "\n\n" + botao.texto + ": " + botao.link + "\n\nMaster Nuvem";
+  const html = "<div style=\"font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#0f172a\">" +
+    "<h2 style=\"color:#0ea5e9\">Master Nuvem</h2><p>" + ola + "</p><p><strong>" + titulo + "</strong></p>" +
+    paragrafos.map(function (p) { return "<p>" + p + "</p>"; }).join("") +
+    "<p style=\"margin:28px 0\"><a href=\"" + botao.link + "\" style=\"background:#0ea5e9;color:#fff;padding:12px 22px;border-radius:10px;text-decoration:none;font-weight:bold\">" + botao.texto + "</a></p></div>";
+  return { html: html, texto: texto };
+}
+
+function dataBr(txt) {
+  const d = String(txt).slice(0, 10).split("-");
+  return d[2] + "/" + d[1] + "/" + d[0];
+}
+
+function espaco(gb) {
+  return gb >= 1000 ? String(+(gb / 1000).toFixed(2)) + " TB" : gb + " GB";
+}
+
+async function limpeza(env) {
+  const relatorio = { avisos: 0, apagados: 0, orfaos: 0, simulados: 0 };
+  // Só apaga arquivos de verdade quando APAGAR_ARQUIVOS = "sim" (variável na Cloudflare). Sem ela, só registra no log.
+  const apagarDeVerdade = env.APAGAR_ARQUIVOS === "sim";
+  let emails = 0;
+  let apagar = 0;
+
+  // 1) Avisos por e-mail. Cada aviso é registrado em "avisos" antes de enviar, para nunca repetir.
+  const tipos = [
+    {
+      tipo: "vence",
+      sql: "s.paid_until > datetime('now') AND s.paid_until <= datetime('now', '+" + DIAS_AVISO_ANTES + " days')",
+      montar: function (s) {
+        return emailAviso(s.name, "Seu plano de " + espaco(s.quota_gb) + " vence em " + dataBr(s.paid_until) + ".",
+          ["Para continuar enviando arquivos sem interrupção, renove antes do vencimento. Renovando o mesmo tamanho, os dias que faltam são somados ao novo período."],
+          { texto: "Renovar meu plano", link: SITE + "/?gb=" + s.quota_gb + "#calculadora" });
+      },
+      assunto: "Seu plano vence em breve - Master Nuvem"
+    },
+    {
+      tipo: "venceu",
+      // Só até começar a janela do "último aviso", para o cliente não receber os dois ao mesmo tempo.
+      sql: "s.paid_until <= datetime('now') AND s.paid_until > datetime('now', '-" + (DIAS_GUARDA_APOS_VENCER - DIAS_AVISO_ANTES) + " days')",
+      montar: function (s) {
+        return emailAviso(s.name, "Seu plano de " + espaco(s.quota_gb) + " venceu em " + dataBr(s.paid_until) + ".",
+          ["O envio de novos arquivos foi bloqueado. Seus arquivos continuam guardados e você ainda pode baixá-los por " + DIAS_GUARDA_APOS_VENCER + " dias.",
+           "Depois disso eles serão apagados definitivamente, conforme os Termos de uso. Renove para não perder nada."],
+          { texto: "Renovar meu plano", link: SITE + "/?gb=" + s.quota_gb + "#calculadora" });
+      },
+      assunto: "Seu plano venceu - Master Nuvem"
+    },
+    {
+      tipo: "ultimo",
+      sql: "s.paid_until <= datetime('now', '-" + (DIAS_GUARDA_APOS_VENCER - DIAS_AVISO_ANTES) + " days') AND s.paid_until > datetime('now', '-" + DIAS_GUARDA_APOS_VENCER + " days') " +
+        "AND EXISTS (SELECT 1 FROM files f WHERE f.user_id = s.user_id)",
+      montar: function (s) {
+        return emailAviso(s.name, "Último aviso: seus arquivos serão apagados em até " + DIAS_AVISO_ANTES + " dias.",
+          ["Seu plano venceu em " + dataBr(s.paid_until) + ". Se não for renovado, os arquivos guardados na Master Nuvem serão apagados definitivamente e não poderão ser recuperados.",
+           "Renove agora ou entre no painel e baixe o que precisar."],
+          { texto: "Renovar ou baixar meus arquivos", link: SITE + "/arquivos" });
+      },
+      assunto: "Último aviso: seus arquivos serão apagados - Master Nuvem"
+    }
+  ];
+
+  for (const t of tipos) {
+    if (emails >= MAX_EMAILS_POR_RODADA) break;
+    const r = await env.DB.prepare(
+      "SELECT s.id, s.quota_gb, s.paid_until, u.email, u.name FROM subscriptions s JOIN users u ON u.id = s.user_id " +
+      "WHERE s.status = 'active' AND " + t.sql + " AND NOT EXISTS (SELECT 1 FROM avisos a WHERE a.sub_id = s.id AND a.tipo = ?) " +
+      "ORDER BY s.paid_until LIMIT ?"
+    ).bind(t.tipo, MAX_EMAILS_POR_RODADA - emails).all();
+    for (const s of r.results) {
+      const marcou = await env.DB.prepare("INSERT OR IGNORE INTO avisos (sub_id, tipo) VALUES (?, ?)").bind(s.id, t.tipo).run();
+      if (!marcou.meta.changes) continue;
+      const msg = t.montar(s);
+      await enviarEmail(env, s.email, t.assunto, msg.html, msg.texto);
+      emails++;
+      relatorio.avisos++;
+    }
+  }
+
+  // 2) Arquivos de quem está sem plano há mais de 15 dias. Admin nunca é apagado.
+  //    "Fim" = maior paid_until entre os planos já pagos/ativos/cancelados (pedidos pendentes não contam).
+  const vencidos = await env.DB.prepare(
+    "SELECT f.id, f.user_id, f.object_key FROM files f JOIN users u ON u.id = f.user_id " +
+    "WHERE u.role != 'admin' " +
+    "AND NOT EXISTS (SELECT 1 FROM subscriptions s WHERE s.user_id = f.user_id AND s.status = 'active' AND s.paid_until > datetime('now')) " +
+    "AND (SELECT MAX(s.paid_until) FROM subscriptions s WHERE s.user_id = f.user_id AND s.status IN ('active', 'replaced', 'cancelled')) " +
+    "< datetime('now', '-" + DIAS_GUARDA_APOS_VENCER + " days') " +
+    "ORDER BY f.id LIMIT ?"
+  ).bind(MAX_APAGAR_POR_RODADA).all();
+  for (const f of vencidos.results) {
+    if (!apagarDeVerdade) {
+      console.log("[modo teste] apagaria o arquivo", f.id, "do usuário", f.user_id);
+      relatorio.simulados++;
+      continue;
+    }
+    const r = await removerObjeto(env, f.object_key);
+    if (!r.ok && r.status !== 404) {
+      console.error("Falha ao apagar no B2", f.id, r.status);
+      continue;
+    }
+    await env.DB.prepare("DELETE FROM files WHERE id = ?").bind(f.id).run();
+    apagar++;
+    relatorio.apagados++;
+  }
+
+  // 3) Envios que ficaram pela metade há mais de 1 dia (sobra no B2 que ninguém usa).
+  const orfaos = await env.DB.prepare(
+    "SELECT id, object_key FROM files WHERE status = 'pending' AND created_at < datetime('now', '-1 day') ORDER BY id LIMIT ?"
+  ).bind(Math.max(0, MAX_APAGAR_POR_RODADA - apagar)).all();
+  for (const f of orfaos.results) {
+    const r = await removerObjeto(env, f.object_key);
+    if (!r.ok && r.status !== 404) continue;
+    await env.DB.prepare("DELETE FROM files WHERE id = ?").bind(f.id).run();
+    relatorio.orfaos++;
+  }
+
+  // 4) Faxina do banco: sessões vencidas, links de senha velhos e pedidos de pagamento abandonados.
+  await env.DB.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')").run();
+  await env.DB.prepare("DELETE FROM password_resets WHERE expires_at < datetime('now', '-1 day')").run();
+  await env.DB.prepare("DELETE FROM subscriptions WHERE status = 'pending' AND created_at < datetime('now', '-2 days')").run();
+
+  console.log("Limpeza:", JSON.stringify(relatorio), apagarDeVerdade ? "" : "(arquivos em modo teste)");
+  return relatorio;
+}
+
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(limpeza(env));
+  },
+
   async fetch(request, env) {
     const url = new URL(request.url);
 

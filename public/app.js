@@ -89,6 +89,17 @@ function iniciar() {
     btn.addEventListener("click", processarPagamento);
   }
   atualizar();
+
+  // Quem já está logado vê "Meu painel" no lugar de "Entrar".
+  var linkConta = document.getElementById("linkConta");
+  if (linkConta) {
+    fetch("/api/me").then(function (r) {
+      if (r.ok) {
+        linkConta.textContent = "Meu painel";
+        linkConta.href = "/painel";
+      }
+    }).catch(function () {});
+  }
 }
 
 if (document.readyState === "loading") {

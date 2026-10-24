@@ -104,7 +104,7 @@ async function urlAssinada(env, metodo, chaveObjeto, expira, extra) {
   return "https://" + host + caminho + "?" + consulta + "&X-Amz-Signature=" + assinatura;
 }
 
-async function removerObjeto(env, chaveObjeto) {
+export async function removerObjeto(env, chaveObjeto) {
   const url = await urlAssinada(env, "DELETE", chaveObjeto, 120);
   return await fetch(url, { method: "DELETE" });
 }

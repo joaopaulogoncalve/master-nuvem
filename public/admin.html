@@ -70,6 +70,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
 <script>
 var clientes = [];
 var receitaMensal = null;
+var modoTeste = true;
 var dadosB2 = null;
 
 function reais(v) {
@@ -134,8 +135,13 @@ function cartao(c) {
     plano.appendChild(document.createTextNode(" até " + formatarData(c.plano.paid_until) + (c.plano.manual ? " (manual)" : " (pago)")));
   } else {
     plano.appendChild(el("span", "text-amber-300", "Sem plano ativo"));
+    if (c.fim_plano) plano.appendChild(document.createTextNode(" · terminou em " + formatarData(c.fim_plano)));
   }
   caixa.appendChild(plano);
+  if (!c.plano && c.apaga_em && c.arquivos > 0) {
+    caixa.appendChild(el("p", "text-sm text-red-300 mt-1",
+      "Arquivos serão apagados a partir de " + formatarData(c.apaga_em) + (modoTeste ? " (limpeza em modo teste: nada é apagado ainda)" : "")));
+  }
 
   var cota = c.plano ? c.plano.quota_gb * 1e9 : 0;
   caixa.appendChild(el("p", "text-sm text-slate-400 mt-1",
@@ -219,6 +225,7 @@ async function carregar() {
   if (resp.status === 403) { window.location.href = "/painel"; return; }
   var d = await resp.json();
   clientes = d.clientes || [];
+  modoTeste = !d.apagar_arquivos;
 
   var planos = 0, uso = 0;
   clientes.forEach(function (c) { if (c.plano) planos++; uso += c.usado_bytes; });
