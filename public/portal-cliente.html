@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Área do cliente</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{--marca:#be185d}
+body{background:#f1f5f9;color:#0f172a}
+.topo{background:var(--marca);color:#fff}
+.btn{background:var(--marca);color:#fff;border-radius:10px;padding:9px 16px;font-weight:600;font-size:14px}
+.btn:disabled{opacity:.6}
+.btn2{border:1px solid var(--marca);color:var(--marca);background:#fff;border-radius:10px;padding:8px 15px;font-weight:600;font-size:14px}
+.btn2.on{background:var(--marca);color:#fff}
+.cartao{background:#fff;border:1px solid #e2e8f0;border-radius:16px}
+.campo{width:100%;padding:11px 13px;border-radius:12px;border:1px solid #cbd5e1;background:#fff;outline:none}
+.campo:focus{border-color:var(--marca)}
+.foto{aspect-ratio:1/1;border-radius:10px;overflow:hidden;position:relative;background:#e2e8f0;cursor:pointer}
+.foto img{width:100%;height:100%;object-fit:cover}
+.coracao{position:absolute;right:6px;bottom:6px;width:32px;height:32px;border-radius:999px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;color:#94a3b8;box-shadow:0 2px 6px #0003}
+.coracao.on{color:#e11d48}
+#tela{position:fixed;inset:0;background:#000e;display:none;flex-direction:column;z-index:50}
+#tela.aberta{display:flex}
+#tela img{max-width:100%;max-height:100%;object-fit:contain}
+</style>
+</head>
+<body class="font-sans antialiased min-h-screen">
+
+<header class="topo">
+  <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3 min-w-0">
+      <div id="iniciais" class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center font-bold shrink-0"></div>
+      <div class="min-w-0"><p id="nomeEstudio" class="font-bold leading-tight truncate"></p><p class="text-xs opacity-80">Área do cliente</p></div>
+    </div>
+    <div id="usuario" class="hidden text-sm text-right"><span id="ola"></span> · <button type="button" id="sair" class="underline">Sair</button></div>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 py-8">
+  <p id="carregando" class="text-slate-500">Carregando...</p>
+  <p id="naoExiste" class="hidden cartao p-6 text-center text-slate-600">Portal não encontrado. Confira o link que você recebeu.</p>
+
+  <!-- Login -->
+  <section id="secLogin" class="hidden max-w-sm mx-auto cartao p-6">
+    <h1 class="text-xl font-bold text-center">Entrar</h1>
+    <p class="text-sm text-slate-500 text-center mt-1 mb-5">Use o e-mail e a senha que você recebeu do estúdio.</p>
+    <form id="formLogin" class="space-y-3">
+      <input id="email" type="email" class="campo" placeholder="E-mail" autocomplete="email" required>
+      <input id="senha" type="password" class="campo" placeholder="Senha" autocomplete="current-password" required>
+      <p id="erroLogin" class="text-sm text-red-600 min-h-[1.25rem]"></p>
+      <button type="submit" id="btnEntrar" class="btn w-full">Entrar</button>
+    </form>
+    <p class="text-xs text-slate-400 text-center mt-4">Esqueceu a senha? Fale com o estúdio para receber uma nova.</p>
+  </section>
+
+  <!-- Lista de álbuns -->
+  <section id="secAlbuns" class="hidden space-y-4">
+    <h1 class="text-xl font-bold">Seus álbuns</h1>
+    <div id="listaAlbuns" class="grid sm:grid-cols-2 gap-3"></div>
+  </section>
+
+  <!-- Álbum aberto -->
+  <section id="secAlbum" class="hidden space-y-4">
+    <button type="button" id="voltar" class="text-sm text-slate-500">← Todos os álbuns</button>
+    <div class="cartao p-4 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <p id="albTipo" class="text-xs uppercase tracking-wider text-slate-500"></p>
+        <p id="albTitulo" class="text-lg font-bold"></p>
+        <p id="albInfo" class="text-sm text-slate-500"></p>
+      </div>
+      <button type="button" id="soFavoritas" class="btn2">♥ Minhas favoritas</button>
+    </div>
+    <p class="text-sm text-slate-500">Toque no ♥ para escolher as fotos do seu álbum. Toque na foto para ver grande e baixar.</p>
+    <div id="grade" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2"></div>
+    <div class="text-center"><button type="button" id="mais" class="hidden btn2">Carregar mais</button></div>
+  </section>
+</main>
+
+<!-- Foto em tela cheia -->
+<div id="tela">
+  <div class="flex items-center justify-between gap-2 p-3 text-white">
+    <p id="telaNome" class="text-sm truncate"></p>
+    <div class="flex gap-2 shrink-0">
+      <button type="button" id="telaFav" class="btn2">♥</button>
+      <button type="button" id="telaBaixar" class="btn">⬇ Baixar</button>
+      <button type="button" id="telaFechar" class="btn2">✕</button>
+    </div>
+  </div>
+  <div class="flex-1 flex items-center justify-center p-2 min-h-0"><img id="telaImg" alt=""></div>
+</div>
+
+<script>
+var slug = (window.location.pathname.split("/")[2] || "").toLowerCase();
+var albumAtual = null, pagina = 0, arquivos = [], filtro = false, naTela = null;
+
+function el(tag, classe, texto) {
+  var e = document.createElement(tag);
+  if (classe) e.className = classe;
+  if (texto !== undefined) e.textContent = texto;
+  return e;
+}
+function mostrar(id, sim) { document.getElementById(id).classList.toggle("hidden", !sim); }
+function formatarBytes(b) {
+  if (b >= 1e9) return (b / 1e9).toFixed(2) + " GB";
+  if (b >= 1e6) return (b / 1e6).toFixed(1) + " MB";
+  return Math.max(1, Math.round(b / 1e3)) + " KB";
+}
+async function api(rota, corpo) {
+  var op = corpo === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo) };
+  var r = await fetch(rota, op);
+  var d = {};
+  try { d = await r.json(); } catch (e) {}
+  return { ok: r.ok, status: r.status, dados: d };
+}
+
+function aplicarMarca(p) {
+  document.documentElement.style.setProperty("--marca", p.cor);
+  document.getElementById("nomeEstudio").textContent = p.nome;
+  document.getElementById("iniciais").textContent = p.nome.split(" ").filter(function (x) { return x.length > 2; }).slice(0, 2).map(function (x) { return x[0]; }).join("").toUpperCase() || p.nome[0];
+  document.title = p.nome + " - Área do cliente";
+}
+
+async function iniciar() {
+  var info = await api("/api/p/info?slug=" + encodeURIComponent(slug));
+  mostrar("carregando", false);
+  if (!info.ok) { mostrar("naoExiste", true); return; }
+  aplicarMarca(info.dados);
+  var me = await api("/api/p/me");
+  if (!me.ok || me.dados.portal.slug !== slug) { mostrar("secLogin", true); return; }
+  document.getElementById("ola").textContent = "Olá, " + me.dados.nome.split(" ")[0];
+  mostrar("usuario", true);
+  mostrar("secLogin", false);
+  mostrarAlbuns(me.dados.albuns);
+}
+
+function mostrarAlbuns(albuns) {
+  mostrar("secAlbum", false);
+  mostrar("secAlbuns", true);
+  var lista = document.getElementById("listaAlbuns");
+  lista.innerHTML = "";
+  if (!albuns.length) lista.appendChild(el("p", "text-slate-500", "Ainda não há álbuns para você. Assim que o estúdio enviar, eles aparecem aqui."));
+  albuns.forEach(function (a) {
+    var c = el("button", "cartao p-4 text-left hover:shadow-md transition");
+    c.type = "button";
+    c.appendChild(el("p", "text-xs uppercase tracking-wider text-slate-500", a.tipo || ""));
+    c.appendChild(el("p", "font-bold text-lg", a.titulo));
+    c.appendChild(el("p", "text-sm text-slate-500", a.arquivos + " arquivo(s)" + (a.favoritas ? " · ♥ " + a.favoritas + " favorita(s)" : "")));
+    c.addEventListener("click", function () { abrirAlbum(a); });
+    lista.appendChild(c);
+  });
+}
+
+async function abrirAlbum(a) {
+  albumAtual = a;
+  pagina = 0;
+  arquivos = [];
+  filtro = false;
+  document.getElementById("soFavoritas").classList.remove("on");
+  document.getElementById("albTipo").textContent = a.tipo || "";
+  document.getElementById("albTitulo").textContent = a.titulo;
+  mostrar("secAlbuns", false);
+  mostrar("secAlbum", true);
+  window.scrollTo(0, 0);
+  await carregarPagina();
+}
+
+async function carregarPagina() {
+  var r = await api("/api/p/album?id=" + albumAtual.id + "&pagina=" + pagina);
+  if (!r.ok) return;
+  arquivos = arquivos.concat(r.dados.arquivos);
+  document.getElementById("albInfo").textContent = r.dados.total + " arquivo(s) · " + formatarBytes(r.dados.bytes);
+  mostrar("mais", (r.dados.pagina + 1) * r.dados.por_pagina < r.dados.total);
+  desenharGrade();
+}
+
+function desenharGrade() {
+  var grade = document.getElementById("grade");
+  grade.innerHTML = "";
+  var visiveis = arquivos.filter(function (f) { return !filtro || f.favorito; });
+  if (!visiveis.length) grade.appendChild(el("p", "col-span-full text-slate-500", filtro ? "Você ainda não marcou nenhuma favorita." : "Nenhum arquivo neste álbum ainda."));
+  visiveis.forEach(function (f) {
+    var caixa = el("div", "foto");
+    if (f.previa) {
+      var img = el("img");
+      img.loading = "lazy";
+      img.src = f.previa;
+      img.alt = f.nome;
+      caixa.appendChild(img);
+    } else {
+      var ic = el("div", "w-full h-full flex flex-col items-center justify-center text-xs text-slate-600 p-2 text-center");
+      ic.appendChild(el("span", "text-3xl", f.tipo === "video" ? "🎬" : "📄"));
+      ic.appendChild(el("span", "break-all mt-1", f.nome));
+      caixa.appendChild(ic);
+    }
+    var cor = el("span", "coracao" + (f.favorito ? " on" : ""), "♥");
+    cor.addEventListener("click", function (ev) { ev.stopPropagation(); alternarFavorito(f); });
+    caixa.appendChild(cor);
+    caixa.addEventListener("click", function () { f.previa ? abrirTela(f) : baixar(f); });
+    grade.appendChild(caixa);
+  });
+}
+
+async function alternarFavorito(f) {
+  f.favorito = !f.favorito;
+  desenharGrade();
+  if (naTela === f) document.getElementById("telaFav").classList.toggle("on", f.favorito);
+  var r = await api("/api/p/favorito", { file_id: f.id, favorito: f.favorito });
+  if (!r.ok) { f.favorito = !f.favorito; desenharGrade(); alert("Não foi possível salvar. Tente de novo."); }
+}
+
+async function baixar(f) {
+  var r = await api("/api/p/baixar?id=" + f.id);
+  if (r.ok) window.location.href = r.dados.url;
+  else alert(r.dados.error || "Não foi possível baixar.");
+}
+
+function abrirTela(f) {
+  naTela = f;
+  document.getElementById("telaImg").src = f.previa;
+  document.getElementById("telaNome").textContent = f.nome;
+  document.getElementById("telaFav").classList.toggle("on", f.favorito);
+  document.getElementById("tela").classList.add("aberta");
+}
+function fecharTela() { naTela = null; document.getElementById("tela").classList.remove("aberta"); document.getElementById("telaImg").src = ""; }
+
+document.getElementById("telaFechar").addEventListener("click", fecharTela);
+document.getElementById("telaFav").addEventListener("click", function () { if (naTela) alternarFavorito(naTela); });
+document.getElementById("telaBaixar").addEventListener("click", function () { if (naTela) baixar(naTela); });
+document.addEventListener("keydown", function (e) { if (e.key === "Escape") fecharTela(); });
+
+document.getElementById("mais").addEventListener("click", function () { pagina++; carregarPagina(); });
+document.getElementById("soFavoritas").addEventListener("click", function () {
+  filtro = !filtro;
+  this.classList.toggle("on", filtro);
+  desenharGrade();
+});
+document.getElementById("voltar").addEventListener("click", async function () {
+  var me = await api("/api/p/me");
+  if (me.ok) mostrarAlbuns(me.dados.albuns);
+});
+
+document.getElementById("formLogin").addEventListener("submit", async function (ev) {
+  ev.preventDefault();
+  var botao = document.getElementById("btnEntrar");
+  var erro = document.getElementById("erroLogin");
+  erro.textContent = "";
+  botao.disabled = true;
+  var r = await api("/api/p/login", { slug: slug, email: document.getElementById("email").value, senha: document.getElementById("senha").value });
+  botao.disabled = false;
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível entrar."; return; }
+  iniciar();
+});
+
+document.getElementById("sair").addEventListener("click", async function () {
+  await api("/api/p/logout", {});
+  window.location.reload();
+});
+
+iniciar();
+</script>
+</body>
+</html>

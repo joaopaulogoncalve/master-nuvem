@@ -1,4 +1,5 @@
 import { tratarArquivos, medirBucket, removerObjeto } from "./arquivos.js";
+import { tratarPortalDono, tratarPortalCliente } from "./portal.js";
 const enc = new TextEncoder();
 const DIAS_SESSAO = 30;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -800,6 +801,14 @@ async function tratarApi(request, env, url) {
     return await tratarAdmin(request, env, url);
   }
 
+  if (caminho === "/api/portal" || caminho.startsWith("/api/portal/")) {
+    return await tratarPortalDono(request, env, url);
+  }
+
+  if (caminho.startsWith("/api/p/")) {
+    return await tratarPortalCliente(request, env, url);
+  }
+
   if (caminho.startsWith("/api/files")) {
     return await tratarArquivos(request, env, url);
   }
@@ -928,6 +937,7 @@ async function limpeza(env) {
 
   // 4) Faxina do banco: sessões vencidas, links de senha velhos e pedidos de pagamento abandonados.
   await env.DB.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')").run();
+  await env.DB.prepare("DELETE FROM portal_sessoes WHERE expires_at < datetime('now')").run();
   await env.DB.prepare("DELETE FROM password_resets WHERE expires_at < datetime('now', '-1 day')").run();
   await env.DB.prepare("DELETE FROM subscriptions WHERE status = 'pending' AND created_at < datetime('now', '-2 days')").run();
 
@@ -950,6 +960,11 @@ export default {
         console.error("Erro inesperado:", e.message);
         return resposta({ error: "Erro interno" }, 500);
       }
+    }
+
+    // Portal do cliente final: /p/<endereço-do-estúdio> abre sempre a mesma página.
+    if (/^\/p\/[a-z0-9-]+\/?$/.test(url.pathname)) {
+      return env.ASSETS.fetch(new Request(new URL("/portal-cliente", url), request));
     }
 
     return env.ASSETS.fetch(request);

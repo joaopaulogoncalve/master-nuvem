@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Meu portal - Master Nuvem</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
+.glass{background:linear-gradient(160deg,#0c1a3dcc,#07102acc);border:1px solid #1e40af88;box-shadow:0 0 50px #38bdf822;backdrop-filter:blur(10px)}
+.grad{background:linear-gradient(90deg,#38bdf8,#818cf8,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.cta{background:linear-gradient(90deg,#0ea5e9,#6366f1);box-shadow:0 0 30px #38bdf866}
+.cta:hover{filter:brightness(1.15)}
+.cta:disabled{opacity:.6}
+.campo{width:100%;padding:10px 12px;border-radius:12px;background:#0a1633;border:1px solid #1e3a8a;color:#fff;outline:none}
+.campo:focus{border-color:#38bdf8}
+.link{color:#67e8f9;font-weight:600;font-size:14px}
+.link:hover{color:#fff}
+.perigo{color:#fca5a5;font-weight:600;font-size:14px}
+.barra{height:6px;border-radius:9px;background:#1e293b;overflow:hidden}
+.barra i{display:block;height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#818cf8)}
+.miniatura{aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:#0f172a;position:relative}
+.miniatura img{width:100%;height:100%;object-fit:cover}
+.miniatura .selo{position:absolute;right:6px;bottom:6px;background:#fff;color:#e11d48;border-radius:999px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:13px}
+</style>
+</head>
+<body class="text-white font-sans antialiased min-h-screen">
+
+<nav class="border-b border-blue-900/50 bg-slate-950/60 backdrop-blur">
+  <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+    <a href="/" class="font-bold text-xl">Master<span class="grad">Nuvem</span></a>
+    <div class="flex gap-5 text-sm font-semibold text-blue-300">
+      <a href="/painel" class="hover:text-white">Painel</a>
+      <a href="/arquivos" class="hover:text-white">Arquivos</a>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-5xl mx-auto px-4 py-10 space-y-6">
+  <div>
+    <h1 class="text-2xl md:text-3xl font-bold">Meu portal <span class="grad">de fotos e vídeos</span></h1>
+    <p class="text-slate-400 mt-1">Seus clientes entram com login e senha e veem só os álbuns deles. As fotos usam o espaço do seu plano.</p>
+  </div>
+  <p id="carregando" class="text-slate-400">Carregando...</p>
+  <p id="semPlano" class="hidden glass rounded-2xl p-5 text-amber-300">Para criar o seu portal, você precisa de um plano ativo. <a href="/#calculadora" class="link">Contratar plano →</a></p>
+
+  <!-- 1. Configuração -->
+  <section id="secConfig" class="hidden glass rounded-3xl p-6">
+    <h2 class="text-lg font-bold">1. Seu portal</h2>
+    <div class="grid md:grid-cols-3 gap-4 mt-4">
+      <label class="text-sm text-slate-300 md:col-span-1">Nome do estúdio
+        <input id="cfgNome" class="campo mt-1" maxlength="60" placeholder="Estúdio Aurora">
+      </label>
+      <label class="text-sm text-slate-300 md:col-span-1">Endereço
+        <div class="flex items-center mt-1"><span class="text-xs text-slate-500 mr-1 whitespace-nowrap">/p/</span><input id="cfgSlug" class="campo" maxlength="40" placeholder="estudio-aurora"></div>
+      </label>
+      <label class="text-sm text-slate-300">Cor da sua marca
+        <input id="cfgCor" type="color" value="#be185d" class="mt-1 w-full h-11 rounded-xl bg-transparent border border-blue-900 cursor-pointer">
+      </label>
+    </div>
+    <p id="cfgErro" class="text-sm text-red-400 mt-3 min-h-[1.25rem]"></p>
+    <div class="flex flex-wrap items-center gap-4">
+      <button type="button" id="btnSalvar" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Salvar</button>
+      <p id="cfgLink" class="hidden text-sm text-slate-300">Link para os seus clientes: <a id="cfgUrl" target="_blank" class="link break-all"></a> <button type="button" id="btnCopiar" class="link ml-2">Copiar</button></p>
+    </div>
+  </section>
+
+  <!-- 2. Clientes -->
+  <section id="secClientes" class="hidden glass rounded-3xl p-6">
+    <h2 class="text-lg font-bold">2. Seus clientes</h2>
+    <p class="text-sm text-slate-400 mt-1">Crie o acesso e mande o link, o e-mail e a senha para o cliente (WhatsApp, por exemplo).</p>
+    <div class="grid md:grid-cols-4 gap-3 mt-4 items-end">
+      <label class="text-sm text-slate-300">Nome<input id="cliNome" class="campo mt-1" maxlength="80" placeholder="Ana e Pedro"></label>
+      <label class="text-sm text-slate-300">E-mail<input id="cliEmail" type="email" class="campo mt-1" maxlength="120" placeholder="ana@email.com"></label>
+      <label class="text-sm text-slate-300">Senha
+        <div class="flex gap-2 mt-1"><input id="cliSenha" class="campo" maxlength="100" placeholder="mín. 8 caracteres"><button type="button" id="btnGerar" class="link whitespace-nowrap">Gerar</button></div>
+      </label>
+      <button type="button" id="btnCliente" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Criar acesso</button>
+    </div>
+    <p id="cliErro" class="text-sm text-red-400 mt-3 min-h-[1.25rem]"></p>
+    <div id="listaClientes" class="space-y-2"></div>
+  </section>
+
+  <!-- 3. Álbuns -->
+  <section id="secAlbuns" class="hidden glass rounded-3xl p-6">
+    <h2 class="text-lg font-bold">3. Álbuns</h2>
+    <div class="grid md:grid-cols-4 gap-3 mt-4 items-end">
+      <label class="text-sm text-slate-300">Cliente<select id="albCliente" class="campo mt-1"></select></label>
+      <label class="text-sm text-slate-300">Tipo de trabalho<select id="albTipo" class="campo mt-1"></select></label>
+      <label class="text-sm text-slate-300">Nome do álbum<input id="albTitulo" class="campo mt-1" maxlength="100" placeholder="Casamento Ana & Pedro"></label>
+      <button type="button" id="btnAlbum" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Criar álbum</button>
+    </div>
+    <p id="albErro" class="text-sm text-red-400 mt-3 min-h-[1.25rem]"></p>
+    <div id="listaAlbuns" class="grid md:grid-cols-2 gap-3"></div>
+  </section>
+
+  <!-- Álbum aberto -->
+  <section id="secAberto" class="hidden glass rounded-3xl p-6 space-y-4">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <p id="abTipo" class="text-xs uppercase tracking-wider text-slate-400"></p>
+        <h2 id="abTitulo" class="text-xl font-bold"></h2>
+        <p id="abInfo" class="text-sm text-slate-400"></p>
+      </div>
+      <div class="flex flex-wrap gap-4">
+        <button type="button" id="btnFavoritas" class="link">♥ Ver favoritas do cliente</button>
+        <button type="button" id="btnFechar" class="link">Fechar</button>
+      </div>
+    </div>
+    <div id="caixaFavoritas" class="hidden bg-slate-900/60 rounded-2xl p-4 text-sm">
+      <p class="font-semibold mb-2">Fotos escolhidas pelo cliente: <span id="favQtd"></span></p>
+      <textarea id="favLista" readonly class="campo h-32 text-xs"></textarea>
+      <button type="button" id="btnCopiarFav" class="link mt-2">Copiar lista</button>
+    </div>
+    <div class="border border-dashed border-blue-800 rounded-2xl p-5 text-center">
+      <input id="arquivosEnviar" type="file" multiple accept="image/*,video/*" class="hidden">
+      <button type="button" id="btnEnviar" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">⬆ Enviar fotos e vídeos</button>
+      <p class="text-xs text-slate-500 mt-2">Pode escolher muitas de uma vez. Limite de 4,5 GB por arquivo.</p>
+      <div id="progresso" class="hidden mt-4 text-left">
+        <p id="progTexto" class="text-sm text-slate-300 mb-1"></p>
+        <div class="barra"><i id="progBarra"></i></div>
+      </div>
+    </div>
+    <div id="grade" class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-2"></div>
+    <div class="text-center"><button type="button" id="btnMais" class="hidden link">Carregar mais</button></div>
+    <div class="pt-2 border-t border-blue-900/60">
+      <button type="button" id="btnApagarAlbum" class="perigo">Apagar álbum e todas as fotos</button>
+    </div>
+  </section>
+</main>
+
+<script>
+var dados = { portal: null, tipos: [], clientes: [], albuns: [] };
+var aberto = null;      // álbum aberto
+var paginaAtual = 0;
+
+async function api(rota, corpo) {
+  var op = corpo === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo) };
+  var r = await fetch(rota, op);
+  if (r.status === 401) { window.location.href = "/entrar?volta=" + encodeURIComponent("/meu-portal"); throw new Error("login"); }
+  var d = {};
+  try { d = await r.json(); } catch (e) {}
+  return { ok: r.ok, dados: d };
+}
+
+function el(tag, classe, texto) {
+  var e = document.createElement(tag);
+  if (classe) e.className = classe;
+  if (texto !== undefined) e.textContent = texto;
+  return e;
+}
+
+function mostrar(id, sim) { document.getElementById(id).classList.toggle("hidden", !sim); }
+
+function formatarBytes(b) {
+  if (b >= 1e9) return (b / 1e9).toFixed(2) + " GB";
+  if (b >= 1e6) return (b / 1e6).toFixed(1) + " MB";
+  if (b >= 1e3) return (b / 1e3).toFixed(0) + " KB";
+  return b + " B";
+}
+
+function paraSlug(txt) {
+  return txt.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+}
+
+function gerarSenha() {
+  var letras = "abcdefghjkmnpqrstuvwxyz23456789";
+  var b = new Uint8Array(10);
+  crypto.getRandomValues(b);
+  return Array.from(b).map(function (x) { return letras[x % letras.length]; }).join("");
+}
+
+/* ---------- carregar ---------- */
+
+async function carregar() {
+  var r = await api("/api/portal");
+  dados.portal = r.dados.portal;
+  dados.tipos = r.dados.tipos || [];
+  mostrar("carregando", false);
+  mostrar("semPlano", !dados.portal && !r.dados.plano);
+  mostrar("secConfig", !!dados.portal || r.dados.plano);
+  if (dados.portal) {
+    document.getElementById("cfgNome").value = dados.portal.nome;
+    document.getElementById("cfgSlug").value = dados.portal.slug;
+    document.getElementById("cfgCor").value = dados.portal.cor;
+    var link = window.location.origin + "/p/" + dados.portal.slug;
+    var a = document.getElementById("cfgUrl");
+    a.textContent = link;
+    a.href = link;
+    mostrar("cfgLink", true);
+    document.getElementById("btnSalvar").textContent = "Salvar alterações";
+  }
+  mostrar("secClientes", !!dados.portal);
+  mostrar("secAlbuns", !!dados.portal);
+  var tipo = document.getElementById("albTipo");
+  if (!tipo.options.length) dados.tipos.forEach(function (t) { tipo.appendChild(new Option(t, t)); });
+  if (dados.portal) {
+    await carregarClientes();
+    await carregarAlbuns();
+  }
+}
+
+async function carregarClientes() {
+  var r = await api("/api/portal/clientes");
+  dados.clientes = r.dados.clientes || [];
+  var lista = document.getElementById("listaClientes");
+  lista.innerHTML = "";
+  var sel = document.getElementById("albCliente");
+  sel.innerHTML = "";
+  if (!dados.clientes.length) {
+    lista.appendChild(el("p", "text-sm text-slate-400", "Nenhum cliente ainda."));
+    sel.appendChild(new Option("Crie um cliente primeiro", ""));
+  }
+  dados.clientes.forEach(function (c) {
+    sel.appendChild(new Option(c.nome + " (" + c.email + ")", c.id));
+    var linha = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/50 rounded-xl px-4 py-3");
+    var info = el("div");
+    info.appendChild(el("p", "font-semibold", c.nome));
+    info.appendChild(el("p", "text-xs text-slate-400 break-all", c.email + " · " + c.albuns + " álbum(ns)"));
+    linha.appendChild(info);
+    var acoes = el("div", "flex gap-4");
+    var bSenha = el("button", "link", "Nova senha");
+    bSenha.type = "button";
+    bSenha.addEventListener("click", async function () {
+      var nova = prompt("Nova senha para " + c.nome + " (mínimo 8 caracteres):", gerarSenha());
+      if (!nova) return;
+      var r2 = await api("/api/portal/clientes/senha", { cliente_id: c.id, senha: nova });
+      alert(r2.ok ? "Senha trocada. Envie a nova senha para o cliente: " + nova : (r2.dados.error || "Não foi possível."));
+    });
+    var bRem = el("button", "perigo", "Remover");
+    bRem.type = "button";
+    bRem.addEventListener("click", async function () {
+      if (!confirm("Remover o acesso de " + c.nome + "?")) return;
+      var r2 = await api("/api/portal/clientes/remover", { cliente_id: c.id });
+      if (!r2.ok) { alert(r2.dados.error || "Não foi possível."); return; }
+      carregarClientes();
+    });
+    acoes.appendChild(bSenha);
+    acoes.appendChild(bRem);
+    linha.appendChild(acoes);
+    lista.appendChild(linha);
+  });
+}
+
+async function carregarAlbuns() {
+  var r = await api("/api/portal/albuns");
+  dados.albuns = r.dados.albuns || [];
+  var lista = document.getElementById("listaAlbuns");
+  lista.innerHTML = "";
+  if (!dados.albuns.length) lista.appendChild(el("p", "text-sm text-slate-400", "Nenhum álbum ainda."));
+  dados.albuns.forEach(function (a) {
+    var c = el("button", "text-left bg-slate-900/50 hover:bg-slate-900 rounded-2xl p-4 border border-blue-900/60");
+    c.type = "button";
+    c.appendChild(el("p", "text-xs uppercase tracking-wider text-slate-400", a.tipo || ""));
+    c.appendChild(el("p", "font-bold", a.titulo));
+    c.appendChild(el("p", "text-sm text-slate-400", a.cliente + " · " + a.arquivos + " arquivo(s) · " + formatarBytes(a.bytes) + (a.favoritas ? " · ♥ " + a.favoritas : "")));
+    c.addEventListener("click", function () { abrirAlbum(a); });
+    lista.appendChild(c);
+  });
+}
+
+/* ---------- ações ---------- */
+
+document.getElementById("cfgNome").addEventListener("input", function () {
+  if (!dados.portal) document.getElementById("cfgSlug").value = paraSlug(this.value);
+});
+
+document.getElementById("btnSalvar").addEventListener("click", async function () {
+  var erro = document.getElementById("cfgErro");
+  erro.textContent = "";
+  var r = await api("/api/portal/salvar", {
+    nome: document.getElementById("cfgNome").value,
+    slug: document.getElementById("cfgSlug").value,
+    cor: document.getElementById("cfgCor").value
+  });
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
+  carregar();
+});
+
+document.getElementById("btnCopiar").addEventListener("click", function () {
+  navigator.clipboard.writeText(document.getElementById("cfgUrl").textContent);
+  this.textContent = "Copiado!";
+});
+
+document.getElementById("btnGerar").addEventListener("click", function () {
+  document.getElementById("cliSenha").value = gerarSenha();
+});
+
+document.getElementById("btnCliente").addEventListener("click", async function () {
+  var erro = document.getElementById("cliErro");
+  erro.textContent = "";
+  var nome = document.getElementById("cliNome").value;
+  var email = document.getElementById("cliEmail").value;
+  var senha = document.getElementById("cliSenha").value;
+  var r = await api("/api/portal/clientes/novo", { nome: nome, email: email, senha: senha });
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível criar."; return; }
+  alert("Acesso criado! Envie para " + nome + ":\n\nLink: " + window.location.origin + "/p/" + dados.portal.slug + "\nE-mail: " + email + "\nSenha: " + senha);
+  ["cliNome", "cliEmail", "cliSenha"].forEach(function (id) { document.getElementById(id).value = ""; });
+  carregarClientes();
+});
+
+document.getElementById("btnAlbum").addEventListener("click", async function () {
+  var erro = document.getElementById("albErro");
+  erro.textContent = "";
+  var r = await api("/api/portal/albuns/novo", {
+    cliente_id: document.getElementById("albCliente").value,
+    tipo: document.getElementById("albTipo").value,
+    titulo: document.getElementById("albTitulo").value
+  });
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível criar."; return; }
+  document.getElementById("albTitulo").value = "";
+  await carregarAlbuns();
+  var novo = dados.albuns.find(function (a) { return a.id === r.dados.id; });
+  if (novo) abrirAlbum(novo);
+});
+
+/* ---------- álbum aberto ---------- */
+
+async function abrirAlbum(a) {
+  aberto = a;
+  paginaAtual = 0;
+  document.getElementById("abTipo").textContent = a.tipo || "";
+  document.getElementById("abTitulo").textContent = a.titulo;
+  document.getElementById("abInfo").textContent = "Cliente: " + a.cliente;
+  document.getElementById("grade").innerHTML = "";
+  mostrar("caixaFavoritas", false);
+  mostrar("secAberto", true);
+  document.getElementById("secAberto").scrollIntoView({ behavior: "smooth" });
+  await carregarPagina();
+}
+
+async function carregarPagina() {
+  var r = await api("/api/portal/album?id=" + aberto.id + "&pagina=" + paginaAtual);
+  if (!r.ok) return;
+  var d = r.dados;
+  document.getElementById("abInfo").textContent = "Cliente: " + d.album.cliente + " · " + d.total + " arquivo(s) · " + formatarBytes(d.bytes);
+  var grade = document.getElementById("grade");
+  d.arquivos.forEach(function (f) {
+    var m = el("div", "miniatura");
+    m.title = f.nome;
+    if (f.previa) {
+      var img = el("img");
+      img.loading = "lazy";
+      img.src = f.previa;
+      img.alt = f.nome;
+      m.appendChild(img);
+    } else {
+      var icone = el("div", "w-full h-full flex flex-col items-center justify-center text-xs text-slate-400 p-2 text-center");
+      icone.appendChild(el("span", "text-2xl", f.tipo === "video" ? "🎬" : "📄"));
+      icone.appendChild(el("span", "break-all mt-1", f.nome));
+      m.appendChild(icone);
+    }
+    if (f.favorito) m.appendChild(el("span", "selo", "♥"));
+    grade.appendChild(m);
+  });
+  mostrar("btnMais", (d.pagina + 1) * d.por_pagina < d.total);
+}
+
+document.getElementById("btnMais").addEventListener("click", function () {
+  paginaAtual++;
+  carregarPagina();
+});
+
+document.getElementById("btnFechar").addEventListener("click", function () {
+  mostrar("secAberto", false);
+  aberto = null;
+  carregarAlbuns();
+});
+
+document.getElementById("btnFavoritas").addEventListener("click", async function () {
+  var r = await api("/api/portal/album?id=" + aberto.id + "&favoritas=1");
+  var lista = r.dados.favoritas || [];
+  document.getElementById("favQtd").textContent = lista.length;
+  document.getElementById("favLista").value = lista.length ? lista.join("\n") : "O cliente ainda não escolheu nenhuma foto.";
+  mostrar("caixaFavoritas", true);
+});
+
+document.getElementById("btnCopiarFav").addEventListener("click", function () {
+  navigator.clipboard.writeText(document.getElementById("favLista").value);
+  this.textContent = "Copiado!";
+});
+
+document.getElementById("btnApagarAlbum").addEventListener("click", async function () {
+  if (!confirm("Apagar o álbum \"" + aberto.titulo + "\" e TODAS as fotos e vídeos dele?\nIsso não pode ser desfeito.")) return;
+  var botao = this;
+  botao.disabled = true;
+  botao.textContent = "Apagando...";
+  // O servidor apaga em lotes; repete até acabar.
+  while (true) {
+    var r = await api("/api/portal/albuns/remover", { id: aberto.id });
+    if (!r.ok) { alert(r.dados.error || "Não foi possível apagar."); break; }
+    if (!r.dados.restantes) break;
+    botao.textContent = "Apagando... faltam " + r.dados.restantes;
+  }
+  botao.disabled = false;
+  botao.textContent = "Apagar álbum e todas as fotos";
+  mostrar("secAberto", false);
+  aberto = null;
+  carregarAlbuns();
+  carregarClientes();
+});
+
+/* ---------- envio de fotos para o álbum ---------- */
+
+function enviarParaB2(url, arquivo, aoProgredir) {
+  return new Promise(function (resolve, reject) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("PUT", url);
+    xhr.upload.onprogress = function (e) { if (e.lengthComputable) aoProgredir(e.loaded); };
+    xhr.onload = function () { xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error("O armazenamento recusou o envio (" + xhr.status + ")")); };
+    xhr.onerror = function () { reject(new Error("Falha de conexão no envio")); };
+    xhr.send(arquivo);
+  });
+}
+
+document.getElementById("btnEnviar").addEventListener("click", function () {
+  document.getElementById("arquivosEnviar").click();
+});
+
+document.getElementById("arquivosEnviar").addEventListener("change", async function () {
+  var lista = Array.from(this.files);
+  this.value = "";
+  if (!lista.length || !aberto) return;
+  var total = lista.reduce(function (s, f) { return s + f.size; }, 0);
+  var feito = 0, falhas = 0;
+  var texto = document.getElementById("progTexto");
+  var barra = document.getElementById("progBarra");
+  mostrar("progresso", true);
+  document.getElementById("btnEnviar").disabled = true;
+  for (var i = 0; i < lista.length; i++) {
+    var f = lista[i];
+    texto.textContent = "Enviando " + (i + 1) + " de " + lista.length + ": " + f.name;
+    try {
+      var p = await api("/api/files/upload-url", { name: f.name, size: f.size, album_id: aberto.id });
+      if (!p.ok) throw new Error(p.dados.error || "Não foi possível enviar");
+      await enviarParaB2(p.dados.url, f, function (n) {
+        barra.style.width = Math.round((feito + n) / total * 100) + "%";
+      });
+      var fim = await api("/api/files/complete", { id: p.dados.id });
+      if (!fim.ok) throw new Error(fim.dados.error || "Não foi possível finalizar");
+    } catch (e) {
+      falhas++;
+      if (/Espaço insuficiente|plano/.test(e.message)) { alert(e.message); break; }
+    }
+    feito += f.size;
+    barra.style.width = Math.round(feito / total * 100) + "%";
+  }
+  texto.textContent = falhas ? "Terminou com " + falhas + " erro(s). Tente enviar de novo os que faltaram." : "Pronto! " + lista.length + " arquivo(s) enviado(s).";
+  document.getElementById("btnEnviar").disabled = false;
+  document.getElementById("grade").innerHTML = "";
+  paginaAtual = 0;
+  carregarPagina();
+});
+
+carregar().catch(function () {});
+</script>
+</body>
+</html>

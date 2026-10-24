@@ -49,6 +49,8 @@ Local: usar `.dev.vars` (no `.gitignore`!) para rodar `wrangler dev`. Nunca comm
 |---|---|
 | `src/worker.js` | Roteador. Auth (cadastro, login, logout, `/api/me`), 2FA TOTP, `/api/checkout`, delega `/api/files*` |
 | `src/arquivos.js` | Arquivos: lista, URL assinada de upload/download (AWS SigV4 feito à mão com WebCrypto), conclusão, exclusão, cota |
+| `src/portal.js` | Portal do Cliente: rotas do fotógrafo (`/api/portal*`) e do cliente final (`/api/p/*`) |
+| `public/meu-portal.html` / `portal-cliente.html` / `portais.html` | Tela do fotógrafo / tela do cliente final (`/p/<slug>`) / vitrine dos ramos |
 | `public/index.html` + `app.js` | Página de vendas: slider de GB, chips, preço em tempo real, botão de pagamento |
 | `public/entrar.html` | Login / criar conta (abas) + etapa do código 2FA |
 | `public/painel.html` | Painel: saudação, selo "Administrador", ativar/desativar 2FA (QR), link p/ arquivos |
@@ -97,7 +99,10 @@ Conferir o esquema real: `npx wrangler d1 execute master-nuvem-db --remote --com
 **Funciona (testado):** site de vendas com cálculo de preço; checkout abre o Mercado Pago; cadastro/login; conta admin criada;
 código de 2FA pronto (admin ainda **sem** 2FA ativado); fluxo de arquivos implementado (upload direto ao B2, cota, download, apagar).
 
-**Lacunas conhecidas (por prioridade):**
+**Atualização 2026-10-24:** os itens 1, 2, 3, 6 e 10 abaixo foram resolvidos (pagamento automático por webhook, login no
+checkout, ciclo de 30 dias com avisos, 2FA do admin ativado, limpeza por Cron). Veja a seção 9 para o que falta.
+
+**Lacunas conhecidas (por prioridade, histórico):**
 1. **Pagamento não vira plano.** `/api/checkout` não grava nada e não há webhook. A tabela `subscriptions` só é preenchida à mão,
    então cliente que paga continua "sem plano". Falta: ligar o pedido ao usuário logado (exigir login no checkout, enviar
    `external_reference = userId:gb`, `notification_url = /api/mp/webhook`), criar o webhook (validar assinatura/consultar o pagamento
@@ -138,11 +143,38 @@ código de 2FA pronto (admin ainda **sem** 2FA ativado); fluxo de arquivos imple
 7. Estilo do código: funções em português, `var`/`function` simples, sem dependências novas sem necessidade.
 8. Commits só quando o João pedir.
 
-## 9. Próximos passos sugeridos (ordem)
-1. ~~Versionar o esquema do D1 (`migrations/`).~~ Feito em 2026-10-21.
-2. Exigir login no checkout + `external_reference` + webhook do Mercado Pago → criar `subscriptions` automaticamente.
-3. Testar compra real de valor mínimo (PIX) ponta a ponta: pagar → plano ativo → enviar arquivo → baixar → apagar.
-4. ~~Conferir CORS do B2~~ (feito); ativar 2FA do admin (conta `masternuvem.contato@gmail.com`).
-5. Painel admin básico (clientes, uso, plano manual).
-6. Renovação mensal + avisos; Cron de limpeza.
-7. Termos/Privacidade, recuperação de senha, Turnstile.
+## 9. Próximos passos (ordem combinada com o João em 2026-10-24)
+Já feito: migrations, pagamento automático (webhook), CORS/chave/ciclo de vida do B2, 2FA do admin, painel admin,
+recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), botão Entrar. Tudo no PR #1.
+
+1. **Trocar `MP_ACCESS_TOKEN` pelo definitivo** (`scripts\segredo.ps1 -Nome MP_ACCESS_TOKEN`) e testar compra real de R$ 9,90 no PIX:
+   pagar → plano ativo sozinho → enviar arquivo → baixar → apagar. Último passo para vender.
+2. João: conversar com o contador sobre o CNAE do MEI (hoje nenhuma atividade é de serviço de internet/armazenamento).
+3. **Depois dos primeiros clientes pagantes:** ligar o apagamento de verdade (`APAGAR_ARQUIVOS = "sim"` como variável do Worker),
+   só depois de ver um ciclo completo de avisos (vence → venceu → último aviso) funcionando em modo teste.
+4. **Depois: Portal do Cliente** (fotógrafos, gráficas, contadores). Ideia do João: cada assinante tem um espaço com a cara dele
+   (logo, cor, modelo por profissão), cria os próprios clientes com login e senha, e cada cliente só vê a pasta dele; o espaço
+   gasto é só o do assinante. Versões: v1 = clientes + pastas + login do cliente final; v2 = modelos por profissão
+   (galeria de fotos, aprovação de arte, pastas por mês); v3 = domínio próprio do assinante. Argumento de venda:
+   "seu cliente não precisa de conta no Google nem de espaço próprio, e entra num portal com a sua marca".
+   **v1 de fotografia e vídeo feita em 2026-10-24** (`src/portal.js`, `migrations/0005_portal.sql`):
+   - Tabelas: `portais` (1 por assinante, `slug` único), `portal_clientes` (login próprio, PBKDF2), `albuns` (de 1 cliente,
+     `tipo` = subnicho), `files.album_id`, `favoritos` (cascade), `portal_sessoes` (cookie `portal_sessao`, separado de `sessao`).
+   - Fotógrafo: `/meu-portal` + `/api/portal*` (salvar portal, clientes novo/senha/remover, álbuns novo/remover em lotes de 40,
+     ver álbum paginado de 40 e lista de favoritas). Envio usa `/api/files/upload-url` com `album_id` (gasta a cota do dono).
+   - Cliente final: `/p/<slug>` (o worker serve `portal-cliente.html`) + `/api/p/*` (info, login, logout, me, album, baixar, favorito).
+   - `/portais` = vitrine/demonstração dos 8 ramos (dados fictícios).
+   - Falta (v1.1): miniaturas leves (hoje a prévia é a foto original), "baixar tudo" (zip), marca d'água, limite de tentativas
+     no login do cliente, e-mail automático com o acesso, outros ramos (gráfica, contador...).
+   **Ideias do João para o Portal (2026-10-24, ainda não feitas):**
+   - v1.1: seleção "Para o álbum impresso" com limite do pacote (ex.: 32/60), prévia em páginas duplas, "enviar seleção"
+     (trava); botão "Pedir edição" por foto com comentário e status "feito".
+   - Central de cobranças do fotógrafo (o dinheiro vai DIRETO para a conta dele, nunca passa pela do João — limite do MEI e
+     responsabilidade). Passo 1 manual: valor + chave PIX/link do fotógrafo + "marcar como pago" + liberar download só quando
+     pago. Passo 2 automático, por provedor: InfinitePay (só o InfiniteTag/handle; checkout PIX e cartão 12x; `webhook_url` +
+     conferência em `api.checkout.infinitepay.io/payment_check`), Mercado Pago (OAuth/conta conectada; comissão via
+     marketplace_fee), Asaas (chave de API do fotógrafo), PagBank (token/Connect), Pagar.me (Stone). Bancos com API Pix por
+     certificado (Efí, Inter...) e Cielo: trabalhosos. Ton, Nubank PJ: sem API pública encontrada → só modo manual.
+     Chaves de API de fotógrafos precisariam ser guardadas criptografadas. Comissão: falar com o contador antes.
+5. Pendências menores: Turnstile/rate-limit no login e cadastro; upload acima de 4,5 GB (multipart); preço duplicado em
+   `app.js` e `worker.js`; responder e-mails como @masternuvem.com.br; WhatsApp.

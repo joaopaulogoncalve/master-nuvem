@@ -104,6 +104,13 @@ async function urlAssinada(env, metodo, chaveObjeto, expira, extra) {
   return "https://" + host + caminho + "?" + consulta + "&X-Amz-Signature=" + assinatura;
 }
 
+// Link temporário para ver (inline) ou baixar (attachment) um objeto do bucket. Usado também pelo Portal.
+export async function urlArquivo(env, chaveObjeto, nome, baixar, segundos) {
+  return await urlAssinada(env, "GET", chaveObjeto, segundos || 300, {
+    "response-content-disposition": (baixar ? "attachment" : "inline") + "; filename*=UTF-8''" + codificar(nome)
+  });
+}
+
 export async function removerObjeto(env, chaveObjeto) {
   const url = await urlAssinada(env, "DELETE", chaveObjeto, 120);
   return await fetch(url, { method: "DELETE" });
@@ -139,8 +146,9 @@ export async function tratarArquivos(request, env, url) {
 
   if (caminho === "/api/files" && request.method === "GET") {
     const plano = await planoAtivo(env, u.id);
+    // Fotos de álbuns do Portal aparecem no "Meu portal"; aqui só os arquivos soltos (a cota conta tudo).
     const lista = await env.DB.prepare(
-      "SELECT id, name, size_bytes, created_at FROM files WHERE user_id = ? AND status = 'ready' ORDER BY id DESC"
+      "SELECT id, name, size_bytes, created_at FROM files WHERE user_id = ? AND status = 'ready' AND album_id IS NULL ORDER BY id DESC"
     ).bind(u.id).all();
     const uso = await env.DB.prepare(
       "SELECT COALESCE(SUM(size_bytes), 0) AS total FROM files WHERE user_id = ?"
@@ -185,6 +193,16 @@ export async function tratarArquivos(request, env, url) {
     const plano = await planoAtivo(env, u.id);
     if (!plano) return resp({ error: "Você ainda não tem um plano ativo" }, 403);
 
+    // Envio direto para um álbum do Portal: o álbum tem que ser do próprio usuário.
+    let albumId = null;
+    if (corpo.album_id !== undefined && corpo.album_id !== null) {
+      const album = await env.DB.prepare(
+        "SELECT a.id FROM albuns a JOIN portais p ON p.id = a.portal_id WHERE a.id = ? AND p.user_id = ?"
+      ).bind(parseInt(corpo.album_id, 10) || 0, u.id).first();
+      if (!album) return resp({ error: "Álbum não encontrado" }, 404);
+      albumId = album.id;
+    }
+
     await env.DB.prepare(
       "DELETE FROM files WHERE user_id = ? AND status = 'pending' AND created_at < datetime('now', '-1 day')"
     ).bind(u.id).run();
@@ -201,8 +219,8 @@ export async function tratarArquivos(request, env, url) {
     const chave = "u" + u.id + "/" + paraHex(bytes);
 
     const r = await env.DB.prepare(
-      "INSERT INTO files (user_id, object_key, name, size_bytes, status) VALUES (?, ?, ?, ?, 'pending')"
-    ).bind(u.id, chave, nome, Math.floor(tamanho)).run();
+      "INSERT INTO files (user_id, object_key, name, size_bytes, status, album_id) VALUES (?, ?, ?, ?, 'pending', ?)"
+    ).bind(u.id, chave, nome, Math.floor(tamanho), albumId).run();
 
     const link = await urlAssinada(env, "PUT", chave, 3600);
     return resp({ id: r.meta.last_row_id, url: link }, 200);
