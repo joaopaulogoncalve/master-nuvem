@@ -271,12 +271,13 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
      (CPF 11 / CNPJ 14 números; quem emite é o fotógrafo, a Master Nuvem não gera nota). `portais.link_pagamento` = botão "Pagar"
      no pedido. O assistente de evento pede o PIX quando falta. Rodapé "Portal criado com Master Nuvem" no portal do cliente.
      **Cuidado ao editar com PowerShell:** `funcao 'a' + "x" + 'b'` vira 3 argumentos — sempre usar parênteses `funcao ('a' + "x")`.
-   - **PENDENTE DE PUBLICAR (aprovado pelo João em 2026-10-25):** 4 layouts temáticos `casamento`, `quinze`, `infantil`, `festa`
+   - **Publicado em 2026-10-25:** 4 layouts temáticos `casamento`, `quinze`, `infantil`, `festa`
      (CSS em `portal-cliente.html` e `evento.html`, fontes Google, opções em `meu-portal.html`, `TEMAS` em `portal.js`) + capa do
-     evento sempre visível (`body.com-capa`). Não precisa de migração: é só `npx wrangler deploy` e commit no PR #1.
+     evento sempre visível (`body.com-capa`). No ar junto com o aumento de espaço.
    - **Lixeira (`migrations/0017_lixeira.sql`, `src/lixeira.js`):** remover álbum, cliente (com todos os álbuns) ou evento pede 2
      confirmações e só marca `removido_em` → some na hora para o cliente/comprador. 30 min para "Desfazer" (`/api/portal/restaurar`,
      `/api/eventos/restaurar`). `purgarLixeira` roda no Cron de 20 min depois da sentinela e apaga de verdade (até 25 arquivos por
      rodada). Os antigos `/albuns/remover` e `/eventos/remover` (apagar na hora) continuam no servidor, mas a tela não usa mais.
+   **Aumentar espaço — 2026-10-25** (`migrations/0019_aumentar_espaco.sql`, no ar): `subscriptions.aumento_ate`; `/api/checkout` com `modo: "aumentar"` cobra (preço novo − preço atual) × dias que faltam ÷ 30, mínimo R$ 2,00 (`precoAumento`), e o webhook mantém o vencimento. `GET /api/plano/aumento?gb=` mostra o valor no painel. Teste grátis por cupom não aumenta.
 5. Pendências menores: Turnstile no login e cadastro; upload acima de 4,5 GB (multipart); preço duplicado em
    `app.js` e `worker.js`; responder e-mails como @masternuvem.com.br; WhatsApp.
