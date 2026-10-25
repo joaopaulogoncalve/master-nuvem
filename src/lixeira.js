@@ -28,6 +28,15 @@ export async function purgarLixeira(env) {
     return true;
   }
 
+  // A foto de capa (arquivo separado, uso "capa") vai junto com o álbum/evento.
+  async function apagarCapa(tabela, id) {
+    const x = await env.DB.prepare("SELECT f.id, f.object_key FROM " + tabela + " t JOIN files f ON f.id = t.capa_file_id WHERE t.id = ?").bind(id).first();
+    if (!x) return;
+    await removerObjeto(env, x.object_key);
+    await env.DB.prepare("DELETE FROM files WHERE id = ?").bind(x.id).run();
+    rel.arquivos++;
+  }
+
   // 1) Álbuns: primeiro as fotos; quando não sobra nenhuma, o álbum.
   const albuns = await env.DB.prepare("SELECT id FROM albuns WHERE removido_em IS NOT NULL AND removido_em < datetime('now', ?) LIMIT 20").bind(prazo).all();
   for (const a of albuns.results) {
@@ -37,6 +46,7 @@ export async function purgarLixeira(env) {
     await env.DB.prepare("DELETE FROM album_downloads WHERE album_id = ?").bind(a.id).run();
     await env.DB.prepare("DELETE FROM pedidos_edicao WHERE album_id = ?").bind(a.id).run();
     await env.DB.prepare("UPDATE cobrancas SET album_id = NULL WHERE album_id = ?").bind(a.id).run();
+    await apagarCapa("albuns", a.id);
     await env.DB.prepare("DELETE FROM albuns WHERE id = ?").bind(a.id).run();
     rel.albuns++;
   }
@@ -62,6 +72,7 @@ export async function purgarLixeira(env) {
     if (n.n) break;
     await env.DB.prepare("DELETE FROM evento_fotos WHERE evento_id = ?").bind(e.id).run();
     await env.DB.prepare("DELETE FROM evento_pedidos WHERE evento_id = ?").bind(e.id).run();
+    await apagarCapa("eventos", e.id);
     await env.DB.prepare("DELETE FROM eventos WHERE id = ?").bind(e.id).run();
     rel.eventos++;
   }

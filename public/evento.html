@@ -47,9 +47,10 @@ body.tema-delicado .foto{border-radius:18px}
 
 <header id="topo" class="text-white" style="background:var(--cor)">
   <div class="max-w-5xl mx-auto px-4 py-8">
-    <p id="estudio" class="text-sm opacity-90 font-semibold"></p>
+    <div class="flex items-center gap-3"><img id="logoEv" class="hidden h-12 w-auto max-w-[140px] object-contain rounded-lg bg-white/80 p-1" alt=""><p id="estudio" class="text-sm opacity-90 font-semibold"></p></div>
     <h1 id="titulo" class="text-2xl md:text-3xl font-extrabold mt-1">Carregando...</h1>
     <p id="detalhes" class="text-sm opacity-90 mt-1"></p>
+    <p id="evDesc" class="hidden text-sm opacity-95 mt-3 max-w-2xl whitespace-pre-line"></p>
     <p id="precos" class="text-sm font-semibold mt-3 bg-white/20 inline-block rounded-xl px-3 py-1.5"></p>
   </div>
 </header>
@@ -81,7 +82,7 @@ body.tema-delicado .foto{border-radius:18px}
       <div id="pedPagar" class="hidden bg-slate-50 rounded-xl p-4 space-y-2">
         <p class="font-semibold">Como pagar (direto para o fotógrafo):</p>
         <p id="pedInstrucoes" class="whitespace-pre-line break-words text-slate-700"></p>
-        <button type="button" id="btnCopiarPix" class="btn2">Copiar dados do PIX</button>
+        <div class="flex flex-wrap gap-2"><button type="button" id="btnCopiarPix" class="btn2">Copiar dados do PIX</button><a id="btnPagarLink" target="_blank" rel="noopener noreferrer" class="hidden btn">💳 Pagar com cartão ou PIX</a></div>
         <p class="text-sm text-slate-500">Depois de pagar, o fotógrafo confere e libera as fotos. Você recebe um e-mail e esta página mostra os botões de download. <strong>Guarde este link.</strong></p>
       </div>
       <div id="pedBaixar" class="hidden">
@@ -117,6 +118,10 @@ body.tema-delicado .foto{border-radius:18px}
       <label class="block text-sm">Seu nome<input id="fimNome" class="campo mt-1" maxlength="80" autocomplete="name"></label>
       <label class="block text-sm">Seu e-mail (as fotos chegam por ele)<input id="fimEmail" type="email" class="campo mt-1" maxlength="120" autocomplete="email"></label>
       <label class="block text-sm">WhatsApp (opcional)<input id="fimZap" class="campo mt-1" maxlength="20" inputmode="tel" autocomplete="tel"></label>
+      <div id="blocoNota" class="hidden text-sm space-y-2">
+        <label class="flex items-center gap-2"><input id="fimNota" type="checkbox"> Preciso de nota fiscal</label>
+        <input id="fimDoc" class="campo hidden" maxlength="20" inputmode="numeric" placeholder="CPF ou CNPJ (só números)">
+      </div>
       <p id="fimErro" class="text-sm text-red-600 min-h-[1.25rem]"></p>
       <button type="button" id="btnFinalizar" class="btn w-full">Fazer pedido e ver o PIX</button>
       <button type="button" id="btnVoltar" class="block mx-auto text-sm text-slate-500">Voltar</button>
@@ -169,6 +174,21 @@ function lembrar() {
   try { (JSON.parse(localStorage.getItem(CHAVE) || "[]")).forEach(function (id) { escolhidas[id] = true; }); } catch (e) {}
 }
 
+// Logo do estúdio, texto do evento e foto de capa no topo.
+function aplicarVisual(e) {
+  if (e.logo) { var l = document.getElementById("logoEv"); l.src = e.logo; l.classList.remove("hidden"); }
+  var d = document.getElementById("evDesc");
+  if (d && e.descricao) { d.textContent = e.descricao; d.classList.remove("hidden"); }
+  if (e.capa) {
+    var topo = document.getElementById("topo");
+    topo.style.backgroundImage = "linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.65)), url(\"" + e.capa + "\")";
+    topo.style.backgroundSize = "cover";
+    topo.style.backgroundPosition = "center";
+    topo.style.color = "#fff";
+    topo.querySelector("div").style.paddingTop = "64px";
+  }
+}
+
 function aplicarCor(cor, tema) {
   if (/^#[0-9a-fA-F]{6}$/.test(cor || "")) document.documentElement.style.setProperty("--cor", cor);
   if (["escuro", "minimalista", "delicado"].indexOf(tema) > -1) document.body.classList.add("tema-" + tema);
@@ -186,6 +206,8 @@ async function carregarEvento() {
   var p = "1 foto: " + reais(evento.preco_centavos);
   evento.faixas.forEach(function (f) { p += " · a partir de " + f.a_partir + ": " + reais(f.preco_centavos) + " cada"; });
   document.getElementById("precos").textContent = p;
+  aplicarVisual(evento);
+  mostrar("blocoNota", !!evento.emite_nota);
   return true;
 }
 
@@ -285,7 +307,8 @@ document.getElementById("btnFinalizar").addEventListener("click", async function
         fotos: Object.keys(escolhidas).map(Number),
         nome: document.getElementById("fimNome").value,
         email: document.getElementById("fimEmail").value,
-        whatsapp: document.getElementById("fimZap").value
+        whatsapp: document.getElementById("fimZap").value,
+        nota_doc: document.getElementById("fimNota").checked ? document.getElementById("fimDoc").value : ""
       })
     });
     var d = await r.json();
@@ -324,6 +347,10 @@ async function carregarPedido() {
   document.getElementById("pedResumo").textContent = d.pedido.qtd + " foto(s) · " + reais(d.pedido.valor_centavos);
   mostrar("pedPagar", d.pedido.status === "pendente" && !!d.instrucoes_pagamento);
   document.getElementById("pedInstrucoes").textContent = d.instrucoes_pagamento || "";
+  var pagar = document.getElementById("btnPagarLink");
+  if (d.link_pagamento) pagar.href = d.link_pagamento;
+  pagar.classList.toggle("hidden", !d.link_pagamento);
+  if (d.evento.logo) { var l = document.getElementById("logoEv"); l.src = d.evento.logo; l.classList.remove("hidden"); }
   mostrar("pedBaixar", pago);
   var grade = document.getElementById("pedFotos");
   grade.innerHTML = "";
@@ -383,6 +410,7 @@ document.getElementById("btnCopiarPix").addEventListener("click", function () {
   this.textContent = "Copiado!";
 });
 document.getElementById("voltarGaleria").href = "/e/" + slug;
+document.getElementById("fimNota").addEventListener("change", function () { document.getElementById("fimDoc").classList.toggle("hidden", !this.checked); });
 
 (async function () {
   if (pedidoToken) { await carregarPedido(); return; }

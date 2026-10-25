@@ -149,7 +149,7 @@ export async function tratarArquivos(request, env, url) {
     const plano = await planoAtivo(env, u.id);
     // Fotos de álbuns do Portal aparecem no "Meu portal"; aqui só os arquivos soltos (a cota conta tudo).
     const lista = await env.DB.prepare(
-      "SELECT id, name, size_bytes, created_at FROM files WHERE user_id = ? AND status = 'ready' AND album_id IS NULL AND evento_id IS NULL ORDER BY id DESC"
+      "SELECT id, name, size_bytes, created_at FROM files WHERE user_id = ? AND status = 'ready' AND album_id IS NULL AND evento_id IS NULL AND uso IS NULL ORDER BY id DESC"
     ).bind(u.id).all();
     const uso = await env.DB.prepare(
       "SELECT COALESCE(SUM(size_bytes), 0) AS total FROM files WHERE user_id = ?"
@@ -230,8 +230,10 @@ export async function tratarArquivos(request, env, url) {
     const chave = "u" + u.id + "/" + paraHex(bytes);
 
     const r = await env.DB.prepare(
-      "INSERT INTO files (user_id, object_key, name, size_bytes, status, album_id, evento_id, e_previa) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)"
-    ).bind(u.id, chave, nome, Math.floor(tamanho), albumId, eventoId, albumId && corpo.previa === true ? 1 : 0).run();
+      "INSERT INTO files (user_id, object_key, name, size_bytes, status, album_id, evento_id, e_previa, uso) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?)"
+    ).bind(u.id, chave, nome, Math.floor(tamanho), albumId, eventoId, albumId && corpo.previa === true ? 1 : 0,
+      // Logo do estúdio ou capa de álbum/evento: fica fora de Meus arquivos e das fotos (mas conta na cota).
+      !albumId && !eventoId && (corpo.uso === "logo" || corpo.uso === "capa") ? corpo.uso : null).run();
 
     const link = await urlAssinada(env, "PUT", chave, 3600);
     return resp({ id: r.meta.last_row_id, url: link }, 200);

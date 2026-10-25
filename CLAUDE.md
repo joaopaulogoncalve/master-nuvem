@@ -263,6 +263,14 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
      Mais; Fotos | Pedidos | Mais). Regra de UX: não colocar muita coisa numa tela só; cada função atrás de um clique.
    - Álbum mostra o link do cliente (copiar, WhatsApp com mensagem pronta sem a senha) e atalho "🎨 Visual". O layout do portal
      vale também para a página pública do evento (`evento.html` usa `tema` de `/api/e/info`).
+   - **Visual e marca (`migrations/0018_visual.sql`):** layout **por cliente** (`portal_clientes.tema`, escolhido ao cadastrar; vale
+     para toda a área dele) e por evento (`eventos.tema`); NULL = layout do estúdio. Álbum e evento têm `descricao` (recado/texto) e
+     `capa_file_id` (sem capa = 1ª foto; no evento, a prévia com marca). Estúdio tem `logo_file_id` e `bio`. Logo e capa são `files`
+     com `uso` = 'logo'/'capa' (fora de Meus arquivos, contam na cota), reduzidos no navegador. Rotas: `/api/portal/marca`,
+     `/clientes/visual`, `/albuns/visual`, `/api/eventos/capa`. Nota fiscal: `portais.emite_nota` + `evento_pedidos.nota_doc`
+     (CPF 11 / CNPJ 14 números; quem emite é o fotógrafo, a Master Nuvem não gera nota). `portais.link_pagamento` = botão "Pagar"
+     no pedido. O assistente de evento pede o PIX quando falta. Rodapé "Portal criado com Master Nuvem" no portal do cliente.
+     **Cuidado ao editar com PowerShell:** `funcao 'a' + "x" + 'b'` vira 3 argumentos — sempre usar parênteses `funcao ('a' + "x")`.
    - **Lixeira (`migrations/0017_lixeira.sql`, `src/lixeira.js`):** remover álbum, cliente (com todos os álbuns) ou evento pede 2
      confirmações e só marca `removido_em` → some na hora para o cliente/comprador. 30 min para "Desfazer" (`/api/portal/restaurar`,
      `/api/eventos/restaurar`). `purgarLixeira` roda no Cron de 20 min depois da sentinela e apaga de verdade (até 25 arquivos por

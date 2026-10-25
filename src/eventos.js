@@ -4,6 +4,7 @@
 // O dinheiro vai direto para o fotógrafo: a Master Nuvem não cobra comissão nem passa o dinheiro pela conta dela.
 import { urlArquivo, removerObjeto } from "./arquivos.js";
 import { chaveIp, dentroDoLimite } from "./limite.js";
+import { urlDoArquivo } from "./portal.js";
 
 const enc = new TextEncoder();
 const POR_PAGINA_DONO = 60;
@@ -127,7 +128,8 @@ async function usuarioLogado(request, env) {
 function eventoParaTela(e) {
   return {
     id: e.id, slug: e.slug, titulo: e.titulo, data: e.data, local: e.local, tipo: e.tipo,
-    preco_centavos: e.preco_centavos, faixas: lerFaixas(e.faixas), marca_texto: e.marca_texto, publicado: !!e.publicado
+    preco_centavos: e.preco_centavos, faixas: lerFaixas(e.faixas), marca_texto: e.marca_texto, publicado: !!e.publicado,
+    tema: e.tema || null, descricao: e.descricao || null, capa_file_id: e.capa_file_id || null
   };
 }
 
@@ -204,7 +206,7 @@ export async function tratarEventosDono(request, env, url) {
     const ev = await eventoDoDono(url.searchParams.get("id"));
     if (!ev) return resp({ error: "Evento não encontrado" }, 404);
     const r = await env.DB.prepare(
-      "SELECT id, nome, email, whatsapp, qtd, valor_centavos, status, pago_em, created_at, fotos FROM evento_pedidos WHERE evento_id = ? " +
+      "SELECT id, nome, email, whatsapp, nota_doc, qtd, valor_centavos, status, pago_em, created_at, fotos FROM evento_pedidos WHERE evento_id = ? " +
       "ORDER BY CASE status WHEN 'pendente' THEN 0 WHEN 'pago' THEN 1 ELSE 2 END, id DESC LIMIT 300"
     ).bind(ev.id).all();
     // Para o fotógrafo conferir quais fotos a pessoa escolheu (nome do arquivo original).
@@ -253,17 +255,19 @@ export async function tratarEventosDono(request, env, url) {
     const tipo = TIPOS_EVENTO.indexOf(corpo.tipo) > -1 ? corpo.tipo : "Outro";
     const id = parseInt(corpo.id, 10) || 0;
     const valores = [titulo, slug, data || null, texto(corpo.local, 100) || null, tipo, preco, JSON.stringify(faixas),
-      texto(corpo.marca_texto, 40) || null, corpo.publicado === false ? 0 : 1];
+      texto(corpo.marca_texto, 40) || null, corpo.publicado === false ? 0 : 1,
+      ["classico", "escuro", "minimalista", "delicado"].indexOf(corpo.tema) > -1 ? corpo.tema : null,
+      String(corpo.descricao || "").replace(/[\u0000-\u0009\u000b-\u001f]/g, " ").trim().slice(0, 600) || null];
     try {
       if (id) {
         const r = await env.DB.prepare(
-          "UPDATE eventos SET titulo = ?, slug = ?, data = ?, local = ?, tipo = ?, preco_centavos = ?, faixas = ?, marca_texto = ?, publicado = ? WHERE id = ? AND portal_id = ?"
+          "UPDATE eventos SET titulo = ?, slug = ?, data = ?, local = ?, tipo = ?, preco_centavos = ?, faixas = ?, marca_texto = ?, publicado = ?, tema = ?, descricao = ? WHERE id = ? AND portal_id = ?"
         ).bind(...valores, id, portal.id).run();
         if (!r.meta.changes) return resp({ error: "Evento não encontrado" }, 404);
         return resp({ ok: true, id: id }, 200);
       }
       const r = await env.DB.prepare(
-        "INSERT INTO eventos (titulo, slug, data, local, tipo, preco_centavos, faixas, marca_texto, publicado, portal_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO eventos (titulo, slug, data, local, tipo, preco_centavos, faixas, marca_texto, publicado, tema, descricao, portal_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       ).bind(...valores, portal.id).run();
       return resp({ ok: true, id: r.meta.last_row_id }, 200);
     } catch (e) {
@@ -303,6 +307,21 @@ export async function tratarEventosDono(request, env, url) {
     const foto = await fotoDoDono(corpo.id);
     if (!foto) return resp({ error: "Foto não encontrada" }, 404);
     if (!(await apagarFoto(env, foto))) return resp({ error: "Não foi possível apagar agora. Tente de novo." }, 502);
+    return resp({ ok: true }, 200);
+  }
+
+  // Foto de capa do evento (arquivo enviado com uso "capa"); null = usar a primeira foto.
+  if (caminho === "/api/eventos/capa") {
+    const ev = await eventoDoDono(corpo.id);
+    if (!ev) return resp({ error: "Evento não encontrado" }, 404);
+    let capa = null;
+    if (corpo.capa_file_id !== null && corpo.capa_file_id !== undefined && corpo.capa_file_id !== "") {
+      const f = await env.DB.prepare("SELECT id FROM files WHERE id = ? AND user_id = ? AND uso = 'capa' AND status = 'ready'")
+        .bind(parseInt(corpo.capa_file_id, 10) || 0, u.id).first();
+      if (!f) return resp({ error: "Foto de capa inválida" }, 400);
+      capa = f.id;
+    }
+    await env.DB.prepare("UPDATE eventos SET capa_file_id = ? WHERE id = ?").bind(capa, ev.id).run();
     return resp({ ok: true }, 200);
   }
 
@@ -364,14 +383,14 @@ export async function tratarEventosDono(request, env, url) {
 
 async function eventoPublico(env, slug) {
   return await env.DB.prepare(
-    "SELECT e.*, p.nome AS estudio, p.cor, p.tema, p.instrucoes_pagamento, p.user_id FROM eventos e JOIN portais p ON p.id = e.portal_id WHERE e.slug = ? AND e.publicado = 1 AND e.removido_em IS NULL"
+    "SELECT e.*, p.nome AS estudio, p.cor, p.tema AS portal_tema, p.logo_file_id, p.bio, p.instrucoes_pagamento, p.emite_nota, p.link_pagamento, p.user_id FROM eventos e JOIN portais p ON p.id = e.portal_id WHERE e.slug = ? AND e.publicado = 1 AND e.removido_em IS NULL"
   ).bind(String(slug || "").toLowerCase()).first();
 }
 
 async function pedidoPorToken(env, token) {
   if (!/^[0-9a-f]{48}$/.test(String(token || ""))) return null;
   return await env.DB.prepare(
-    "SELECT p.*, e.slug, e.titulo, e.portal_id, pt.nome AS estudio, pt.cor, pt.tema, pt.instrucoes_pagamento FROM evento_pedidos p " +
+    "SELECT p.*, e.slug, e.titulo, e.portal_id, e.tema AS ev_tema, pt.nome AS estudio, pt.cor, pt.tema AS portal_tema, pt.logo_file_id, pt.instrucoes_pagamento, pt.link_pagamento FROM evento_pedidos p " +
     "JOIN eventos e ON e.id = p.evento_id JOIN portais pt ON pt.id = e.portal_id WHERE p.token = ? AND e.removido_em IS NULL"
   ).bind(token).first();
 }
@@ -389,7 +408,17 @@ export async function tratarEventoPublico(request, env, url) {
     delete t.id;
     t.estudio = ev.estudio;
     t.cor = ev.cor;
-    t.tema = ev.tema || "classico";
+    t.tema = ev.tema || ev.portal_tema || "classico";
+    t.logo = await urlDoArquivo(env, ev.logo_file_id);
+    t.bio = ev.bio || null;
+    t.emite_nota = !!ev.emite_nota;
+    delete t.capa_file_id;
+    // Capa: a escolhida pelo fotógrafo ou a prévia (com marca d'água) da primeira foto.
+    t.capa = await urlDoArquivo(env, ev.capa_file_id);
+    if (!t.capa) {
+      const pv = await env.DB.prepare("SELECT p.object_key, p.name FROM evento_fotos f JOIN files p ON p.id = f.previa_id WHERE f.evento_id = ? ORDER BY f.id LIMIT 1").bind(ev.id).first();
+      if (pv) t.capa = await urlArquivo(env, pv.object_key, pv.name, false, 3600);
+    }
     t.total_fotos = n.n;
     return resp(t, 200);
   }
@@ -427,9 +456,10 @@ export async function tratarEventoPublico(request, env, url) {
       for (const f of r.results) fotos.push({ id: f.id, previa: await urlArquivo(env, f.object_key, f.name, false, 3600) });
     }
     return resp({
-      evento: { slug: p.slug, titulo: p.titulo, estudio: p.estudio, cor: p.cor, tema: p.tema || "classico" },
+      evento: { slug: p.slug, titulo: p.titulo, estudio: p.estudio, cor: p.cor, tema: p.ev_tema || p.portal_tema || "classico", logo: await urlDoArquivo(env, p.logo_file_id) },
       pedido: { nome: p.nome, qtd: p.qtd, valor_centavos: p.valor_centavos, status: p.status, pago_em: p.pago_em, criado: p.created_at },
       instrucoes_pagamento: p.status === "pendente" ? p.instrucoes_pagamento : null,
+      link_pagamento: p.status === "pendente" ? p.link_pagamento : null,
       fotos: fotos
     }, 200);
   }
@@ -458,6 +488,9 @@ export async function tratarEventoPublico(request, env, url) {
     const nome = texto(corpo.nome, 80);
     const email = String(corpo.email || "").trim().toLowerCase();
     const whatsapp = texto(corpo.whatsapp, 20).replace(/[^0-9()+\s-]/g, "");
+    // Nota fiscal (só se o fotógrafo emite): CPF (11 números) ou CNPJ (14). Quem emite é o fotógrafo.
+    const notaDoc = ev.emite_nota ? String(corpo.nota_doc || "").replace(/\D/g, "") : "";
+    if (notaDoc && notaDoc.length !== 11 && notaDoc.length !== 14) return resp({ error: "Para a nota fiscal, informe um CPF (11 números) ou CNPJ (14 números)" }, 400);
     if (nome.length < 2) return resp({ error: "Digite seu nome" }, 400);
     if (!EMAIL_OK.test(email) || email.length > 120) return resp({ error: "E-mail inválido (é por ele que as fotos chegam)" }, 400);
     const pedidas = Array.from(new Set((Array.isArray(corpo.fotos) ? corpo.fotos : []).map(function (x) { return parseInt(x, 10); }).filter(Boolean)));
@@ -477,15 +510,15 @@ export async function tratarEventoPublico(request, env, url) {
     const token = paraHex(b);
     pedidas.sort(function (a, c) { return a - c; });
     const r = await env.DB.prepare(
-      "INSERT INTO evento_pedidos (evento_id, token, nome, email, whatsapp, fotos, qtd, valor_centavos) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    ).bind(ev.id, token, nome, email, whatsapp || null, "," + pedidas.join(",") + ",", pedidas.length, conta.total).run();
+      "INSERT INTO evento_pedidos (evento_id, token, nome, email, whatsapp, nota_doc, fotos, qtd, valor_centavos) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(ev.id, token, nome, email, whatsapp || null, notaDoc || null, "," + pedidas.join(",") + ",", pedidas.length, conta.total).run();
     const link = url.origin + "/e/" + ev.slug + "?pedido=" + token;
 
     // Aviso para o fotógrafo conferir o PIX e para o comprador guardar o link.
     const dono = await env.DB.prepare("SELECT email FROM users WHERE id = ?").bind(ev.user_id).first();
     if (dono) {
       await enviarEmail(env, dono.email, "Novo pedido de fotos: " + reais(conta.total) + " - " + ev.titulo,
-        [nome + " (" + email + (whatsapp ? ", WhatsApp " + whatsapp : "") + ") pediu " + pedidas.length + " foto(s) de \"" + ev.titulo + "\" e vai pagar " + reais(conta.total) + " no seu PIX.",
+        [nome + " (" + email + (whatsapp ? ", WhatsApp " + whatsapp : "") + ") pediu " + pedidas.length + " foto(s) de \"" + ev.titulo + "\" e vai pagar " + reais(conta.total) + " no seu PIX." + (notaDoc ? " Pediu nota fiscal para o " + (notaDoc.length === 11 ? "CPF " : "CNPJ ") + notaDoc + "." : ""),
          "Quando o dinheiro cair, abra os pedidos do evento e clique em \"Pago\": as fotos são liberadas na hora para a pessoa."],
         { texto: "Ver pedidos", link: url.origin + "/meu-portal?aba=abertos" });
     }

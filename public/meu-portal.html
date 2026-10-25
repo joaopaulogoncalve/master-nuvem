@@ -120,6 +120,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
           <label class="text-sm text-slate-300 block">Senha
             <div class="flex gap-2 mt-1"><input id="cliSenha" class="campo" maxlength="100" placeholder="mín. 8 caracteres" autocomplete="new-password"><button type="button" id="btnGerar" class="link whitespace-nowrap">Gerar</button></div>
           </label>
+          <label class="text-sm text-slate-300 block">🎨 Layout da área deste cliente<select id="cliTema" class="campo mt-1"><option value="">Igual ao do estúdio</option><option value="classico">Clássico</option><option value="escuro">Galeria escura</option><option value="minimalista">Minimalista</option><option value="delicado">Delicado</option></select></label>
         </div>
         <label id="wzCliExistente" class="hidden text-sm text-slate-300 block">Escolha o cliente<select id="albCliente" class="campo mt-1"></select></label>
         <button type="button" id="wzF1ok" class="cta w-full font-bold px-6 py-3 rounded-xl">Próximo →</button>
@@ -129,6 +130,8 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         <h2 class="text-xl font-bold">Como se chama o álbum?</h2>
         <label class="text-sm text-slate-300 block">Nome do álbum<input id="albTitulo" class="campo mt-1" maxlength="100" placeholder="Casamento Ana & João"></label>
         <label class="text-sm text-slate-300 block">Tipo de trabalho<select id="albTipo" class="campo mt-1"></select></label>
+        <label class="text-sm text-slate-300 block">Um recado para o cliente (opcional)<textarea id="albDescricao" class="campo mt-1 h-20" maxlength="600" placeholder="Que dia lindo! Escolham as 60 fotos para o álbum até sexta."></textarea></label>
+        <label class="text-sm text-slate-300 block">Foto de capa (opcional: sem ela, usamos a primeira foto)<input id="albCapa" type="file" accept="image/jpeg,image/png,image/webp" class="campo mt-1 text-sm"></label>
         <button type="button" id="wzF2ok" class="cta w-full font-bold px-6 py-3 rounded-xl">Próximo →</button>
       </div>
 
@@ -154,10 +157,21 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <div id="wzA1" class="wz hidden space-y-4">
         <h2 class="text-xl font-bold">Sobre o evento</h2>
         <div id="wzA1campos"></div>
+        <label class="text-sm text-slate-300 block">Texto sobre o evento (opcional)<textarea id="evDescricao" class="campo mt-1 h-20" maxlength="600" placeholder="Fotos da 5ª Corrida Noturna. Procure pelo seu número de peito!"></textarea></label>
         <button type="button" id="wzA1ok" class="cta w-full font-bold px-6 py-3 rounded-xl">Próximo →</button>
+      </div>
+      <div id="wzPX" class="wz hidden space-y-4">
+        <h2 class="text-xl font-bold">Onde você recebe o PIX?</h2>
+        <p class="text-sm text-slate-400">Quem comprar as fotos vê estes dados junto com o valor. O dinheiro vai direto para você.</p>
+        <textarea id="wzPix" class="campo h-24" maxlength="500" placeholder="PIX (celular, e-mail, CPF ou CNPJ): ...&#10;Nome que aparece no banco: ..."></textarea>
+        <button type="button" id="wzPXok" class="cta w-full font-bold px-6 py-3 rounded-xl">Salvar e continuar →</button>
       </div>
       <div id="wzA2" class="wz hidden space-y-4">
         <h2 class="text-xl font-bold">Quanto custa cada foto?</h2>
+        <div id="wzA2visual" class="space-y-3">
+          <label class="text-sm text-slate-300 block">🎨 Layout da página do evento<select id="evTema" class="campo mt-1"><option value="">Igual ao do estúdio</option><option value="classico">Clássico</option><option value="escuro">Galeria escura</option><option value="minimalista">Minimalista</option><option value="delicado">Delicado</option></select></label>
+          <label class="text-sm text-slate-300 block">Foto de capa (opcional: sem ela, usamos a primeira foto)<input id="evCapa" type="file" accept="image/jpeg,image/png,image/webp" class="campo mt-1 text-sm"></label>
+        </div>
         <div id="wzA2campos" class="space-y-4"></div>
       </div>
     </div>
@@ -213,6 +227,35 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <button type="button" id="btnInstrucoes" class="link mt-1">Salvar forma de recebimento</button>
       <span id="instrOk" class="hidden text-sm text-emerald-300 ml-2">Salvo!</span>
       <p class="text-xs text-slate-500 mt-1">O dinheiro vai direto para você. A Master Nuvem não cobra comissão.</p>
+      <label class="text-sm text-slate-300 block mt-4">🔗 Seu link de pagamento (opcional: Mercado Pago, InfinitePay...). Aparece como botão "Pagar" ao lado do PIX
+        <input id="cfgLinkPag" class="campo mt-1" maxlength="300" placeholder="https://...">
+      </label>
+      <label class="text-sm text-slate-300 block mt-4">🧾 Você emite nota fiscal para os seus clientes?
+        <select id="cfgNota" class="campo mt-1" style="max-width:360px">
+          <option value="0">Não</option>
+          <option value="1">Sim: quem comprar pode pedir, com CPF ou CNPJ</option>
+        </select>
+        <span class="block text-xs text-slate-500 mt-1">Se sim, o pedido mostra o CPF/CNPJ do cliente e você emite a nota no portal da sua prefeitura.</span>
+      </label>
+    </div>
+
+    <div id="blocoMarca" class="hidden mt-5 pt-5 border-t border-blue-900/60 space-y-4">
+      <div>
+        <p class="text-sm text-slate-300">🏷️ Sua logomarca (aparece no cantinho das páginas dos clientes e dos eventos)</p>
+        <div class="flex items-center gap-4 mt-2">
+          <div class="w-20 h-20 rounded-2xl bg-slate-900/70 border border-blue-900 flex items-center justify-center overflow-hidden"><img id="cfgLogoImg" class="hidden max-w-full max-h-full" alt=""><span id="cfgLogoVazio" class="text-xs text-slate-500">sem logo</span></div>
+          <div class="space-y-2">
+            <input id="cfgLogoArq" type="file" accept="image/png,image/jpeg,image/webp" class="hidden">
+            <button type="button" id="cfgLogoBtn" class="cta font-bold px-4 py-2 rounded-xl text-sm">Enviar logo</button>
+            <button type="button" id="cfgLogoTirar" class="hidden block perigo text-xs">Tirar a logo</button>
+          </div>
+        </div>
+      </div>
+      <label class="text-sm text-slate-300 block">✍️ Sobre você (opcional: aparece para os clientes)
+        <textarea id="cfgBio" class="campo mt-1 h-20" maxlength="600" placeholder="Fotógrafo de casamentos em Goiânia há 10 anos..."></textarea>
+      </label>
+      <button type="button" id="btnMarca" class="link">Salvar logo, texto, nota e link</button>
+      <span id="marcaOk" class="hidden text-sm text-emerald-300 ml-2">Salvo!</span>
     </div>
     </div>
   </section>
@@ -315,6 +358,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <button type="button" data-aba="fotos" class="abaAlb aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800">📷 Fotos</button>
       <button type="button" data-aba="regras" class="abaAlb aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800">🔐 Regras</button>
       <button type="button" data-aba="cliente" class="abaAlb aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800" id="abaCliente">❤️ Escolhas e edições</button>
+      <button type="button" data-aba="visual" class="abaAlb aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800">🎨 Visual</button>
       <button type="button" data-aba="mais" class="abaAlb aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800">⚙️ Mais</button>
     </div>
 
@@ -373,6 +417,20 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         <p class="font-bold">✏️ Pedidos de edição</p>
         <div id="listaEdicoes" class="space-y-2 mt-2"></div>
       </div>
+    </div>
+
+    <div id="paneVisual" class="pane hidden glass rounded-3xl p-5 space-y-4 text-sm text-slate-300">
+      <label class="block">🎨 Layout da área deste cliente (vale para todos os álbuns dele)<select id="vsTema" class="campo mt-1" style="max-width:320px"><option value="">Igual ao do estúdio</option><option value="classico">Clássico</option><option value="escuro">Galeria escura</option><option value="minimalista">Minimalista</option><option value="delicado">Delicado</option></select></label>
+      <label class="block">💬 Recado para o cliente neste álbum<textarea id="vsDescricao" class="campo mt-1 h-20" maxlength="600"></textarea></label>
+      <div>
+        <p>🖼️ Foto de capa</p>
+        <div class="flex items-center gap-4 mt-2">
+          <div class="w-32 h-20 rounded-xl bg-slate-900/70 border border-blue-900 overflow-hidden flex items-center justify-center"><img id="vsCapaImg" class="hidden w-full h-full object-cover" alt=""><span id="vsCapaVazio" class="text-xs text-slate-500 text-center px-2">usando a 1ª foto</span></div>
+          <div class="space-y-1"><input id="vsCapaArq" type="file" accept="image/jpeg,image/png,image/webp" class="hidden"><button type="button" id="vsCapaBtn" class="link">Escolher foto de capa</button><button type="button" id="vsCapaTirar" class="hidden block perigo text-xs">Voltar para a 1ª foto</button></div>
+        </div>
+      </div>
+      <button type="button" id="btnVisual" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Salvar visual</button>
+      <span id="vsOk" class="hidden text-emerald-300 ml-2">Salvo!</span>
     </div>
 
     <div id="paneMais" class="pane hidden glass rounded-3xl p-5 space-y-4">
@@ -565,7 +623,14 @@ async function carregar() {
   var temaAtual = document.querySelector("input[name=tema][value=" + ((dados.portal && dados.portal.tema) || "classico") + "]");
   if (temaAtual) temaAtual.checked = true;
   mostrar("blocoPix", !!dados.portal);
+  mostrar("blocoMarca", !!dados.portal);
   mostrar("cfgVoltar", !!dados.portal);
+  if (dados.portal) {
+    document.getElementById("cfgLinkPag").value = dados.portal.link_pagamento || "";
+    document.getElementById("cfgNota").value = dados.portal.emite_nota ? "1" : "0";
+    document.getElementById("cfgBio").value = dados.portal.bio || "";
+    mostrarLogo(dados.portal.logo_url);
+  }
   // Sem portal ainda: o primeiro passo é configurar o estúdio. Depois, a tela inicial com os links.
   if (dados.portal) mostrarTela(document.getElementById("secConfig").classList.contains("hidden") || telaInicial ? "home" : "config");
   else if (r.dados.plano) mostrarTela("config");
@@ -579,6 +644,75 @@ async function carregar() {
     await carregarCobrancas();
   }
 }
+
+/* ---------- marca do estúdio: logo, texto, nota fiscal e link de pagamento ---------- */
+
+function mostrarLogo(url) {
+  var img = document.getElementById("cfgLogoImg");
+  if (url) img.src = url;
+  img.classList.toggle("hidden", !url);
+  mostrar("cfgLogoVazio", !url);
+  mostrar("cfgLogoTirar", !!url);
+}
+
+// Reduz a imagem no navegador antes de enviar (logo em PNG para manter o fundo transparente; capa em JPG).
+async function reduzirImagem(arquivo, lado, tipo) {
+  var img;
+  try { img = await createImageBitmap(arquivo, { imageOrientation: "from-image" }); }
+  catch (e) {
+    img = await new Promise(function (ok, falha) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = falha; i.src = URL.createObjectURL(arquivo); });
+  }
+  var esc = Math.min(1, lado / Math.max(img.width, img.height));
+  var c = document.createElement("canvas");
+  c.width = Math.round(img.width * esc);
+  c.height = Math.round(img.height * esc);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return await new Promise(function (ok) { c.toBlob(ok, tipo, 0.85); });
+}
+
+// Envia logo ou capa (arquivo de uso especial, fora de Meus arquivos). Devolve o id do arquivo.
+async function enviarEspecial(blob, nome, uso) {
+  var p = await api("/api/files/upload-url", { name: nome, size: blob.size, uso: uso });
+  if (!p.ok) throw new Error(p.dados.error || "Não foi possível enviar");
+  await enviarParaB2(p.dados.url, blob, function () {});
+  var fim = await api("/api/files/complete", { id: p.dados.id });
+  if (!fim.ok) throw new Error(fim.dados.error || "Não foi possível finalizar");
+  return p.dados.id;
+}
+
+document.getElementById("cfgLogoBtn").addEventListener("click", function () { document.getElementById("cfgLogoArq").click(); });
+document.getElementById("cfgLogoArq").addEventListener("change", async function () {
+  var f = this.files[0];
+  this.value = "";
+  if (!f) return;
+  var botao = document.getElementById("cfgLogoBtn");
+  botao.disabled = true;
+  botao.textContent = "Enviando...";
+  try {
+    var blob = await reduzirImagem(f, 512, "image/png");
+    var id = await enviarEspecial(blob, "logo.png", "logo");
+    var r = await api("/api/portal/marca", { logo_file_id: id });
+    if (!r.ok) throw new Error(r.dados.error);
+    mostrarLogo(URL.createObjectURL(blob));
+  } catch (e) { alert(e.message || "Não foi possível enviar a logo."); }
+  botao.disabled = false;
+  botao.textContent = "Enviar logo";
+});
+document.getElementById("cfgLogoTirar").addEventListener("click", async function () {
+  if (!confirm("Tirar a logo das suas páginas?")) return;
+  await api("/api/portal/marca", { logo_file_id: null });
+  mostrarLogo(null);
+});
+document.getElementById("btnMarca").addEventListener("click", async function () {
+  var r = await api("/api/portal/marca", {
+    bio: document.getElementById("cfgBio").value,
+    emite_nota: document.getElementById("cfgNota").value === "1",
+    link_pagamento: document.getElementById("cfgLinkPag").value
+  });
+  if (!r.ok) { alert(r.dados.error || "Não foi possível salvar."); return; }
+  mostrar("marcaOk", true);
+  setTimeout(function () { mostrar("marcaOk", false); }, 2500);
+});
 
 /* ---------- telas: uma coisa de cada vez ---------- */
 
@@ -594,7 +728,7 @@ function mostrarTela(nome) {
 
 function abaAlbum(qual) {
   document.querySelectorAll(".abaAlb").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-aba") === qual); });
-  ["Fotos", "Regras", "Cliente", "Mais"].forEach(function (p) { mostrar("pane" + p, p.toLowerCase() === qual); });
+  ["Fotos", "Regras", "Cliente", "Visual", "Mais"].forEach(function (p) { mostrar("pane" + p, p.toLowerCase() === qual); });
 }
 document.querySelectorAll(".abaAlb").forEach(function (b) { b.addEventListener("click", function () { abaAlbum(b.getAttribute("data-aba")); }); });
 
@@ -806,8 +940,8 @@ document.querySelectorAll(".filtro").forEach(function (b) {
 /* ---------- criar novo: uma pergunta por tela ---------- */
 
 var PASSOS = { P1: ["", "wzP1"], F1: ["Álbum · passo 1 de 3", "wzF1"], F2: ["Álbum · passo 2 de 3", "wzF2"], F3: ["Álbum · passo 3 de 3", "wzF3"],
-  A1: ["Evento · passo 1 de 2", "wzA1"], A2: ["Evento · passo 2 de 2", "wzA2"] };
-var VOLTA = { F1: "P1", F2: "F1", F3: "F2", A1: "P1", A2: "A1" };
+  A1: ["Evento · passo 1 de 2", "wzA1"], PX: ["Evento · seu PIX", "wzPX"], A2: ["Evento · passo 2 de 2", "wzA2"] };
+var VOLTA = { F1: "P1", F2: "F1", F3: "F2", A1: "P1", PX: "A1", A2: "A1" };
 var passoAtual = "P1";
 
 function passoAssistente(p) {
@@ -862,8 +996,29 @@ document.getElementById("wzF2ok").addEventListener("click", function () {
 });
 document.getElementById("wzA1ok").addEventListener("click", function () {
   if (document.getElementById("ev_evTitulo").value.trim().length < 3) { alert("Dê um nome ao evento"); return; }
+  // Sem PIX ninguém consegue comprar: pergunta antes do preço.
+  passoAssistente(dados.portal.instrucoes_pagamento ? "A2" : "PX");
+});
+document.getElementById("wzPXok").addEventListener("click", async function () {
+  var pix = document.getElementById("wzPix").value.trim();
+  if (pix.length < 5) { alert("Digite a sua chave PIX"); return; }
+  var r = await api("/api/portal/pagamento", { instrucoes: pix });
+  if (!r.ok) { alert(r.dados.error || "Não foi possível salvar."); return; }
+  dados.portal.instrucoes_pagamento = pix;
+  document.getElementById("instrucoes").value = pix;
   passoAssistente("A2");
 });
+
+// Depois que a venda de eventos salva o evento: envia a capa escolhida no assistente.
+window.depoisDeSalvarEvento = async function (id) {
+  var arq = document.getElementById("evCapa").files[0];
+  document.getElementById("evCapa").value = "";
+  if (!arq) return;
+  try {
+    var capa = await enviarEspecial(await reduzirImagem(arq, 1800, "image/jpeg"), "capa.jpg", "capa");
+    await api("/api/eventos/capa", { id: id, capa_file_id: capa });
+  } catch (e) { alert("O evento foi salvo, mas a foto de capa não foi enviada: " + e.message); }
+};
 
 document.getElementById("btnCriarFechado").addEventListener("click", async function () {
   var botao = this;
@@ -875,7 +1030,7 @@ document.getElementById("btnCriarFechado").addEventListener("click", async funct
   try {
     var clienteId = document.getElementById("albCliente").value;
     if (novo) {
-      var c = await api("/api/portal/clientes/novo", { nome: nome, email: email, senha: senha });
+      var c = await api("/api/portal/clientes/novo", { nome: nome, email: email, senha: senha, tema: document.getElementById("cliTema").value });
       if (!c.ok) { erro.textContent = c.dados.error || "Não foi possível criar o cliente."; return; }
       clienteId = c.dados.id;
       await carregarClientes();
@@ -894,8 +1049,16 @@ document.getElementById("btnCriarFechado").addEventListener("click", async funct
       pode_baixar: document.getElementById("wzBaixar").checked,
       max_downloads: document.getElementById("wzMaxDown").value
     });
+    // Recado e foto de capa do álbum (opcionais).
+    var visual = { id: a.dados.id, descricao: document.getElementById("albDescricao").value };
+    var arqCapa = document.getElementById("albCapa").files[0];
+    if (arqCapa) {
+      try { visual.capa_file_id = await enviarEspecial(await reduzirImagem(arqCapa, 1800, "image/jpeg"), "capa.jpg", "capa"); }
+      catch (e) { alert("O álbum foi criado, mas a foto de capa não foi enviada: " + e.message); }
+    }
+    await api("/api/portal/albuns/visual", visual);
     if (novo) alert("Pronto! Envie para " + nome + ":\n\nLink: " + window.location.origin + "/p/" + dados.portal.slug + "\nE-mail: " + email + "\nSenha: " + senha + "\n\nAgora envie as fotos do álbum.");
-    ["cliNome", "cliEmail", "cliSenha", "albTitulo", "wzLimite", "wzMaxDown"].forEach(function (id) { document.getElementById(id).value = ""; });
+    ["cliNome", "cliEmail", "cliSenha", "albTitulo", "wzLimite", "wzMaxDown", "albDescricao", "albCapa", "cliTema"].forEach(function (id) { document.getElementById(id).value = ""; });
     document.querySelector("input[name=wzCli][value=novo]").checked = true;
     trocarTipoCliente();
     await carregarAlbuns();
@@ -918,10 +1081,54 @@ function preencherCliente() {
   var link = window.location.origin + "/p/" + dados.portal.slug;
   document.getElementById("abLinkCliente").value = link;
   document.getElementById("abWhatsapp").href = "https://wa.me/?text=" + encodeURIComponent(mensagemAcesso(c));
-  document.getElementById("abTema").textContent = NOMES_TEMA[dados.portal.tema] || "Clássico";
+  var temaCli = (c && c.tema) || (aberto && aberto.cliente_tema) || "";
+  document.getElementById("abTema").textContent = NOMES_TEMA[temaCli || dados.portal.tema] || "Clássico";
+  document.getElementById("vsTema").value = temaCli;
+  document.getElementById("vsDescricao").value = (aberto && aberto.descricao) || "";
+  capaNova = undefined;
+  mostrarCapa(aberto && aberto.capa_url);
 }
 
 var NOMES_TEMA = { classico: "Clássico", escuro: "Galeria escura", minimalista: "Minimalista", delicado: "Delicado" };
+
+// Aba Visual do álbum: layout do cliente, recado e foto de capa.
+var capaNova;   // undefined = não mexeu; null = voltar para a 1ª foto; Blob = capa nova escolhida
+function mostrarCapa(url) {
+  var img = document.getElementById("vsCapaImg");
+  if (url) img.src = url;
+  img.classList.toggle("hidden", !url);
+  mostrar("vsCapaVazio", !url);
+  mostrar("vsCapaTirar", !!url);
+}
+document.getElementById("vsCapaBtn").addEventListener("click", function () { document.getElementById("vsCapaArq").click(); });
+document.getElementById("vsCapaArq").addEventListener("change", async function () {
+  var f = this.files[0];
+  this.value = "";
+  if (!f) return;
+  capaNova = await reduzirImagem(f, 1800, "image/jpeg");
+  mostrarCapa(URL.createObjectURL(capaNova));
+});
+document.getElementById("vsCapaTirar").addEventListener("click", function () { capaNova = null; mostrarCapa(null); });
+document.getElementById("btnVisual").addEventListener("click", async function () {
+  var botao = this;
+  botao.disabled = true;
+  try {
+    await api("/api/portal/clientes/visual", { cliente_id: aberto.cliente_id, tema: document.getElementById("vsTema").value });
+    var corpo = { id: aberto.id, descricao: document.getElementById("vsDescricao").value };
+    if (capaNova === null) corpo.capa_file_id = null;
+    else if (capaNova) corpo.capa_file_id = await enviarEspecial(capaNova, "capa.jpg", "capa");
+    var r = await api("/api/portal/albuns/visual", corpo);
+    if (!r.ok) throw new Error(r.dados.error);
+    capaNova = undefined;
+    aberto.descricao = corpo.descricao;
+    aberto.cliente_tema = document.getElementById("vsTema").value || null;
+    document.getElementById("abTema").textContent = NOMES_TEMA[aberto.cliente_tema || dados.portal.tema] || "Clássico";
+    mostrar("vsOk", true);
+    setTimeout(function () { mostrar("vsOk", false); }, 2500);
+    carregarAlbuns();
+  } catch (e) { alert(e.message || "Não foi possível salvar."); }
+  botao.disabled = false;
+});
 
 function mensagemAcesso(c) {
   var nome = c ? c.nome.split(" ")[0] : "";
@@ -939,10 +1146,7 @@ document.getElementById("abCopiarMsg").addEventListener("click", function () {
   navigator.clipboard.writeText(mensagemAcesso(clienteDoAlbum()));
   this.textContent = "Copiada!";
 });
-document.getElementById("abVerVisual").addEventListener("click", function () {
-  mostrarTela("config");
-  document.getElementById("temas").scrollIntoView({ behavior: "smooth", block: "center" });
-});
+document.getElementById("abVerVisual").addEventListener("click", function () { abaAlbum("visual"); });
 
 function clienteDoAlbum() {
   return aberto ? central.clientes.find(function (c) { return c.id === aberto.cliente_id; }) : null;
@@ -1412,6 +1616,9 @@ async function carregarPagina() {
   document.getElementById("abInfo").textContent = "Cliente: " + d.album.cliente + " · " + d.total + " arquivo(s) · " + formatarBytes(d.bytes);
   if (paginaAtual === 0) {
     preencherRegras(d.album.regras);
+    if (capaNova === undefined) mostrarCapa(d.album.capa_url);
+    aberto.descricao = d.album.descricao;
+    document.getElementById("vsDescricao").value = d.album.descricao || "";
     desenharEdicoes(d.edicoes || []);
   }
   var grade = document.getElementById("grade");

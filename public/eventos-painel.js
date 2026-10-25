@@ -62,6 +62,7 @@ function limparForm() {
   editando = 0;
   ["ev_evTitulo", "ev_evSlug", "ev_evData", "ev_evLocal", "ev_evPreco", "ev_evMarca"].forEach(function (id) { document.getElementById(id).value = ""; });
   document.getElementById("ev_evPublicado").checked = true;
+  ["evDescricao", "evTema"].forEach(function (x) { var c = document.getElementById(x); if (c) c.value = ""; });
   document.getElementById("ev_faixas").innerHTML = "";
   linhaFaixa(5, "");
   linhaFaixa(10, "");
@@ -83,6 +84,8 @@ function editar(ev) {
   document.getElementById("ev_evPreco").value = textoPreco(ev.preco_centavos);
   document.getElementById("ev_evMarca").value = ev.marca_texto || "";
   document.getElementById("ev_evPublicado").checked = ev.publicado;
+  if (document.getElementById("evDescricao")) document.getElementById("evDescricao").value = ev.descricao || "";
+  if (document.getElementById("evTema")) document.getElementById("evTema").value = ev.tema || "";
   document.getElementById("ev_faixas").innerHTML = "";
   ev.faixas.forEach(function (f) { linhaFaixa(f.a_partir, textoPreco(f.preco_centavos)); });
   linhaFaixa("", "");
@@ -112,10 +115,13 @@ document.getElementById("ev_btnSalvarEv").addEventListener("click", async functi
     preco: document.getElementById("ev_evPreco").value,
     faixas: faixasDoForm(),
     marca_texto: document.getElementById("ev_evMarca").value,
-    publicado: document.getElementById("ev_evPublicado").checked
+    publicado: document.getElementById("ev_evPublicado").checked,
+    tema: (document.getElementById("evTema") || {}).value || "",
+    descricao: (document.getElementById("evDescricao") || {}).value || ""
   });
   if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
   var id = r.dados.id;
+  if (window.depoisDeSalvarEvento) await window.depoisDeSalvarEvento(id);
   limparForm();
   await carregar();
   var ev = dados.eventos.find(function (e) { return e.id === id; });
@@ -260,6 +266,7 @@ async function carregarPedidos() {
     topo.appendChild(acoes);
     c.appendChild(topo);
     c.appendChild(el("p", "text-xs text-slate-400 break-all", p.email + (p.whatsapp ? " · WhatsApp " + p.whatsapp : "") + " · " + dataBr(p.created_at)));
+    if (p.nota_doc) c.appendChild(el("p", "text-xs text-amber-300 font-semibold", "🧾 Pediu nota fiscal: " + (p.nota_doc.length === 11 ? "CPF " : "CNPJ ") + p.nota_doc));
     var det = el("details", "text-xs text-slate-400 mt-1");
     det.appendChild(el("summary", "cursor-pointer", "Ver as fotos escolhidas"));
     det.appendChild(el("p", "mt-1 break-words", p.arquivos.join(", ")));

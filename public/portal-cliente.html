@@ -51,6 +51,7 @@ body.tema-minimalista .heroi .sobre{align-items:center;text-align:center}
   <div id="topoCaixa" class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
     <div class="flex items-center gap-3 min-w-0">
       <div id="iniciais" class="w-10 h-10 rounded-xl flex items-center justify-center font-bold shrink-0" style="background:#ffffff33"></div>
+      <img id="logo" class="hidden h-12 w-auto max-w-[140px] object-contain shrink-0 rounded-lg" alt="">
       <div class="min-w-0"><p id="nomeEstudio" class="titulo font-bold leading-tight truncate text-lg"></p><p class="text-xs opacity-80">Área do cliente</p></div>
     </div>
     <div id="usuario" class="hidden text-sm text-right"><span id="ola"></span> · <button type="button" id="sair" class="underline">Sair</button></div>
@@ -82,6 +83,7 @@ body.tema-minimalista .heroi .sobre{align-items:center;text-align:center}
 
   <!-- Lista de álbuns -->
   <section id="secAlbuns" class="hidden space-y-4">
+    <div id="bio" class="hidden cartao p-4 text-sm suave whitespace-pre-line"></div>
     <h1 class="titulo text-2xl font-bold">Seus álbuns</h1>
     <div id="listaAlbuns" class="grid sm:grid-cols-2 gap-4"></div>
   </section>
@@ -98,6 +100,7 @@ body.tema-minimalista .heroi .sobre{align-items:center;text-align:center}
       </div>
       <button type="button" id="soFavoritas" class="btn2">♥ Minhas escolhidas</button>
     </div>
+    <p id="albDescricao" class="hidden cartao p-4 whitespace-pre-line"></p>
     <div id="regrasBar" class="hidden cartao p-4 text-sm space-y-1"></div>
     <p id="avisoTrancado" class="hidden cartao p-4 text-sm text-amber-700" style="background:#fffbeb;border-color:#fde68a">🔒 Este álbum será liberado assim que o pagamento for confirmado pelo estúdio. Veja os detalhes em “Pagamentos”.</p>
     <p id="dicaFotos" class="text-sm suave"></p>
@@ -113,6 +116,8 @@ body.tema-minimalista .heroi .sobre{align-items:center;text-align:center}
     <button type="button" id="voltarVencido" class="btn2">← Todos os álbuns</button>
   </section>
 </main>
+
+<footer class="text-center text-xs suave py-8">Portal criado com <a href="/" class="underline font-semibold">Master Nuvem ☁️</a></footer>
 
 <!-- Foto em tela cheia -->
 <div id="tela">
@@ -160,6 +165,16 @@ function aplicarMarca(p) {
   var ini = document.getElementById("iniciais");
   ini.textContent = p.nome.split(" ").filter(function (x) { return x.length > 2; }).slice(0, 2).map(function (x) { return x[0]; }).join("").toUpperCase() || p.nome[0];
   if (p.tema === "minimalista") { ini.style.display = "none"; document.getElementById("topoCaixa").classList.add("py-6"); }
+  else ini.style.display = "";
+  if (p.logo) {
+    var logo = document.getElementById("logo");
+    logo.src = p.logo;
+    logo.classList.remove("hidden");
+    ini.style.display = "none";
+  }
+  var bio = document.getElementById("bio");
+  bio.textContent = p.bio || "";
+  bio.classList.toggle("hidden", !p.bio);
   if (p.tema === "escuro" || p.tema === "delicado") ini.style.background = "var(--marca)", ini.style.color = "#fff";
   document.title = p.nome + " - Área do cliente";
 }
@@ -171,6 +186,7 @@ async function iniciar() {
   aplicarMarca(info.dados);
   var me = await api("/api/p/me");
   if (!me.ok || me.dados.portal.slug !== slug) { mostrar("secLogin", true); return; }
+  aplicarMarca(me.dados.portal);   // cada cliente tem o seu layout
   document.getElementById("ola").textContent = "Olá, " + me.dados.nome.split(" ")[0];
   mostrar("usuario", true);
   mostrar("secLogin", false);
@@ -318,6 +334,9 @@ async function carregarPagina() {
     return;
   }
   arquivos = arquivos.concat(r.dados.arquivos);
+  var rec = document.getElementById("albDescricao");
+  rec.textContent = (r.dados.album && r.dados.album.descricao) || "";
+  rec.classList.toggle("hidden", !rec.textContent);
   regras = r.dados.regras;
   escolhidas = r.dados.escolhidas;
   mostrar("avisoTrancado", !!r.dados.trancado);
