@@ -2,6 +2,8 @@ import { tratarArquivos, medirBucket, removerObjeto } from "./arquivos.js";
 import { tratarPortalDono, tratarPortalCliente } from "./portal.js";
 import { chaveIp, chaveConta, limiteAtingido, registrarTentativa, dentroDoLimite, registrarEvento } from "./limite.js";
 import { sentinela, REGRAS as REGRAS_SENTINELA } from "./sentinela.js";
+import { tratarEventosDono, tratarEventoPublico } from "./eventos.js";
+import { tratarBlog, agendaBlog } from "./blog.js";
 const enc = new TextEncoder();
 const DIAS_SESSAO = 30;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -413,6 +415,10 @@ async function tratarAdmin(request, env, url) {
       "FROM seguranca_eventos WHERE created_at > datetime('now', '-1 day')"
     ).first();
     return resposta({ alertas: alertas.results, contas: contas.results, clientes: clientes.results, resumo_24h: resumo, regras: REGRAS_SENTINELA }, 200);
+  }
+
+  if (caminho === "/api/admin/blog" && request.method === "GET") {
+    return resposta({ posts: agendaBlog() }, 200);
   }
 
   if (caminho === "/api/admin/cupons" && request.method === "GET") {
@@ -1199,6 +1205,14 @@ async function tratarApi(request, env, url) {
     return await tratarPortalCliente(request, env, url);
   }
 
+  if (caminho === "/api/eventos" || caminho.startsWith("/api/eventos/")) {
+    return await tratarEventosDono(request, env, url);
+  }
+
+  if (caminho.startsWith("/api/e/")) {
+    return await tratarEventoPublico(request, env, url);
+  }
+
   if (caminho.startsWith("/api/files")) {
     return await tratarArquivos(request, env, url);
   }
@@ -1378,6 +1392,15 @@ export default {
     // Portal do cliente final: /p/<endereço-do-estúdio> abre sempre a mesma página.
     if (/^\/p\/[a-z0-9-]+\/?$/.test(url.pathname)) {
       return comProtecao(await env.ASSETS.fetch(new Request(new URL("/portal-cliente", url), request)), false);
+    }
+
+    // Blog (/blog, /blog/<post>) e sitemap.xml: páginas montadas no servidor, com a agenda de publicação automática.
+    const blog = tratarBlog(url);
+    if (blog) return comProtecao(blog, false);
+
+    // Galeria de evento: /e/<endereço-do-evento> abre sempre a mesma página.
+    if (/^\/e\/[a-z0-9-]+\/?$/.test(url.pathname)) {
+      return comProtecao(await env.ASSETS.fetch(new Request(new URL("/evento", url), request)), false);
     }
 
     return comProtecao(await env.ASSETS.fetch(request), false);

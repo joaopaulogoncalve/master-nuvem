@@ -229,5 +229,17 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
    de valor). Tela `#pixTela` no painel (QR, copia e cola, contagem, "Pagamento confirmado"). Cartão continua no Checkout Pro
    ("Prefiro cartão de crédito"). O "Contratar" da página inicial leva a `/painel?gb=N&contratar=1`.
    Teste real do PIX (Checkout Pro) feito em 2026-10-25: R$ 1,00 com o cupom PIX1REAL na conta jovensnovaliancaadmim@ → ativou sozinho em ~1 min.
+   **Galeria de evento (fotógrafo de rua/corrida/festa) — 2026-10-25** (`src/eventos.js`, `migrations/0013_eventos.sql`,
+   `public/meus-eventos.html`, `public/evento.html`). Tabelas `eventos` (slug único, preço por foto, `faixas` JSON de desconto),
+   `evento_fotos` (original_id + previa_id → files, `numeros` ",123,45,"), `evento_pedidos` (token de 48 hex guardado em claro: só libera
+   aquele pedido), `files.evento_id` (fora de Meus arquivos, conta na cota). A prévia (1400 px, marca d'água diagonal) é criada no
+   navegador do fotógrafo (canvas) e enviada como outro arquivo. Público em `/e/<slug>` só recebe prévias; original só via
+   `/api/e/baixar` com pedido `pago`. Pagamento no PIX do fotógrafo (`portais.instrucoes_pagamento`), confirmação manual
+   ("✔ Pago" → e-mail ao comprador). Limite 10 pedidos/h por IP. Preço sempre calculado no servidor (`calcularTotal`).
+   **Blog — 2026-10-25** (`src/blog.js` + `src/blog-posts.js`): `/blog`, `/blog/<slug>` e `/sitemap.xml` montados no worker.
+   Agenda automática: post com `publicar` futuro (data de Brasília) não aparece até o dia. 13 posts (5 no ar, 8 agendados até 21/11).
+   Busca e "mais procurados" (`PALAVRAS_EM_ALTA`, lista fixa — não vem do Google Trends). Admin: seção "Blog" (agenda).
+   `public/robots.txt`. Nuvenzinha aponta para os posts (`migrations/0014_faq_blog_eventos.sql`, 60 respostas).
+   Regra: post publicado não pode linkar post agendado para depois dele (o teste confere).
 5. Pendências menores: Turnstile no login e cadastro; upload acima de 4,5 GB (multipart); preço duplicado em
    `app.js` e `worker.js`; responder e-mails como @masternuvem.com.br; WhatsApp.

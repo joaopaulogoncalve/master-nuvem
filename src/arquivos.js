@@ -149,7 +149,7 @@ export async function tratarArquivos(request, env, url) {
     const plano = await planoAtivo(env, u.id);
     // Fotos de álbuns do Portal aparecem no "Meu portal"; aqui só os arquivos soltos (a cota conta tudo).
     const lista = await env.DB.prepare(
-      "SELECT id, name, size_bytes, created_at FROM files WHERE user_id = ? AND status = 'ready' AND album_id IS NULL ORDER BY id DESC"
+      "SELECT id, name, size_bytes, created_at FROM files WHERE user_id = ? AND status = 'ready' AND album_id IS NULL AND evento_id IS NULL ORDER BY id DESC"
     ).bind(u.id).all();
     const uso = await env.DB.prepare(
       "SELECT COALESCE(SUM(size_bytes), 0) AS total FROM files WHERE user_id = ?"
@@ -204,6 +204,15 @@ export async function tratarArquivos(request, env, url) {
       if (!album) return resp({ error: "Álbum não encontrado" }, 404);
       albumId = album.id;
     }
+    // Envio para uma galeria de evento (original ou prévia com marca d'água): o evento tem que ser do próprio usuário.
+    let eventoId = null;
+    if (corpo.evento_id !== undefined && corpo.evento_id !== null) {
+      const ev = await env.DB.prepare(
+        "SELECT e.id FROM eventos e JOIN portais p ON p.id = e.portal_id WHERE e.id = ? AND p.user_id = ?"
+      ).bind(parseInt(corpo.evento_id, 10) || 0, u.id).first();
+      if (!ev) return resp({ error: "Evento não encontrado" }, 404);
+      eventoId = ev.id;
+    }
 
     await env.DB.prepare(
       "DELETE FROM files WHERE user_id = ? AND status = 'pending' AND created_at < datetime('now', '-1 day')"
@@ -221,8 +230,8 @@ export async function tratarArquivos(request, env, url) {
     const chave = "u" + u.id + "/" + paraHex(bytes);
 
     const r = await env.DB.prepare(
-      "INSERT INTO files (user_id, object_key, name, size_bytes, status, album_id) VALUES (?, ?, ?, ?, 'pending', ?)"
-    ).bind(u.id, chave, nome, Math.floor(tamanho), albumId).run();
+      "INSERT INTO files (user_id, object_key, name, size_bytes, status, album_id, evento_id) VALUES (?, ?, ?, ?, 'pending', ?, ?)"
+    ).bind(u.id, chave, nome, Math.floor(tamanho), albumId, eventoId).run();
 
     const link = await urlAssinada(env, "PUT", chave, 3600);
     return resp({ id: r.meta.last_row_id, url: link }, 200);
