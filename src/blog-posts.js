@@ -179,7 +179,7 @@ Plataformas de venda de fotos esportivas costumam ficar com uma parte de cada fo
 ## Como funciona para você
 
 1. Crie o seu portal em [Meu portal](/meu-portal) e cadastre a sua chave PIX em **Acesso e cobranças → Como você recebe**.
-2. Entre em [Meus eventos](/meus-eventos) e crie o evento: nome, tipo (corrida, futebol, formatura, festa...), data, local e **preço por foto**.
+2. Entre em [Meu portal → Criar novo → Link aberto](/meu-portal?aba=abertos) e crie o evento: nome, tipo (corrida, futebol, formatura, festa...), data, local e **preço por foto**.
 3. Configure o **desconto por quantidade** se quiser. Exemplo: 1 foto por R$ 15; a partir de 5, R$ 10 cada; a partir de 10, R$ 8 cada.
 4. Envie as fotos. O **seu navegador** cria uma prévia pequena com a marca d'água (o nome do seu estúdio repetido na diagonal). O original fica guardado e escondido.
 5. Marque os números de peito na leva de fotos ou foto por foto.
@@ -468,7 +468,7 @@ A foto de uma pessoa é um **dado pessoal** para a Lei Geral de Proteção de Da
 
 ## Fotos de eventos abertos (corrida, rua)
 
-Na galeria de evento, as pessoas veem prévias com marca d'água e compram as próprias fotos. Se alguém pedir para tirar uma foto da galeria, atenda: em [Meus eventos](/meus-eventos) você apaga qualquer foto com um clique.
+Na galeria de evento, as pessoas veem prévias com marca d'água e compram as próprias fotos. Se alguém pedir para tirar uma foto da galeria, atenda: em [Meu portal → Criar novo → Link aberto](/meu-portal?aba=abertos) você apaga qualquer foto com um clique.
 
 ## E a Master Nuvem?
 
@@ -500,7 +500,7 @@ No app do banco, o recebedor aparece com o nome do titular da Master Nuvem: é n
 Na Master Nuvem, **o dinheiro dos seus clientes vai direto para você**. Nós só organizamos quem pagou.
 
 - **Álbuns de contrato**: em [Meu portal](/meu-portal) → Acesso e cobranças, cadastre a sua chave PIX, monte a tabela de preços, crie a cobrança e, se quiser, tranque o álbum até marcar como pago.
-- **Fotos de eventos**: em [Meus eventos](/meus-eventos), o comprador escolhe as fotos, paga no seu PIX e você libera com um clique. Veja o [guia completo](/blog/vender-fotos-de-eventos-e-corridas).
+- **Fotos de eventos**: em [Meu portal → Criar novo → Link aberto](/meu-portal?aba=abertos), o comprador escolhe as fotos, paga no seu PIX e você libera com um clique. Veja o [guia completo](/blog/vender-fotos-de-eventos-e-corridas).
 
 ## Por que não cobramos comissão?
 

@@ -241,5 +241,20 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
    Busca e "mais procurados" (`PALAVRAS_EM_ALTA`, lista fixa — não vem do Google Trends). Admin: seção "Blog" (agenda).
    `public/robots.txt`. Nuvenzinha aponta para os posts (`migrations/0014_faq_blog_eventos.sql`, 60 respostas).
    Regra: post publicado não pode linkar post agendado para depois dele (o teste confere).
+   **Meu estúdio (reforma do Meu portal) — 2026-10-25** (`migrations/0015_regras_acesso.sql`, `0016_faq_estudio.sql`):
+   - `/meu-portal` virou o lugar único: painel (recebido no mês, a receber, links abertos/fechados), "➕ Criar novo" passo a passo
+     (🌐 link aberto = evento | 🔒 link fechado = cliente + álbum + regras num formulário só), "📋 Central de acesso"
+     (`GET /api/portal/central`: por cliente visitas, último acesso, downloads, escolhidas, edições, cobranças; sinais 🔴/❓/✅),
+     configurações (nome, endereço, cor, **layout**, PIX) num painel que abre e fecha, e as cobranças.
+   - A venda de eventos foi embutida: `public/eventos-painel.js` (gerado da antiga meus-eventos.html, ids com prefixo `ev_`,
+     dentro de uma IIFE; `window.EV`). `/meus-eventos` agora só redireciona para `/meu-portal?aba=abertos`.
+   - Regras do álbum (`albuns.acesso_ate`, `max_downloads` por foto, `pode_baixar`, `pode_escolher` + `limite_escolha`,
+     `pode_editar`); `POST /api/portal/albuns/regras` (prazo_dias: 0 = sem prazo, ausente = mantém). Cliente: `album_downloads`,
+     `pedidos_edicao` (`POST /api/p/edicao`, fotógrafo marca em `/api/portal/edicoes/status`). Visita ao álbum vira evento
+     `portal_album` em `seguranca_eventos` (é o que a central conta como acesso).
+   - Prévia leve das fotos do álbum: o navegador do fotógrafo cria um JPG de 1600 px e envia com `previa: true`
+     (`files.e_previa = 1`), ligado ao original por `POST /api/portal/previa` (`files.previa_id`). O cliente vê a prévia; o original só
+     no download. Fotos antigas sem prévia continuam usando o original.
+   - 4 layouts da área do cliente (`portais.tema`: classico | escuro | minimalista | delicado), capa do álbum = 1ª foto.
 5. Pendências menores: Turnstile no login e cadastro; upload acima de 4,5 GB (multipart); preço duplicado em
    `app.js` e `worker.js`; responder e-mails como @masternuvem.com.br; WhatsApp.

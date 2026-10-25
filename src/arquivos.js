@@ -230,8 +230,8 @@ export async function tratarArquivos(request, env, url) {
     const chave = "u" + u.id + "/" + paraHex(bytes);
 
     const r = await env.DB.prepare(
-      "INSERT INTO files (user_id, object_key, name, size_bytes, status, album_id, evento_id) VALUES (?, ?, ?, ?, 'pending', ?, ?)"
-    ).bind(u.id, chave, nome, Math.floor(tamanho), albumId, eventoId).run();
+      "INSERT INTO files (user_id, object_key, name, size_bytes, status, album_id, evento_id, e_previa) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)"
+    ).bind(u.id, chave, nome, Math.floor(tamanho), albumId, eventoId, albumId && corpo.previa === true ? 1 : 0).run();
 
     const link = await urlAssinada(env, "PUT", chave, 3600);
     return resp({ id: r.meta.last_row_id, url: link }, 200);

@@ -7,90 +7,120 @@
 <title>Área do cliente</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-:root{--marca:#be185d}
-body{background:#f1f5f9;color:#0f172a}
-.topo{background:var(--marca);color:#fff}
-.btn{background:var(--marca);color:#fff;border-radius:10px;padding:9px 16px;font-weight:600;font-size:14px}
+/* Layouts escolhidos pelo fotógrafo: classico (padrão), escuro, minimalista, delicado. --marca = cor do estúdio. */
+:root{--marca:#be185d;--fundo:#f1f5f9;--texto:#0f172a;--suave:#64748b;--cartao:#fff;--borda:#e2e8f0;--raio:16px;--titulo:inherit;--topo:var(--marca);--topotexto:#fff}
+body.tema-escuro{--fundo:#0a0a0a;--texto:#e5e5e5;--suave:#a3a3a3;--cartao:#141414;--borda:#262626;--raio:10px;--topo:#0a0a0a;--topotexto:#fafafa}
+body.tema-minimalista{--fundo:#fff;--texto:#111;--suave:#737373;--cartao:#fff;--borda:#ececec;--raio:2px;--titulo:Georgia,"Times New Roman",serif;--topo:#fff;--topotexto:#111}
+body.tema-delicado{--fundo:#fdf6f0;--texto:#4a3b3b;--suave:#8c7b74;--cartao:#fff;--borda:#f1e4dc;--raio:22px;--titulo:Georgia,"Times New Roman",serif;--topo:linear-gradient(135deg,#f3d9d0,#ead7f3);--topotexto:#4a3b3b}
+body{background:var(--fundo);color:var(--texto)}
+.topo{background:var(--topo);color:var(--topotexto)}
+body.tema-escuro .topo,body.tema-minimalista .topo{border-bottom:1px solid var(--borda)}
+.titulo{font-family:var(--titulo)}
+.suave{color:var(--suave)}
+.btn{background:var(--marca);color:#fff;border-radius:calc(var(--raio) / 1.6);padding:9px 16px;font-weight:600;font-size:14px}
 .btn:disabled{opacity:.6}
-.btn2{border:1px solid var(--marca);color:var(--marca);background:#fff;border-radius:10px;padding:8px 15px;font-weight:600;font-size:14px}
-.btn2.on{background:var(--marca);color:#fff}
-.cartao{background:#fff;border:1px solid #e2e8f0;border-radius:16px}
-.campo{width:100%;padding:11px 13px;border-radius:12px;border:1px solid #cbd5e1;background:#fff;outline:none}
+.btn2{border:1px solid var(--marca);color:var(--marca);background:var(--cartao);border-radius:calc(var(--raio) / 1.6);padding:8px 15px;font-weight:600;font-size:14px}
+body.tema-escuro .btn2{color:#fafafa;border-color:#525252;background:transparent}
+.btn2.on{background:var(--marca);color:#fff;border-color:var(--marca)}
+.cartao{background:var(--cartao);border:1px solid var(--borda);border-radius:var(--raio)}
+.campo{width:100%;padding:11px 13px;border-radius:12px;border:1px solid var(--borda);background:var(--cartao);color:var(--texto);outline:none}
 .campo:focus{border-color:var(--marca)}
-.foto{aspect-ratio:1/1;border-radius:10px;overflow:hidden;position:relative;background:#e2e8f0;cursor:pointer}
-.foto img{width:100%;height:100%;object-fit:cover}
+.foto{aspect-ratio:1/1;border-radius:calc(var(--raio) / 1.6);overflow:hidden;position:relative;background:var(--borda);cursor:pointer}
+body.tema-minimalista .foto{aspect-ratio:4/5}
+body.tema-escuro .foto{border-radius:4px}
+.foto img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.foto:hover img{transform:scale(1.03)}
 .coracao{position:absolute;right:6px;bottom:6px;width:32px;height:32px;border-radius:999px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;color:#94a3b8;box-shadow:0 2px 6px #0003}
 .coracao.on{color:#e11d48}
+.selo{position:absolute;left:6px;top:6px;font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px}
+.capa{width:100%;aspect-ratio:16/10;object-fit:cover;background:var(--borda)}
+.heroi{position:relative;border-radius:var(--raio);overflow:hidden;min-height:180px;background:var(--borda)}
+.heroi img{width:100%;height:280px;object-fit:cover;display:block}
+.heroi .sobre{position:absolute;inset:0;background:linear-gradient(transparent 35%,#000a);display:flex;flex-direction:column;justify-content:flex-end;padding:20px;color:#fff}
+body.tema-minimalista .heroi .sobre{align-items:center;text-align:center}
 #tela{position:fixed;inset:0;background:#000e;display:none;flex-direction:column;z-index:50}
 #tela.aberta{display:flex}
 #tela img{max-width:100%;max-height:100%;object-fit:contain}
+#tela .btn2{background:#fff;color:#111;border-color:#fff}
+#tela .btn2.on{background:#e11d48;color:#fff;border-color:#e11d48}
 </style>
 </head>
 <body class="font-sans antialiased min-h-screen">
 
 <header class="topo">
-  <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+  <div id="topoCaixa" class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
     <div class="flex items-center gap-3 min-w-0">
-      <div id="iniciais" class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center font-bold shrink-0"></div>
-      <div class="min-w-0"><p id="nomeEstudio" class="font-bold leading-tight truncate"></p><p class="text-xs opacity-80">Área do cliente</p></div>
+      <div id="iniciais" class="w-10 h-10 rounded-xl flex items-center justify-center font-bold shrink-0" style="background:#ffffff33"></div>
+      <div class="min-w-0"><p id="nomeEstudio" class="titulo font-bold leading-tight truncate text-lg"></p><p class="text-xs opacity-80">Área do cliente</p></div>
     </div>
     <div id="usuario" class="hidden text-sm text-right"><span id="ola"></span> · <button type="button" id="sair" class="underline">Sair</button></div>
   </div>
 </header>
 
 <main class="max-w-5xl mx-auto px-4 py-8">
-  <p id="carregando" class="text-slate-500">Carregando...</p>
-  <p id="naoExiste" class="hidden cartao p-6 text-center text-slate-600">Portal não encontrado. Confira o link que você recebeu.</p>
+  <p id="carregando" class="suave">Carregando...</p>
+  <p id="naoExiste" class="hidden cartao p-6 text-center suave">Portal não encontrado. Confira o link que você recebeu.</p>
 
   <!-- Login -->
   <section id="secLogin" class="hidden max-w-sm mx-auto cartao p-6">
-    <h1 class="text-xl font-bold text-center">Entrar</h1>
-    <p class="text-sm text-slate-500 text-center mt-1 mb-5">Use o e-mail e a senha que você recebeu do estúdio.</p>
+    <h1 class="titulo text-2xl font-bold text-center">Entrar</h1>
+    <p class="text-sm suave text-center mt-1 mb-5">Use o e-mail e a senha que você recebeu do estúdio.</p>
     <form id="formLogin" class="space-y-3">
       <input id="email" type="email" class="campo" placeholder="E-mail" autocomplete="email" required>
       <input id="senha" type="password" class="campo" placeholder="Senha" autocomplete="current-password" required>
-      <p id="erroLogin" class="text-sm text-red-600 min-h-[1.25rem]"></p>
+      <p id="erroLogin" class="text-sm text-red-500 min-h-[1.25rem]"></p>
       <button type="submit" id="btnEntrar" class="btn w-full">Entrar</button>
     </form>
-    <p class="text-xs text-slate-400 text-center mt-4">Esqueceu a senha? Fale com o estúdio para receber uma nova.</p>
+    <p class="text-xs suave text-center mt-4">Esqueceu a senha? Fale com o estúdio para receber uma nova.</p>
   </section>
 
   <!-- Pagamentos -->
   <section id="secPagamentos" class="hidden space-y-3 mb-8">
-    <h1 class="text-xl font-bold">Pagamentos</h1>
+    <h1 class="titulo text-xl font-bold">Pagamentos</h1>
     <div id="listaCobrancas" class="space-y-3"></div>
   </section>
 
   <!-- Lista de álbuns -->
   <section id="secAlbuns" class="hidden space-y-4">
-    <h1 class="text-xl font-bold">Seus álbuns</h1>
-    <div id="listaAlbuns" class="grid sm:grid-cols-2 gap-3"></div>
+    <h1 class="titulo text-2xl font-bold">Seus álbuns</h1>
+    <div id="listaAlbuns" class="grid sm:grid-cols-2 gap-4"></div>
   </section>
 
   <!-- Álbum aberto -->
   <section id="secAlbum" class="hidden space-y-4">
-    <button type="button" id="voltar" class="text-sm text-slate-500">← Todos os álbuns</button>
+    <button type="button" id="voltar" class="text-sm suave">← Todos os álbuns</button>
+    <div id="heroi" class="hidden heroi"><img id="heroiImg" alt=""><div class="sobre"><p id="heroiTipo" class="text-xs uppercase tracking-widest opacity-90"></p><p id="heroiTitulo" class="titulo text-3xl font-bold"></p></div></div>
     <div class="cartao p-4 flex flex-wrap items-center justify-between gap-3">
       <div>
-        <p id="albTipo" class="text-xs uppercase tracking-wider text-slate-500"></p>
-        <p id="albTitulo" class="text-lg font-bold"></p>
-        <p id="albInfo" class="text-sm text-slate-500"></p>
+        <p id="albTipo" class="text-xs uppercase tracking-wider suave"></p>
+        <p id="albTitulo" class="titulo text-lg font-bold"></p>
+        <p id="albInfo" class="text-sm suave"></p>
       </div>
-      <button type="button" id="soFavoritas" class="btn2">♥ Minhas favoritas</button>
+      <button type="button" id="soFavoritas" class="btn2">♥ Minhas escolhidas</button>
     </div>
-    <p id="avisoTrancado" class="hidden cartao p-4 text-sm text-amber-700 bg-amber-50 border-amber-200">🔒 Este álbum será liberado assim que o pagamento for confirmado pelo estúdio. Veja os detalhes em “Pagamentos”.</p>
-    <p id="dicaFotos" class="text-sm text-slate-500">Toque no ♥ para escolher as fotos do seu álbum. Toque na foto para ver grande e baixar.</p>
+    <div id="regrasBar" class="hidden cartao p-4 text-sm space-y-1"></div>
+    <p id="avisoTrancado" class="hidden cartao p-4 text-sm text-amber-700" style="background:#fffbeb;border-color:#fde68a">🔒 Este álbum será liberado assim que o pagamento for confirmado pelo estúdio. Veja os detalhes em “Pagamentos”.</p>
+    <p id="dicaFotos" class="text-sm suave"></p>
     <div id="grade" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2"></div>
     <div class="text-center"><button type="button" id="mais" class="hidden btn2">Carregar mais</button></div>
+  </section>
+
+  <!-- Álbum com prazo encerrado -->
+  <section id="secVencido" class="hidden max-w-md mx-auto cartao p-6 text-center space-y-3">
+    <p class="text-4xl">⏳</p>
+    <h1 class="titulo text-xl font-bold">O prazo de acesso terminou</h1>
+    <p class="suave text-sm">O tempo combinado para ver este álbum acabou. Fale com o estúdio: ele pode liberar de novo.</p>
+    <button type="button" id="voltarVencido" class="btn2">← Todos os álbuns</button>
   </section>
 </main>
 
 <!-- Foto em tela cheia -->
 <div id="tela">
-  <div class="flex items-center justify-between gap-2 p-3 text-white">
+  <div class="flex flex-wrap items-center justify-between gap-2 p-3 text-white">
     <p id="telaNome" class="text-sm truncate"></p>
-    <div class="flex gap-2 shrink-0">
-      <button type="button" id="telaFav" class="btn2">♥</button>
+    <div class="flex flex-wrap gap-2 shrink-0">
+      <button type="button" id="telaFav" class="btn2">♥ Escolher</button>
+      <button type="button" id="telaEditar" class="btn2">✏️ Pedir edição</button>
       <button type="button" id="telaBaixar" class="btn">⬇ Baixar</button>
       <button type="button" id="telaFechar" class="btn2">✕</button>
     </div>
@@ -101,6 +131,7 @@ body{background:#f1f5f9;color:#0f172a}
 <script>
 var slug = (window.location.pathname.split("/")[2] || "").toLowerCase();
 var albumAtual = null, pagina = 0, arquivos = [], filtro = false, naTela = null;
+var regras = null, escolhidas = 0, relogio = null, ultimoMe = null;
 
 function el(tag, classe, texto) {
   var e = document.createElement(tag);
@@ -123,9 +154,13 @@ async function api(rota, corpo) {
 }
 
 function aplicarMarca(p) {
-  document.documentElement.style.setProperty("--marca", p.cor);
+  if (/^#[0-9a-fA-F]{6}$/.test(p.cor || "")) document.documentElement.style.setProperty("--marca", p.cor);
+  document.body.className = "font-sans antialiased min-h-screen tema-" + (["escuro", "minimalista", "delicado"].indexOf(p.tema) > -1 ? p.tema : "classico");
   document.getElementById("nomeEstudio").textContent = p.nome;
-  document.getElementById("iniciais").textContent = p.nome.split(" ").filter(function (x) { return x.length > 2; }).slice(0, 2).map(function (x) { return x[0]; }).join("").toUpperCase() || p.nome[0];
+  var ini = document.getElementById("iniciais");
+  ini.textContent = p.nome.split(" ").filter(function (x) { return x.length > 2; }).slice(0, 2).map(function (x) { return x[0]; }).join("").toUpperCase() || p.nome[0];
+  if (p.tema === "minimalista") { ini.style.display = "none"; document.getElementById("topoCaixa").classList.add("py-6"); }
+  if (p.tema === "escuro" || p.tema === "delicado") ini.style.background = "var(--marca)", ini.style.color = "#fff";
   document.title = p.nome + " - Área do cliente";
 }
 
@@ -150,6 +185,16 @@ function dataBr(t) {
   var d = t.slice(0, 10).split("-");
   return d[2] + "/" + d[1] + "/" + d[0];
 }
+function quando(t) { return new Date(String(t).replace(" ", "T") + "Z"); }
+
+// "2 dias e 5 h" / "3 h e 20 min" / "12 min"
+function tempoRestante(ms) {
+  var min = Math.max(0, Math.floor(ms / 60000));
+  var d = Math.floor(min / 1440), h = Math.floor((min % 1440) / 60), m = min % 60;
+  if (d) return d + (d === 1 ? " dia" : " dias") + (h ? " e " + h + " h" : "");
+  if (h) return h + " h" + (m ? " e " + m + " min" : "");
+  return m + " min";
+}
 
 function mostrarCobrancas(me) {
   var cobs = (me && me.cobrancas) || [];
@@ -163,13 +208,14 @@ function mostrarCobrancas(me) {
     var topo = el("div", "flex flex-wrap items-center justify-between gap-2");
     var t = el("div");
     t.appendChild(el("p", "font-bold text-lg", reais(b.valor_centavos)));
-    t.appendChild(el("p", "text-sm text-slate-600", b.descricao + (b.album ? " · " + b.album : "")));
+    t.appendChild(el("p", "text-sm suave", b.descricao + (b.album ? " · " + b.album : "")));
     topo.appendChild(t);
     topo.appendChild(el("span", "text-xs font-semibold px-3 py-1 rounded-full " + (pago ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"),
       pago ? "Pago em " + dataBr(b.pago_em) : (b.vencimento ? "Vence em " + dataBr(b.vencimento) : "Pendente")));
     c.appendChild(topo);
     if (b.itens && b.itens.length) {
-      var tab = el("div", "text-sm text-slate-600 border-t border-slate-100 pt-2 space-y-1");
+      var tab = el("div", "text-sm suave pt-2 space-y-1");
+      tab.style.borderTop = "1px solid var(--borda)";
       b.itens.forEach(function (i) {
         var l = el("div", "flex justify-between gap-3");
         l.appendChild(el("span", "", (i.unidade === "avulso" ? "" : i.qtd + " × ") + i.nome + (i.unidade === "avulso" || i.qtd === 1 ? "" : " (" + reais(i.valor_centavos) + " cada)")));
@@ -187,7 +233,8 @@ function mostrarCobrancas(me) {
         c.appendChild(a);
       }
       if (instr) {
-        var caixa = el("div", "bg-slate-50 rounded-xl p-3 text-sm text-slate-700");
+        var caixa = el("div", "rounded-xl p-3 text-sm");
+        caixa.style.background = "var(--fundo)";
         caixa.appendChild(el("p", "font-semibold mb-1", "Como pagar"));
         caixa.appendChild(el("p", "whitespace-pre-line break-words", instr));
         var copiar = el("button", "btn2 mt-2", "Copiar dados de pagamento");
@@ -196,25 +243,43 @@ function mostrarCobrancas(me) {
         caixa.appendChild(copiar);
         c.appendChild(caixa);
       }
-      c.appendChild(el("p", "text-xs text-slate-500", "Depois de pagar, o estúdio confirma o recebimento e esta cobrança aparece como paga."));
+      c.appendChild(el("p", "text-xs suave", "Depois de pagar, o estúdio confirma o recebimento e esta cobrança aparece como paga."));
     }
     lista.appendChild(c);
   });
 }
 
 function mostrarAlbuns(albuns, me) {
+  ultimoMe = me;
+  clearInterval(relogio);
   mostrar("secAlbum", false);
+  mostrar("secVencido", false);
   mostrar("secAlbuns", true);
   if (me) mostrarCobrancas(me);
   var lista = document.getElementById("listaAlbuns");
   lista.innerHTML = "";
-  if (!albuns.length) lista.appendChild(el("p", "text-slate-500", "Ainda não há álbuns para você. Assim que o estúdio enviar, eles aparecem aqui."));
+  if (!albuns.length) lista.appendChild(el("p", "suave", "Ainda não há álbuns para você. Assim que o estúdio enviar, eles aparecem aqui."));
   albuns.forEach(function (a) {
-    var c = el("button", "cartao p-4 text-left hover:shadow-md transition");
+    var c = el("button", "cartao overflow-hidden text-left hover:shadow-lg transition");
     c.type = "button";
-    c.appendChild(el("p", "text-xs uppercase tracking-wider text-slate-500", a.tipo || ""));
-    c.appendChild(el("p", "font-bold text-lg", (a.trancado ? "🔒 " : "") + a.titulo));
-    c.appendChild(el("p", "text-sm text-slate-500", a.arquivos + " arquivo(s)" + (a.favoritas ? " · ♥ " + a.favoritas + " favorita(s)" : "")));
+    if (a.capa) {
+      var img = el("img", "capa");
+      img.src = a.capa;
+      img.alt = "";
+      img.loading = "lazy";
+      c.appendChild(img);
+    } else {
+      var semCapa = el("div", "capa flex items-center justify-center text-4xl", a.trancado ? "🔒" : a.regras && a.regras.vencido ? "⏳" : "📷");
+      c.appendChild(semCapa);
+    }
+    var txt = el("div", "p-4");
+    txt.appendChild(el("p", "text-xs uppercase tracking-wider suave", a.tipo || ""));
+    txt.appendChild(el("p", "titulo font-bold text-lg", (a.trancado ? "🔒 " : "") + a.titulo));
+    txt.appendChild(el("p", "text-sm suave", a.arquivos + " arquivo(s)" + (a.favoritas ? " · ♥ " + a.favoritas + " escolhida(s)" : "")));
+    var r = a.regras || {};
+    if (r.vencido) txt.appendChild(el("p", "text-sm font-semibold text-red-500 mt-1", "⏳ Acesso encerrado"));
+    else if (r.acesso_ate) txt.appendChild(el("p", "text-sm font-semibold mt-1", "⏳ Disponível por mais " + tempoRestante(quando(r.acesso_ate) - Date.now())));
+    c.appendChild(txt);
     c.addEventListener("click", function () { abrirAlbum(a); });
     lista.appendChild(c);
   });
@@ -230,28 +295,78 @@ async function abrirAlbum(a) {
   document.getElementById("albTitulo").textContent = a.titulo;
   mostrar("secAlbuns", false);
   mostrar("secPagamentos", false);
-  mostrar("secAlbum", true);
   window.scrollTo(0, 0);
+  if (a.regras && a.regras.vencido) { mostrar("secVencido", true); return; }
+  mostrar("secAlbum", true);
+  // Capa grande no topo do álbum (menos no layout clássico).
+  var comHeroi = a.capa && document.body.className.indexOf("tema-classico") < 0;
+  mostrar("heroi", !!comHeroi);
+  mostrar("albTipo", !comHeroi);
+  mostrar("albTitulo", !comHeroi);
+  if (comHeroi) {
+    document.getElementById("heroiImg").src = a.capa;
+    document.getElementById("heroiTipo").textContent = a.tipo || "";
+    document.getElementById("heroiTitulo").textContent = a.titulo;
+  }
   await carregarPagina();
 }
 
 async function carregarPagina() {
   var r = await api("/api/p/album?id=" + albumAtual.id + "&pagina=" + pagina);
-  if (!r.ok) return;
+  if (!r.ok) {
+    if (r.dados.vencido) { mostrar("secAlbum", false); mostrar("secVencido", true); }
+    return;
+  }
   arquivos = arquivos.concat(r.dados.arquivos);
+  regras = r.dados.regras;
+  escolhidas = r.dados.escolhidas;
   mostrar("avisoTrancado", !!r.dados.trancado);
-  mostrar("dicaFotos", !r.dados.trancado);
   albumAtual.trancado = !!r.dados.trancado;
   document.getElementById("albInfo").textContent = r.dados.total + " arquivo(s) · " + formatarBytes(r.dados.bytes);
+  mostrar("soFavoritas", regras.pode_escolher);
   mostrar("mais", (r.dados.pagina + 1) * r.dados.por_pagina < r.dados.total);
+  atualizarRegras();
+  clearInterval(relogio);
+  if (regras.acesso_ate) relogio = setInterval(atualizarRegras, 30000);
   desenharGrade();
+}
+
+// Faixa com o que o cliente pode fazer, o tempo que falta e quantas fotos já escolheu.
+function atualizarRegras() {
+  var caixa = document.getElementById("regrasBar");
+  caixa.innerHTML = "";
+  if (!regras) return;
+  var linhas = [];
+  if (regras.acesso_ate) {
+    var falta = quando(regras.acesso_ate) - Date.now();
+    if (falta <= 0) { mostrar("secAlbum", false); mostrar("secVencido", true); clearInterval(relogio); return; }
+    linhas.push(["⏳", "Seu acesso termina em " + tempoRestante(falta) + " (" + quando(regras.acesso_ate).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) + ")", "font-semibold"]);
+  }
+  if (regras.pode_escolher) linhas.push(["❤️", regras.limite_escolha ? "Escolhidas: " + escolhidas + " de " + regras.limite_escolha : "Escolhidas: " + escolhidas, ""]);
+  if (regras.pode_editar) linhas.push(["✏️", "Quer mudar alguma foto? Abra a foto e toque em \"Pedir edição\".", ""]);
+  if (!regras.pode_baixar) linhas.push(["👀", "Por enquanto é só para ver" + (regras.pode_escolher ? " e escolher" : "") + ". O download será liberado pelo estúdio.", ""]);
+  else if (regras.max_downloads) linhas.push(["⬇️", "Você pode baixar cada foto até " + regras.max_downloads + " vez(es). Salve num lugar seguro!", ""]);
+  linhas.forEach(function (l) {
+    var p = el("p", l[2]);
+    p.appendChild(document.createTextNode(l[0] + " " + l[1]));
+    caixa.appendChild(p);
+  });
+  mostrar("regrasBar", linhas.length > 0);
+  var dica = [];
+  if (regras.pode_escolher) dica.push("Toque no ♥ para escolher as fotos do seu álbum.");
+  dica.push("Toque na foto para ver grande" + (regras.pode_baixar ? " e baixar." : "."));
+  document.getElementById("dicaFotos").textContent = albumAtual.trancado ? "" : dica.join(" ");
+}
+
+function podeBaixar(f) {
+  return regras && regras.pode_baixar && !albumAtual.trancado && (!regras.max_downloads || f.baixados < regras.max_downloads);
 }
 
 function desenharGrade() {
   var grade = document.getElementById("grade");
   grade.innerHTML = "";
   var visiveis = arquivos.filter(function (f) { return !filtro || f.favorito; });
-  if (!visiveis.length) grade.appendChild(el("p", "col-span-full text-slate-500", filtro ? "Você ainda não marcou nenhuma favorita." : "Nenhum arquivo neste álbum ainda."));
+  if (!visiveis.length) grade.appendChild(el("p", "col-span-full suave", filtro ? "Você ainda não escolheu nenhuma foto." : "Nenhum arquivo neste álbum ainda."));
   visiveis.forEach(function (f) {
     var caixa = el("div", "foto");
     if (f.previa) {
@@ -261,38 +376,77 @@ function desenharGrade() {
       img.alt = f.nome;
       caixa.appendChild(img);
     } else {
-      var ic = el("div", "w-full h-full flex flex-col items-center justify-center text-xs text-slate-600 p-2 text-center");
+      var ic = el("div", "w-full h-full flex flex-col items-center justify-center text-xs suave p-2 text-center");
       ic.appendChild(el("span", "text-3xl", albumAtual.trancado ? "🔒" : f.tipo === "video" ? "🎬" : "📄"));
       ic.appendChild(el("span", "break-all mt-1", f.nome));
       caixa.appendChild(ic);
     }
-    var cor = el("span", "coracao" + (f.favorito ? " on" : ""), "♥");
-    cor.addEventListener("click", function (ev) { ev.stopPropagation(); alternarFavorito(f); });
-    caixa.appendChild(cor);
-    caixa.addEventListener("click", function () { f.previa ? abrirTela(f) : baixar(f); });
+    if (f.edicao === "aberto") caixa.appendChild(el("span", "selo bg-amber-300 text-slate-900", "✏️ edição pedida"));
+    else if (f.edicao === "feito") caixa.appendChild(el("span", "selo bg-emerald-400 text-white", "✔ editada"));
+    if (regras && regras.pode_escolher) {
+      var cor = el("span", "coracao" + (f.favorito ? " on" : ""), "♥");
+      cor.addEventListener("click", function (ev) { ev.stopPropagation(); alternarFavorito(f); });
+      caixa.appendChild(cor);
+    }
+    caixa.addEventListener("click", function () { f.previa ? abrirTela(f) : (podeBaixar(f) ? baixar(f) : null); });
     grade.appendChild(caixa);
   });
 }
 
 async function alternarFavorito(f) {
   f.favorito = !f.favorito;
+  escolhidas += f.favorito ? 1 : -1;
   desenharGrade();
-  if (naTela === f) document.getElementById("telaFav").classList.toggle("on", f.favorito);
+  atualizarRegras();
+  atualizarTela();
   var r = await api("/api/p/favorito", { file_id: f.id, favorito: f.favorito });
-  if (!r.ok) { f.favorito = !f.favorito; desenharGrade(); alert("Não foi possível salvar. Tente de novo."); }
+  if (!r.ok) {
+    f.favorito = !f.favorito;
+    escolhidas += f.favorito ? 1 : -1;
+    desenharGrade();
+    atualizarRegras();
+    atualizarTela();
+    alert(r.dados.error || "Não foi possível salvar. Tente de novo.");
+  }
 }
 
 async function baixar(f) {
   var r = await api("/api/p/baixar?id=" + f.id);
-  if (r.ok) window.location.href = r.dados.url;
-  else alert(r.dados.error || "Não foi possível baixar.");
+  if (r.ok) {
+    f.baixados = (f.baixados || 0) + 1;
+    atualizarTela();
+    window.location.href = r.dados.url;
+  } else alert(r.dados.error || "Não foi possível baixar.");
+}
+
+async function pedirEdicao(f) {
+  var txt = prompt("O que você quer mudar nesta foto? (ex.: tirar o fio do fundo, clarear o rosto)");
+  if (!txt) return;
+  var r = await api("/api/p/edicao", { file_id: f.id, comentario: txt });
+  if (!r.ok) { alert(r.dados.error || "Não foi possível enviar."); return; }
+  f.edicao = "aberto";
+  desenharGrade();
+  alert("Pedido enviado para o estúdio! ✏️");
+}
+
+function atualizarTela() {
+  if (!naTela) return;
+  var f = naTela;
+  var fav = document.getElementById("telaFav");
+  fav.classList.toggle("on", f.favorito);
+  fav.textContent = f.favorito ? "♥ Escolhida" : "♥ Escolher";
+  fav.classList.toggle("hidden", !(regras && regras.pode_escolher));
+  document.getElementById("telaEditar").classList.toggle("hidden", !(regras && regras.pode_editar));
+  var b = document.getElementById("telaBaixar");
+  b.classList.toggle("hidden", !podeBaixar(f));
+  b.textContent = "⬇ Baixar" + (regras && regras.max_downloads ? " (restam " + Math.max(0, regras.max_downloads - (f.baixados || 0)) + ")" : "");
 }
 
 function abrirTela(f) {
   naTela = f;
   document.getElementById("telaImg").src = f.previa;
   document.getElementById("telaNome").textContent = f.nome;
-  document.getElementById("telaFav").classList.toggle("on", f.favorito);
+  atualizarTela();
   document.getElementById("tela").classList.add("aberta");
 }
 function fecharTela() { naTela = null; document.getElementById("tela").classList.remove("aberta"); document.getElementById("telaImg").src = ""; }
@@ -300,6 +454,7 @@ function fecharTela() { naTela = null; document.getElementById("tela").classList
 document.getElementById("telaFechar").addEventListener("click", fecharTela);
 document.getElementById("telaFav").addEventListener("click", function () { if (naTela) alternarFavorito(naTela); });
 document.getElementById("telaBaixar").addEventListener("click", function () { if (naTela) baixar(naTela); });
+document.getElementById("telaEditar").addEventListener("click", function () { if (naTela) pedirEdicao(naTela); });
 document.addEventListener("keydown", function (e) { if (e.key === "Escape") fecharTela(); });
 
 document.getElementById("mais").addEventListener("click", function () { pagina++; carregarPagina(); });
@@ -308,10 +463,12 @@ document.getElementById("soFavoritas").addEventListener("click", function () {
   this.classList.toggle("on", filtro);
   desenharGrade();
 });
-document.getElementById("voltar").addEventListener("click", async function () {
+async function voltarParaLista() {
   var me = await api("/api/p/me");
   if (me.ok) mostrarAlbuns(me.dados.albuns, me.dados);
-});
+}
+document.getElementById("voltar").addEventListener("click", voltarParaLista);
+document.getElementById("voltarVencido").addEventListener("click", voltarParaLista);
 
 document.getElementById("formLogin").addEventListener("submit", async function (ev) {
   ev.preventDefault();

@@ -14,6 +14,7 @@ const MAX_APAGAR_POR_VEZ = 40;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SLUG_OK = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
 const COR_OK = /^#[0-9a-fA-F]{6}$/;
+const TEMAS = ["classico", "escuro", "minimalista", "delicado"];
 const IMAGEM = /\.(jpe?g|png|webp|gif|avif|jfif)$/i;
 const VIDEO = /\.(mp4|mov|m4v|webm|avi|mkv)$/i;
 // Como o fotógrafo cobra cada serviço da tabela de preços.
@@ -125,17 +126,40 @@ async function albumTrancado(env, albumId) {
   return !!r;
 }
 
-// Monta uma página de arquivos de um álbum, com link de prévia (só imagens) e se é favorita do cliente.
+// Regras de acesso do álbum (prazo, downloads, o que o cliente pode fazer), no formato das telas.
+function regrasAlbum(a) {
+  return {
+    acesso_ate: a.acesso_ate || null,
+    vencido: albumVencido(a),
+    max_downloads: a.max_downloads || null,
+    pode_baixar: a.pode_baixar !== 0,
+    pode_escolher: a.pode_escolher !== 0,
+    limite_escolha: a.limite_escolha || null,
+    pode_editar: !!a.pode_editar
+  };
+}
+
+function albumVencido(a) {
+  return !!a.acesso_ate && new Date(String(a.acesso_ate).replace(" ", "T") + "Z").getTime() <= Date.now();
+}
+
+const COLUNAS_REGRAS = "a.acesso_ate, a.max_downloads, a.pode_baixar, a.pode_escolher, a.limite_escolha, a.pode_editar";
+
+// Monta uma página de arquivos de um álbum, com link de prévia (só imagens), favorita, downloads e pedido de edição do cliente.
+// A prévia é a versão leve (files.previa_id) quando existe; fotos antigas, sem prévia, usam o próprio original.
 // semPrevia = true quando o álbum está trancado para o cliente (não gera link nenhum do arquivo).
 async function paginaArquivos(env, albumId, clienteId, pagina, semPrevia) {
   const total = await env.DB.prepare(
-    "SELECT COUNT(*) AS n, COALESCE(SUM(size_bytes), 0) AS bytes FROM files WHERE album_id = ? AND status = 'ready'"
+    "SELECT COUNT(*) AS n, COALESCE(SUM(size_bytes), 0) AS bytes FROM files WHERE album_id = ? AND status = 'ready' AND e_previa = 0"
   ).bind(albumId).first();
   const r = await env.DB.prepare(
-    "SELECT f.id, f.name, f.size_bytes, f.object_key, " +
-    "EXISTS (SELECT 1 FROM favoritos v WHERE v.file_id = f.id AND v.cliente_id = ?) AS favorito " +
-    "FROM files f WHERE f.album_id = ? AND f.status = 'ready' ORDER BY f.name, f.id LIMIT ? OFFSET ?"
-  ).bind(clienteId, albumId, POR_PAGINA, pagina * POR_PAGINA).all();
+    "SELECT f.id, f.name, f.size_bytes, f.object_key, pv.object_key AS previa_key, pv.name AS previa_nome, " +
+    "EXISTS (SELECT 1 FROM favoritos v WHERE v.file_id = f.id AND v.cliente_id = ?) AS favorito, " +
+    "(SELECT COUNT(*) FROM album_downloads d WHERE d.file_id = f.id AND d.cliente_id = ?) AS baixados, " +
+    "(SELECT e.status FROM pedidos_edicao e WHERE e.file_id = f.id AND e.cliente_id = ? ORDER BY e.id DESC LIMIT 1) AS edicao " +
+    "FROM files f LEFT JOIN files pv ON pv.id = f.previa_id AND pv.status = 'ready' " +
+    "WHERE f.album_id = ? AND f.status = 'ready' AND f.e_previa = 0 ORDER BY f.name, f.id LIMIT ? OFFSET ?"
+  ).bind(clienteId, clienteId, clienteId, albumId, POR_PAGINA, pagina * POR_PAGINA).all();
   const arquivos = [];
   for (const f of r.results) {
     const tipo = tipoArquivo(f.name);
@@ -145,7 +169,9 @@ async function paginaArquivos(env, albumId, clienteId, pagina, semPrevia) {
       tamanho: f.size_bytes,
       tipo: tipo,
       favorito: !!f.favorito,
-      previa: tipo === "foto" && !semPrevia ? await urlArquivo(env, f.object_key, f.name, false, 3600) : null
+      baixados: f.baixados,
+      edicao: f.edicao || null,
+      previa: tipo === "foto" && !semPrevia ? await urlArquivo(env, f.previa_key || f.object_key, f.previa_nome || f.name, false, 3600) : null
     });
   }
   return { total: total.n, bytes: total.bytes, pagina: pagina, por_pagina: POR_PAGINA, arquivos: arquivos };
@@ -173,7 +199,7 @@ export async function tratarPortalDono(request, env, url) {
   const u = await usuarioLogado(request, env);
   if (!u) return resp({ error: "Não autenticado" }, 401);
 
-  const portal = await env.DB.prepare("SELECT id, slug, nome, cor, ramo, instrucoes_pagamento, cobrar FROM portais WHERE user_id = ?").bind(u.id).first();
+  const portal = await env.DB.prepare("SELECT id, slug, nome, cor, ramo, instrucoes_pagamento, cobrar, tema FROM portais WHERE user_id = ?").bind(u.id).first();
 
   if (caminho === "/api/portal" && request.method === "GET") {
     return resp({ portal: portal, plano: await temPlano(env, u.id), tipos: TIPOS_FOTO }, 200);
@@ -191,22 +217,24 @@ export async function tratarPortalDono(request, env, url) {
   if (caminho === "/api/portal/albuns" && request.method === "GET") {
     if (!portal) return resp({ albuns: [] }, 200);
     const r = await env.DB.prepare(
-      "SELECT a.id, a.titulo, a.tipo, a.created_at, a.cliente_id, c.nome AS cliente, " +
-      "(SELECT COUNT(*) FROM files f WHERE f.album_id = a.id AND f.status = 'ready') AS arquivos, " +
+      "SELECT a.id, a.titulo, a.tipo, a.created_at, a.cliente_id, c.nome AS cliente, " + COLUNAS_REGRAS + ", " +
+      "(SELECT COUNT(*) FROM files f WHERE f.album_id = a.id AND f.status = 'ready' AND f.e_previa = 0) AS arquivos, " +
       "(SELECT COALESCE(SUM(size_bytes), 0) FROM files f WHERE f.album_id = a.id AND f.status = 'ready') AS bytes, " +
       "(SELECT COUNT(*) FROM favoritos v JOIN files f ON f.id = v.file_id WHERE f.album_id = a.id) AS favoritas, " +
+      "(SELECT COUNT(*) FROM pedidos_edicao e WHERE e.album_id = a.id AND e.status = 'aberto') AS edicoes_abertas, " +
       "EXISTS (SELECT 1 FROM cobrancas b JOIN portais p ON p.id = b.portal_id WHERE b.album_id = a.id AND b.status = 'pendente' AND b.bloqueia_album = 1 AND p.cobrar = 1) AS trancado " +
       "FROM albuns a JOIN portal_clientes c ON c.id = a.cliente_id WHERE a.portal_id = ? ORDER BY a.id DESC"
     ).bind(portal.id).all();
-    return resp({ albuns: r.results }, 200);
+    return resp({ albuns: r.results.map(function (a) { a.regras = regrasAlbum(a); return a; }) }, 200);
   }
 
   if (caminho === "/api/portal/album" && request.method === "GET") {
     if (!portal) return resp({ error: "Crie o seu portal primeiro" }, 400);
     const album = await env.DB.prepare(
-      "SELECT a.id, a.titulo, a.tipo, a.cliente_id, c.nome AS cliente FROM albuns a JOIN portal_clientes c ON c.id = a.cliente_id WHERE a.id = ? AND a.portal_id = ?"
+      "SELECT a.id, a.titulo, a.tipo, a.cliente_id, c.nome AS cliente, " + COLUNAS_REGRAS + " FROM albuns a JOIN portal_clientes c ON c.id = a.cliente_id WHERE a.id = ? AND a.portal_id = ?"
     ).bind(parseInt(url.searchParams.get("id"), 10) || 0, portal.id).first();
     if (!album) return resp({ error: "Álbum não encontrado" }, 404);
+    album.regras = regrasAlbum(album);
     if (url.searchParams.get("favoritas") === "1") {
       // Lista de nomes das favoritas, para o fotógrafo copiar e montar o álbum impresso.
       const f = await env.DB.prepare(
@@ -217,7 +245,45 @@ export async function tratarPortalDono(request, env, url) {
     const pagina = Math.max(0, parseInt(url.searchParams.get("pagina"), 10) || 0);
     const dados = await paginaArquivos(env, album.id, album.cliente_id, pagina);
     dados.album = album;
+    // Pedidos de edição do cliente neste álbum (abertos primeiro).
+    const ed = await env.DB.prepare(
+      "SELECT e.id, e.comentario, e.status, e.created_at, e.feito_em, f.name FROM pedidos_edicao e JOIN files f ON f.id = e.file_id " +
+      "WHERE e.album_id = ? ORDER BY CASE e.status WHEN 'aberto' THEN 0 ELSE 1 END, e.id DESC LIMIT 300"
+    ).bind(album.id).all();
+    dados.edicoes = ed.results;
     return resp(dados, 200);
+  }
+
+  // Central de acesso: resumo do estúdio e, para cada cliente (link fechado), visitas, downloads, escolhas e pendências.
+  if (caminho === "/api/portal/central" && request.method === "GET") {
+    if (!portal) return resp({ resumo: null, clientes: [] }, 200);
+    const resumo = await env.DB.prepare(
+      "SELECT " +
+      "(SELECT COALESCE(SUM(valor_centavos), 0) FROM cobrancas WHERE portal_id = ?1 AND status = 'pago' AND pago_em >= date('now', 'start of month')) + " +
+      "(SELECT COALESCE(SUM(p.valor_centavos), 0) FROM evento_pedidos p JOIN eventos e ON e.id = p.evento_id WHERE e.portal_id = ?1 AND p.status = 'pago' AND p.pago_em >= date('now', 'start of month')) AS recebido_mes, " +
+      "(SELECT COALESCE(SUM(valor_centavos), 0) FROM cobrancas WHERE portal_id = ?1 AND status = 'pendente') + " +
+      "(SELECT COALESCE(SUM(p.valor_centavos), 0) FROM evento_pedidos p JOIN eventos e ON e.id = p.evento_id WHERE e.portal_id = ?1 AND p.status = 'pendente') AS a_receber, " +
+      "(SELECT COALESCE(SUM(valor_centavos), 0) FROM cobrancas WHERE portal_id = ?1 AND status = 'pago') + " +
+      "(SELECT COALESCE(SUM(p.valor_centavos), 0) FROM evento_pedidos p JOIN eventos e ON e.id = p.evento_id WHERE e.portal_id = ?1 AND p.status = 'pago') AS recebido_total, " +
+      "(SELECT COUNT(*) FROM eventos WHERE portal_id = ?1) AS eventos, " +
+      "(SELECT COUNT(*) FROM evento_pedidos p JOIN eventos e ON e.id = p.evento_id WHERE e.portal_id = ?1 AND p.status = 'pendente') AS pedidos_pendentes, " +
+      "(SELECT COUNT(*) FROM portal_clientes WHERE portal_id = ?1) AS clientes"
+    ).bind(portal.id).first();
+    const r = await env.DB.prepare(
+      "SELECT c.id, c.nome, c.email, c.created_at, c.travada_em, " +
+      "(SELECT COUNT(*) FROM albuns a WHERE a.cliente_id = c.id) AS albuns, " +
+      "(SELECT MAX(s.created_at) FROM seguranca_eventos s WHERE s.cliente_id = c.id AND s.tipo IN ('portal_login_ok', 'portal_album')) AS ultimo_acesso, " +
+      "(SELECT COUNT(*) FROM seguranca_eventos s WHERE s.cliente_id = c.id AND s.tipo = 'portal_album') AS visitas, " +
+      "(SELECT COUNT(*) FROM album_downloads d WHERE d.cliente_id = c.id) AS downloads, " +
+      "(SELECT COUNT(*) FROM favoritos v WHERE v.cliente_id = c.id) AS escolhidas, " +
+      "(SELECT COUNT(*) FROM pedidos_edicao e WHERE e.cliente_id = c.id AND e.status = 'aberto') AS edicoes_abertas, " +
+      "(SELECT COUNT(*) FROM cobrancas b WHERE b.cliente_id = c.id AND b.status = 'pendente') AS cobrancas_pendentes, " +
+      "(SELECT COUNT(*) FROM cobrancas b WHERE b.cliente_id = c.id AND b.status = 'pendente' AND b.vencimento IS NOT NULL AND b.vencimento < date('now')) AS atrasadas, " +
+      "(SELECT MIN(a.acesso_ate) FROM albuns a WHERE a.cliente_id = c.id AND a.acesso_ate > datetime('now')) AS prazo_proximo, " +
+      "(SELECT COUNT(*) FROM albuns a WHERE a.cliente_id = c.id AND a.acesso_ate IS NOT NULL AND a.acesso_ate <= datetime('now')) AS vencidos " +
+      "FROM portal_clientes c WHERE c.portal_id = ? ORDER BY c.id DESC"
+    ).bind(portal.id).all();
+    return resp({ resumo: resumo, clientes: r.results }, 200);
   }
 
   if (caminho === "/api/portal/cobrancas" && request.method === "GET") {
@@ -250,12 +316,13 @@ export async function tratarPortalDono(request, env, url) {
     if (nome.length < 2) return resp({ error: "Digite o nome do seu estúdio" }, 400);
     if (!SLUG_OK.test(slug)) return resp({ error: "Endereço inválido: use de 3 a 40 letras minúsculas, números e hífen (ex.: estudio-aurora)" }, 400);
     if (!COR_OK.test(cor)) return resp({ error: "Cor inválida" }, 400);
+    const tema = TEMAS.indexOf(corpo.tema) > -1 ? corpo.tema : (portal && portal.tema) || "classico";
     if (!portal && !(await temPlano(env, u.id))) return resp({ error: "Você precisa de um plano ativo para criar o portal" }, 403);
     try {
       if (portal) {
-        await env.DB.prepare("UPDATE portais SET nome = ?, slug = ?, cor = ? WHERE id = ?").bind(nome, slug, cor, portal.id).run();
+        await env.DB.prepare("UPDATE portais SET nome = ?, slug = ?, cor = ?, tema = ? WHERE id = ?").bind(nome, slug, cor, tema, portal.id).run();
       } else {
-        await env.DB.prepare("INSERT INTO portais (user_id, slug, nome, cor) VALUES (?, ?, ?, ?)").bind(u.id, slug, nome, cor).run();
+        await env.DB.prepare("INSERT INTO portais (user_id, slug, nome, cor, tema) VALUES (?, ?, ?, ?, ?)").bind(u.id, slug, nome, cor, tema).run();
       }
     } catch (e) {
       if (String(e.message).includes("UNIQUE")) return resp({ error: "Esse endereço já está em uso. Escolha outro." }, 409);
@@ -361,6 +428,48 @@ export async function tratarPortalDono(request, env, url) {
     return resp({ ok: true }, 200);
   }
 
+  // Regras de acesso do álbum. prazo_dias: número de dias a partir de agora; 0 = sem prazo; ausente = mantém o atual.
+  if (caminho === "/api/portal/albuns/regras") {
+    const album = await env.DB.prepare("SELECT id FROM albuns WHERE id = ? AND portal_id = ?").bind(parseInt(corpo.id, 10) || 0, portal.id).first();
+    if (!album) return resp({ error: "Álbum não encontrado" }, 404);
+    const maxD = corpo.max_downloads === "" || corpo.max_downloads === null || corpo.max_downloads === undefined ? null : parseInt(corpo.max_downloads, 10);
+    if (maxD !== null && (!maxD || maxD < 1 || maxD > 100)) return resp({ error: "Downloads por foto: de 1 a 100 (ou vazio para sem limite)" }, 400);
+    const lim = corpo.limite_escolha === "" || corpo.limite_escolha === null || corpo.limite_escolha === undefined ? null : parseInt(corpo.limite_escolha, 10);
+    if (lim !== null && (!lim || lim < 1 || lim > 10000)) return resp({ error: "Limite de fotos escolhidas inválido (ou vazio para sem limite)" }, 400);
+    await env.DB.prepare(
+      "UPDATE albuns SET max_downloads = ?, pode_baixar = ?, pode_escolher = ?, limite_escolha = ?, pode_editar = ? WHERE id = ?"
+    ).bind(maxD, corpo.pode_baixar === false ? 0 : 1, corpo.pode_escolher === false ? 0 : 1, lim, corpo.pode_editar ? 1 : 0, album.id).run();
+    if (corpo.prazo_dias !== undefined && corpo.prazo_dias !== null && corpo.prazo_dias !== "") {
+      const dias = parseInt(corpo.prazo_dias, 10);
+      if (isNaN(dias) || dias < 0 || dias > 365) return resp({ error: "Prazo inválido (0 a 365 dias)" }, 400);
+      await env.DB.prepare("UPDATE albuns SET acesso_ate = CASE WHEN ? = 0 THEN NULL ELSE datetime('now', ?) END WHERE id = ?")
+        .bind(dias, "+" + dias + " days", album.id).run();
+    }
+    return resp({ ok: true }, 200);
+  }
+
+  if (caminho === "/api/portal/edicoes/status") {
+    const status = corpo.status === "feito" ? "feito" : "aberto";
+    const r = await env.DB.prepare(
+      "UPDATE pedidos_edicao SET status = ?, feito_em = CASE WHEN ? = 'feito' THEN datetime('now') ELSE NULL END " +
+      "WHERE id = ? AND album_id IN (SELECT id FROM albuns WHERE portal_id = ?)"
+    ).bind(status, status, parseInt(corpo.id, 10) || 0, portal.id).run();
+    if (!r.meta.changes) return resp({ error: "Pedido não encontrado" }, 404);
+    return resp({ ok: true }, 200);
+  }
+
+  // Liga a prévia leve (criada no navegador do fotógrafo) à foto original do álbum.
+  if (caminho === "/api/portal/previa") {
+    const arquivos = await env.DB.prepare(
+      "SELECT f.id, f.album_id, f.e_previa FROM files f JOIN albuns a ON a.id = f.album_id WHERE f.id IN (?, ?) AND f.user_id = ? AND a.portal_id = ? AND f.status = 'ready'"
+    ).bind(parseInt(corpo.original_id, 10) || 0, parseInt(corpo.previa_id, 10) || 0, u.id, portal.id).all();
+    const original = arquivos.results.find(function (f) { return f.id === parseInt(corpo.original_id, 10) && !f.e_previa; });
+    const previa = arquivos.results.find(function (f) { return f.id === parseInt(corpo.previa_id, 10) && f.e_previa; });
+    if (!original || !previa || original.album_id !== previa.album_id) return resp({ error: "Prévia inválida" }, 400);
+    await env.DB.prepare("UPDATE files SET previa_id = ? WHERE id = ?").bind(previa.id, original.id).run();
+    return resp({ ok: true }, 200);
+  }
+
   if (caminho === "/api/portal/clientes/novo") {
     const nome = texto(corpo.nome, 80);
     const email = String(corpo.email || "").trim().toLowerCase();
@@ -369,15 +478,17 @@ export async function tratarPortalDono(request, env, url) {
     if (!EMAIL_OK.test(email) || email.length > 120) return resp({ error: "E-mail inválido" }, 400);
     if (senha.length < 8 || senha.length > 100) return resp({ error: "A senha precisa ter de 8 a 100 caracteres" }, 400);
     const h = await novaSenhaHash(senha);
+    let novoId;
     try {
-      await env.DB.prepare(
+      const r = await env.DB.prepare(
         "INSERT INTO portal_clientes (portal_id, nome, email, password_hash, password_salt) VALUES (?, ?, ?, ?, ?)"
       ).bind(portal.id, nome, email, h.hash, h.salt).run();
+      novoId = r.meta.last_row_id;
     } catch (e) {
       if (String(e.message).includes("UNIQUE")) return resp({ error: "Você já tem um cliente com esse e-mail" }, 409);
       throw e;
     }
-    return resp({ ok: true }, 200);
+    return resp({ ok: true, id: novoId }, 200);
   }
 
   const cliente = corpo.cliente_id !== undefined
@@ -431,7 +542,11 @@ export async function tratarPortalDono(request, env, url) {
       await env.DB.prepare("DELETE FROM files WHERE id = ?").bind(f.id).run();
     }
     const resta = await env.DB.prepare("SELECT COUNT(*) AS n FROM files WHERE album_id = ?").bind(album.id).first();
-    if (resta.n === 0) await env.DB.prepare("DELETE FROM albuns WHERE id = ?").bind(album.id).run();
+    if (resta.n === 0) {
+      await env.DB.prepare("DELETE FROM album_downloads WHERE album_id = ?").bind(album.id).run();
+      await env.DB.prepare("DELETE FROM pedidos_edicao WHERE album_id = ?").bind(album.id).run();
+      await env.DB.prepare("DELETE FROM albuns WHERE id = ?").bind(album.id).run();
+    }
     return resp({ ok: true, restantes: resta.n }, 200);
   }
 
@@ -454,7 +569,7 @@ export async function tratarPortalCliente(request, env, url) {
   const caminho = url.pathname;
 
   if (caminho === "/api/p/info" && request.method === "GET") {
-    const p = await env.DB.prepare("SELECT nome, cor, slug FROM portais WHERE slug = ?")
+    const p = await env.DB.prepare("SELECT nome, cor, slug, tema FROM portais WHERE slug = ?")
       .bind(String(url.searchParams.get("slug") || "").toLowerCase()).first();
     if (!p) return resp({ error: "Portal não encontrado" }, 404);
     return resp(p, 200);
@@ -509,8 +624,8 @@ export async function tratarPortalCliente(request, env, url) {
 
   if (caminho === "/api/p/me" && request.method === "GET") {
     const r = await env.DB.prepare(
-      "SELECT a.id, a.titulo, a.tipo, a.created_at, " +
-      "(SELECT COUNT(*) FROM files f WHERE f.album_id = a.id AND f.status = 'ready') AS arquivos, " +
+      "SELECT a.id, a.titulo, a.tipo, a.created_at, " + COLUNAS_REGRAS + ", " +
+      "(SELECT COUNT(*) FROM files f WHERE f.album_id = a.id AND f.status = 'ready' AND f.e_previa = 0) AS arquivos, " +
       "(SELECT COUNT(*) FROM favoritos v JOIN files f ON f.id = v.file_id WHERE f.album_id = a.id AND v.cliente_id = a.cliente_id) AS favoritas, " +
       "EXISTS (SELECT 1 FROM cobrancas b JOIN portais p ON p.id = b.portal_id WHERE b.album_id = a.id AND b.status = 'pendente' AND b.bloqueia_album = 1 AND p.cobrar = 1) AS trancado " +
       "FROM albuns a WHERE a.cliente_id = ? ORDER BY a.id DESC"
@@ -519,11 +634,26 @@ export async function tratarPortalCliente(request, env, url) {
       "SELECT b.id, b.descricao, b.valor_centavos, b.vencimento, b.link_pagamento, b.status, b.pago_em, b.itens, a.titulo AS album " +
       "FROM cobrancas b LEFT JOIN albuns a ON a.id = b.album_id WHERE b.cliente_id = ? AND b.status != 'cancelado' ORDER BY b.status DESC, b.id DESC"
     ).bind(c.id).all();
-    const instr = await env.DB.prepare("SELECT instrucoes_pagamento, cobrar FROM portais WHERE id = ?").bind(c.portal_id).first();
+    const instr = await env.DB.prepare("SELECT instrucoes_pagamento, cobrar, tema FROM portais WHERE id = ?").bind(c.portal_id).first();
+    const albuns = [];
+    for (const a of r.results) {
+      const x = { id: a.id, titulo: a.titulo, tipo: a.tipo, created_at: a.created_at, arquivos: a.arquivos, favoritas: a.favoritas, trancado: a.trancado, capa: null };
+      x.regras = regrasAlbum(a);
+      // Capa = primeira foto do álbum (prévia leve, se houver). Álbum trancado ou vencido não mostra capa.
+      if (!a.trancado && !x.regras.vencido) {
+        const fs = await env.DB.prepare(
+          "SELECT f.name, f.object_key, pv.object_key AS previa_key, pv.name AS previa_nome FROM files f LEFT JOIN files pv ON pv.id = f.previa_id AND pv.status = 'ready' " +
+          "WHERE f.album_id = ? AND f.status = 'ready' AND f.e_previa = 0 ORDER BY f.name, f.id LIMIT 8"
+        ).bind(a.id).all();
+        const foto = fs.results.find(function (f) { return IMAGEM.test(f.name); });
+        if (foto) x.capa = await urlArquivo(env, foto.previa_key || foto.object_key, foto.previa_nome || foto.name, false, 3600);
+      }
+      albuns.push(x);
+    }
     return resp({
       nome: c.nome,
-      portal: { slug: c.slug, nome: c.portal_nome, cor: c.cor, instrucoes_pagamento: instr ? instr.instrucoes_pagamento : null },
-      albuns: r.results,
+      portal: { slug: c.slug, nome: c.portal_nome, cor: c.cor, tema: instr ? instr.tema : "classico", instrucoes_pagamento: instr ? instr.instrucoes_pagamento : null },
+      albuns: albuns,
       // Acesso livre (cobrar = 0): o cliente não vê cobranças.
       cobrancas: instr && instr.cobrar ? cob.results.map(function (b) {
         let itens = [];
@@ -536,29 +666,71 @@ export async function tratarPortalCliente(request, env, url) {
 
   // Álbum só aparece se for deste cliente.
   async function albumDoCliente(id) {
-    return await env.DB.prepare("SELECT id, titulo, tipo FROM albuns WHERE id = ? AND cliente_id = ?")
+    return await env.DB.prepare("SELECT a.id, a.titulo, a.tipo, " + COLUNAS_REGRAS + " FROM albuns a WHERE a.id = ? AND a.cliente_id = ?")
       .bind(parseInt(id, 10) || 0, c.id).first();
+  }
+
+  const MSG_VENCIDO = "O prazo de acesso a este álbum terminou. Fale com o estúdio para liberar de novo.";
+
+  // Arquivo (original, nunca a prévia) de um álbum deste cliente, já com as regras do álbum.
+  async function arquivoDoCliente(id) {
+    return await env.DB.prepare(
+      "SELECT f.id, f.object_key, f.name, f.album_id, " + COLUNAS_REGRAS + " FROM files f JOIN albuns a ON a.id = f.album_id " +
+      "WHERE f.id = ? AND a.cliente_id = ? AND f.status = 'ready' AND f.e_previa = 0"
+    ).bind(parseInt(id, 10) || 0, c.id).first();
   }
 
   if (caminho === "/api/p/album" && request.method === "GET") {
     const album = await albumDoCliente(url.searchParams.get("id"));
     if (!album) return resp({ error: "Álbum não encontrado" }, 404);
+    if (albumVencido(album)) return resp({ error: MSG_VENCIDO, vencido: true }, 403);
     const pagina = Math.max(0, parseInt(url.searchParams.get("pagina"), 10) || 0);
+    // Conta a visita (só a primeira página) para a central de acesso do fotógrafo.
+    if (pagina === 0) await registrarEvento(env, request, "portal_album", { cliente_id: c.id });
     const trancado = await albumTrancado(env, album.id);
     const dados = await paginaArquivos(env, album.id, c.id, pagina, trancado);
-    dados.album = album;
+    const escolhidas = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM favoritos v JOIN files f ON f.id = v.file_id WHERE f.album_id = ? AND v.cliente_id = ?"
+    ).bind(album.id, c.id).first();
+    dados.album = { id: album.id, titulo: album.titulo, tipo: album.tipo };
+    dados.regras = regrasAlbum(album);
+    dados.escolhidas = escolhidas.n;
     dados.trancado = trancado;
     return resp(dados, 200);
   }
 
   if (caminho === "/api/p/baixar" && request.method === "GET") {
-    const f = await env.DB.prepare(
-      "SELECT f.object_key, f.name, f.album_id FROM files f JOIN albuns a ON a.id = f.album_id WHERE f.id = ? AND a.cliente_id = ? AND f.status = 'ready'"
-    ).bind(parseInt(url.searchParams.get("id"), 10) || 0, c.id).first();
+    const f = await arquivoDoCliente(url.searchParams.get("id"));
     if (!f) return resp({ error: "Arquivo não encontrado" }, 404);
+    if (albumVencido(f)) return resp({ error: MSG_VENCIDO }, 403);
+    if (f.pode_baixar === 0) return resp({ error: "Neste álbum o estúdio liberou só a visualização. O download será liberado por ele." }, 403);
     if (await albumTrancado(env, f.album_id)) return resp({ error: "Este álbum será liberado assim que o pagamento for confirmado pelo estúdio." }, 402);
+    if (f.max_downloads) {
+      const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM album_downloads WHERE cliente_id = ? AND file_id = ?").bind(c.id, f.id).first();
+      if (n.n >= f.max_downloads) return resp({ error: "Você já baixou esta foto " + n.n + " vez(es), o limite combinado com o estúdio." }, 429);
+    }
+    await env.DB.prepare("INSERT INTO album_downloads (album_id, file_id, cliente_id) VALUES (?, ?, ?)").bind(f.album_id, f.id, c.id).run();
     await registrarEvento(env, request, "download", { cliente_id: c.id });
     return resp({ url: await urlArquivo(env, f.object_key, f.name, true, 300) }, 200);
+  }
+
+  // Pedido de edição de uma foto (só se o estúdio permitiu neste álbum).
+  if (caminho === "/api/p/edicao") {
+    if (request.method !== "POST") return resp({ error: "Método não permitido" }, 405);
+    if (!origemOk(request, url)) return resp({ error: "Origem inválida" }, 403);
+    const corpo = await lerJson(request);
+    if (!corpo) return resp({ error: "JSON inválido" }, 400);
+    const f = await arquivoDoCliente(corpo.file_id);
+    if (!f) return resp({ error: "Arquivo não encontrado" }, 404);
+    if (albumVencido(f)) return resp({ error: MSG_VENCIDO }, 403);
+    if (!f.pode_editar) return resp({ error: "Pedidos de edição não estão liberados neste álbum." }, 403);
+    const comentario = String(corpo.comentario || "").replace(/[\u0000-\u0009\u000b-\u001f]/g, " ").trim().slice(0, 500);
+    if (comentario.length < 3) return resp({ error: "Conte o que você quer mudar nesta foto" }, 400);
+    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM pedidos_edicao WHERE album_id = ? AND cliente_id = ?").bind(f.album_id, c.id).first();
+    if (n.n >= 300) return resp({ error: "Limite de pedidos de edição deste álbum atingido. Fale com o estúdio." }, 400);
+    await env.DB.prepare("INSERT INTO pedidos_edicao (album_id, file_id, cliente_id, comentario) VALUES (?, ?, ?, ?)")
+      .bind(f.album_id, f.id, c.id, comentario).run();
+    return resp({ ok: true }, 200);
   }
 
   if (caminho === "/api/p/favorito") {
@@ -566,11 +738,17 @@ export async function tratarPortalCliente(request, env, url) {
     if (!origemOk(request, url)) return resp({ error: "Origem inválida" }, 403);
     const corpo = await lerJson(request);
     if (!corpo) return resp({ error: "JSON inválido" }, 400);
-    const f = await env.DB.prepare(
-      "SELECT f.id FROM files f JOIN albuns a ON a.id = f.album_id WHERE f.id = ? AND a.cliente_id = ?"
-    ).bind(parseInt(corpo.file_id, 10) || 0, c.id).first();
+    const f = await arquivoDoCliente(corpo.file_id);
     if (!f) return resp({ error: "Arquivo não encontrado" }, 404);
+    if (albumVencido(f)) return resp({ error: MSG_VENCIDO }, 403);
     if (corpo.favorito) {
+      if (f.pode_escolher === 0) return resp({ error: "A escolha de fotos não está liberada neste álbum." }, 403);
+      if (f.limite_escolha) {
+        const n = await env.DB.prepare(
+          "SELECT COUNT(*) AS n FROM favoritos v JOIN files x ON x.id = v.file_id WHERE x.album_id = ? AND v.cliente_id = ? AND v.file_id != ?"
+        ).bind(f.album_id, c.id, f.id).first();
+        if (n.n >= f.limite_escolha) return resp({ error: "Você já escolheu " + n.n + " de " + f.limite_escolha + " fotos. Tire o coração de outra para trocar." }, 400);
+      }
       await env.DB.prepare("INSERT OR IGNORE INTO favoritos (cliente_id, file_id) VALUES (?, ?)").bind(c.id, f.id).run();
     } else {
       await env.DB.prepare("DELETE FROM favoritos WHERE cliente_id = ? AND file_id = ?").bind(c.id, f.id).run();

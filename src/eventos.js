@@ -162,7 +162,7 @@ export async function tratarEventosDono(request, env, url) {
       "FROM eventos e WHERE e.portal_id = ? ORDER BY e.id DESC"
     ).bind(portal.id).all();
     return resp({
-      portal: { nome: portal.nome, cor: portal.cor, tem_pix: !!portal.instrucoes_pagamento },
+      portal: { nome: portal.nome, cor: portal.cor, tem_pix: !!portal.instrucoes_pagamento, instrucoes: portal.instrucoes_pagamento || "" },
       tipos: TIPOS_EVENTO,
       eventos: r.results.map(function (e) {
         const t = eventoParaTela(e);
@@ -477,7 +477,7 @@ export async function tratarEventoPublico(request, env, url) {
       await enviarEmail(env, dono.email, "Novo pedido de fotos: " + reais(conta.total) + " - " + ev.titulo,
         [nome + " (" + email + (whatsapp ? ", WhatsApp " + whatsapp : "") + ") pediu " + pedidas.length + " foto(s) de \"" + ev.titulo + "\" e vai pagar " + reais(conta.total) + " no seu PIX.",
          "Quando o dinheiro cair, abra os pedidos do evento e clique em \"Pago\": as fotos são liberadas na hora para a pessoa."],
-        { texto: "Ver pedidos", link: url.origin + "/meus-eventos" });
+        { texto: "Ver pedidos", link: url.origin + "/meu-portal?aba=abertos" });
     }
     await enviarEmail(env, email, "Seu pedido de fotos - " + ev.titulo,
       ["Olá, " + nome.split(" ")[0] + "!", "Recebemos o seu pedido de " + pedidas.length + " foto(s) de \"" + ev.titulo + "\", no valor de " + reais(conta.total) + ".",

@@ -22,6 +22,9 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
 .perigo{color:#fca5a5;font-weight:600;font-size:14px}
 .barra{height:6px;border-radius:9px;background:#1e293b;overflow:hidden}
 .barra i{display:block;height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#818cf8)}
+.mini{border-radius:10px;overflow:hidden;background:#0f172a;position:relative}
+.mini img{width:100%;aspect-ratio:1/1;object-fit:cover}
+.aba.on{background:linear-gradient(90deg,#0ea5e9,#6366f1);border-color:transparent;color:#fff}
 .miniatura{aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:#0f172a;position:relative}
 .miniatura img{width:100%;height:100%;object-fit:cover}
 .miniatura .selo{position:absolute;right:6px;bottom:6px;background:#fff;color:#e11d48;border-radius:999px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:13px}
@@ -41,25 +44,141 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
 
 <main class="max-w-5xl mx-auto px-4 py-10 space-y-6">
   <div>
-    <h1 class="text-2xl md:text-3xl font-bold">Meu portal <span class="grad">de fotos e vídeos</span></h1>
-    <p class="text-slate-400 mt-1">Seus clientes entram com login e senha e veem só os álbuns deles. As fotos usam o espaço do seu plano.</p>
-    <a href="/meus-eventos" class="inline-block mt-3 text-sm font-semibold text-emerald-200 border border-emerald-400/40 px-4 py-2 rounded-xl hover:bg-emerald-500/10">🏃 Fotógrafo de evento ou de rua? Venda fotos avulsas com marca d'água →</a>
+    <h1 class="text-2xl md:text-3xl font-bold">Meu <span class="grad">estúdio</span></h1>
+    <p class="text-slate-400 mt-1">Entregue álbuns com login para cada cliente (link fechado) ou venda fotos de eventos com marca d'água (link aberto). Tudo aqui, num lugar só.</p>
   </div>
   <p id="carregando" class="text-slate-400">Carregando...</p>
   <p id="semPlano" class="hidden glass rounded-2xl p-5 text-amber-300">Para criar o seu portal, você precisa de um plano ativo. <a href="/#calculadora" class="link">Contratar plano →</a></p>
 
+  <!-- Painel do estúdio -->
+  <section id="painelEstudio" class="hidden grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="glass rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">Recebido no mês</p><p id="stMes" class="text-2xl font-bold mt-1 text-emerald-300">-</p><p id="stTotal" class="text-xs text-slate-500 mt-1"></p></div>
+    <div class="glass rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">A receber</p><p id="stReceber" class="text-2xl font-bold mt-1 text-amber-300">-</p><p id="stPedidos" class="text-xs text-slate-500 mt-1"></p></div>
+    <div class="glass rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">🌐 Links abertos</p><p id="stEventos" class="text-2xl font-bold mt-1">-</p><p class="text-xs text-slate-500 mt-1">eventos à venda</p></div>
+    <div class="glass rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">🔒 Links fechados</p><p id="stClientes" class="text-2xl font-bold mt-1">-</p><p id="stAtencao" class="text-xs mt-1 text-slate-500">clientes</p></div>
+  </section>
+
+  <!-- Criar novo (passo a passo) -->
+  <section id="secCriar" class="hidden glass rounded-3xl p-6 space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 class="text-lg font-bold">➕ Criar novo</h2>
+      <button type="button" id="wzVoltar" class="hidden link">← Voltar</button>
+    </div>
+    <div id="wzPasso1">
+      <p class="text-sm text-slate-300 mb-3">Passo 1: o que você quer criar?</p>
+      <div class="grid md:grid-cols-2 gap-3">
+        <button type="button" id="criarAberto" class="text-left bg-slate-900/50 hover:bg-slate-900 border border-emerald-400/40 rounded-2xl p-5">
+          <span class="block text-lg font-bold text-emerald-200">🌐 Link aberto</span>
+          <span class="block text-sm text-slate-300 mt-1">Para eventos: corrida, futebol, formatura, convidados da festa...</span>
+          <span class="block text-xs text-slate-400 mt-2">Qualquer pessoa vê as fotos com marca d'água, escolhe, paga por foto no seu PIX e baixa o original. Não precisa cadastrar ninguém.</span>
+        </button>
+        <button type="button" id="criarFechado" class="text-left bg-slate-900/50 hover:bg-slate-900 border border-cyan-400/40 rounded-2xl p-5">
+          <span class="block text-lg font-bold text-cyan-200">🔒 Link fechado</span>
+          <span class="block text-sm text-slate-300 mt-1">Para um cliente: casamento, 15 anos, ensaio, empresa...</span>
+          <span class="block text-xs text-slate-400 mt-2">O cliente entra com login e senha e vê só o álbum dele. Você escolhe o prazo e se ele pode escolher, pedir edição ou baixar.</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Passo 2: link aberto (o formulário do evento é colocado aqui) -->
+    <div id="wzAberto" class="hidden"><p class="text-sm text-slate-300 mb-2">Passo 2: os dados do evento e o preço das fotos. Depois você envia as fotos.</p></div>
+
+    <!-- Passo 2: link fechado -->
+    <div id="wzFechado" class="hidden space-y-4">
+      <p class="text-sm text-slate-300">Passo 2: o cliente, o álbum e as regras. Depois você envia as fotos.</p>
+      <div class="bg-slate-900/40 rounded-2xl p-4 space-y-3">
+        <p class="font-bold">👤 Cliente</p>
+        <div class="flex flex-wrap gap-4 text-sm">
+          <label class="flex items-center gap-2"><input type="radio" name="wzCli" value="novo" checked> Cliente novo</label>
+          <label class="flex items-center gap-2"><input type="radio" name="wzCli" value="existente"> Cliente que já tenho</label>
+        </div>
+        <div id="wzCliNovo" class="grid md:grid-cols-3 gap-3">
+          <label class="text-sm text-slate-300">Nome<input id="cliNome" class="campo mt-1" maxlength="80" placeholder="Ana e Pedro" autocomplete="off"></label>
+          <label class="text-sm text-slate-300">E-mail (é o login)<input id="cliEmail" type="email" class="campo mt-1" maxlength="120" placeholder="ana@email.com" autocomplete="off"></label>
+          <label class="text-sm text-slate-300">Senha
+            <div class="flex gap-2 mt-1"><input id="cliSenha" class="campo" maxlength="100" placeholder="mín. 8 caracteres" autocomplete="new-password"><button type="button" id="btnGerar" class="link whitespace-nowrap">Gerar</button></div>
+          </label>
+        </div>
+        <label id="wzCliExistente" class="hidden text-sm text-slate-300 block">Escolha o cliente<select id="albCliente" class="campo mt-1"></select></label>
+      </div>
+      <div class="bg-slate-900/40 rounded-2xl p-4 space-y-3">
+        <p class="font-bold">📁 Álbum</p>
+        <div class="grid md:grid-cols-2 gap-3">
+          <label class="text-sm text-slate-300">Nome do álbum<input id="albTitulo" class="campo mt-1" maxlength="100" placeholder="Casamento Ana & Pedro"></label>
+          <label class="text-sm text-slate-300">Tipo de trabalho<select id="albTipo" class="campo mt-1"></select></label>
+        </div>
+      </div>
+      <div class="bg-slate-900/40 rounded-2xl p-4 space-y-3 text-sm text-slate-300">
+        <p class="font-bold text-white">🔐 Regras de acesso <span class="font-normal text-slate-400">(dá para mudar depois)</span></p>
+        <label class="block">⏳ Por quanto tempo o cliente pode acessar
+          <select id="wzPrazo" class="campo mt-1" style="max-width:260px">
+            <option value="0">Sem prazo</option><option value="2">2 dias</option><option value="3">3 dias</option><option value="4">4 dias</option>
+            <option value="7" selected>7 dias</option><option value="15">15 dias</option><option value="30">30 dias</option>
+          </select>
+        </label>
+        <label class="flex items-center gap-2 flex-wrap"><input id="wzEscolher" type="checkbox" checked> ❤️ Escolher fotos para o álbum, até
+          <input id="wzLimite" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> fotos</label>
+        <label class="flex items-center gap-2"><input id="wzEditar" type="checkbox"> ✏️ Pedir edição de fotos, com comentário</label>
+        <label class="flex items-center gap-2 flex-wrap"><input id="wzBaixar" type="checkbox" checked> ⬇️ Baixar os originais, até
+          <input id="wzMaxDown" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> vez(es) cada foto</label>
+      </div>
+      <p id="wzErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+      <button type="button" id="btnCriarFechado" class="cta font-bold px-6 py-3 rounded-xl">Criar e enviar as fotos →</button>
+    </div>
+  </section>
+
+  <!-- Central de acesso -->
+  <section id="secCentral" class="hidden glass rounded-3xl p-6 space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 class="text-lg font-bold">📋 Central de acesso</h2>
+      <div class="flex gap-2">
+        <button type="button" id="abaFechados" class="aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800">🔒 Links fechados</button>
+        <button type="button" id="abaAbertos" class="aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800">🌐 Links abertos</button>
+      </div>
+    </div>
+    <div id="painelFechados" class="space-y-3">
+      <p class="text-xs text-slate-400">🔴 precisa de atenção (edição pedida, cobrança atrasada, acesso trancado) · ❓ ainda não acessou ou o prazo está acabando · ✅ tudo certo</p>
+      <div id="listaCentral" class="space-y-2"></div>
+    </div>
+    <div id="painelAbertos" class="hidden space-y-3"></div>
+  </section>
+
   <!-- 1. Configuração -->
   <section id="secConfig" class="hidden glass rounded-3xl p-6">
-    <h2 class="text-lg font-bold">1. Seu portal</h2>
+    <details id="cfgDetalhes" open>
+    <summary class="cursor-pointer text-lg font-bold">⚙️ Configurações do estúdio <span class="text-sm font-normal text-slate-400">nome, endereço, cor, layout e o seu PIX</span></summary>
     <div class="grid md:grid-cols-3 gap-4 mt-4">
       <label class="text-sm text-slate-300 md:col-span-1">Nome do estúdio
-        <input id="cfgNome" class="campo mt-1" maxlength="60" placeholder="Estúdio Aurora">
+        <input id="cfgNome" class="campo mt-1" maxlength="60" placeholder="Estúdio Aurora" autocomplete="organization">
       </label>
       <label class="text-sm text-slate-300 md:col-span-1">Endereço
-        <div class="flex items-center mt-1"><span class="text-xs text-slate-500 mr-1 whitespace-nowrap">/p/</span><input id="cfgSlug" class="campo" maxlength="40" placeholder="estudio-aurora"></div>
+        <div class="flex items-center mt-1"><span class="text-xs text-slate-500 mr-1 whitespace-nowrap">/p/</span><input id="cfgSlug" class="campo" maxlength="40" placeholder="estudio-aurora" autocomplete="off"></div>
       </label>
       <label class="text-sm text-slate-300">Cor da sua marca
         <input id="cfgCor" type="color" value="#be185d" class="mt-1 w-full h-11 rounded-xl bg-transparent border border-blue-900 cursor-pointer">
+      </label>
+    </div>
+    <p class="text-sm text-slate-300 mt-5 mb-2">Layout da área do cliente</p>
+    <div id="temas" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
+        <input type="radio" name="tema" value="classico" class="hidden">
+        <span class="block rounded-xl overflow-hidden" style="background:#f1f5f9"><span class="block h-5" style="background:var(--cfgcor,#be185d)"></span><span class="grid grid-cols-3 gap-1 p-2"><i class="block aspect-square rounded bg-slate-300"></i><i class="block aspect-square rounded bg-slate-300"></i><i class="block aspect-square rounded bg-slate-300"></i></span></span>
+        <span class="block text-sm font-semibold mt-2">Clássico</span><span class="block text-xs text-slate-400">Claro, com a sua cor no topo</span>
+      </label>
+      <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
+        <input type="radio" name="tema" value="escuro" class="hidden">
+        <span class="block rounded-xl overflow-hidden" style="background:#0a0a0a"><span class="block h-5 border-b border-white/10"></span><span class="grid grid-cols-3 gap-1 p-2"><i class="block aspect-square rounded bg-zinc-700"></i><i class="block aspect-square rounded bg-zinc-700"></i><i class="block aspect-square rounded bg-zinc-700"></i></span></span>
+        <span class="block text-sm font-semibold mt-2">Galeria escura</span><span class="block text-xs text-slate-400">Fundo preto, fotos em destaque</span>
+      </label>
+      <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
+        <input type="radio" name="tema" value="minimalista" class="hidden">
+        <span class="block rounded-xl overflow-hidden" style="background:#fff"><span class="block h-5 text-center" style="font:italic 9px Georgia;color:#111;line-height:20px">Estúdio</span><span class="grid grid-cols-2 gap-2 p-2"><i class="block aspect-[4/3] bg-neutral-300"></i><i class="block aspect-[4/3] bg-neutral-300"></i></span></span>
+        <span class="block text-sm font-semibold mt-2">Minimalista</span><span class="block text-xs text-slate-400">Branco, elegante, muito espaço</span>
+      </label>
+      <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
+        <input type="radio" name="tema" value="delicado" class="hidden">
+        <span class="block rounded-xl overflow-hidden" style="background:#fdf6f0"><span class="block h-8" style="background:linear-gradient(135deg,#f3d9d0,#e9d5f5)"></span><span class="grid grid-cols-3 gap-1 p-2"><i class="block aspect-square rounded-lg bg-rose-200"></i><i class="block aspect-square rounded-lg bg-rose-200"></i><i class="block aspect-square rounded-lg bg-rose-200"></i></span></span>
+        <span class="block text-sm font-semibold mt-2">Delicado</span><span class="block text-xs text-slate-400">Tons suaves e capa com foto</span>
       </label>
     </div>
     <p id="cfgErro" class="text-sm text-red-400 mt-3 min-h-[1.25rem]"></p>
@@ -67,42 +186,22 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <button type="button" id="btnSalvar" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Salvar</button>
       <p id="cfgLink" class="hidden text-sm text-slate-300">Link para os seus clientes: <a id="cfgUrl" target="_blank" class="link break-all"></a> <button type="button" id="btnCopiar" class="link ml-2">Copiar</button></p>
     </div>
-  </section>
-
-  <!-- 2. Clientes -->
-  <section id="secClientes" class="hidden glass rounded-3xl p-6">
-    <h2 class="text-lg font-bold">2. Seus clientes</h2>
-    <p class="text-sm text-slate-400 mt-1">Crie o acesso e mande o link, o e-mail e a senha para o cliente (WhatsApp, por exemplo).</p>
-    <div class="grid md:grid-cols-4 gap-3 mt-4 items-end">
-      <label class="text-sm text-slate-300">Nome<input id="cliNome" class="campo mt-1" maxlength="80" placeholder="Ana e Pedro"></label>
-      <label class="text-sm text-slate-300">E-mail<input id="cliEmail" type="email" class="campo mt-1" maxlength="120" placeholder="ana@email.com"></label>
-      <label class="text-sm text-slate-300">Senha
-        <div class="flex gap-2 mt-1"><input id="cliSenha" class="campo" maxlength="100" placeholder="mín. 8 caracteres"><button type="button" id="btnGerar" class="link whitespace-nowrap">Gerar</button></div>
+    <div id="blocoPix" class="hidden mt-5 pt-5 border-t border-blue-900/60">
+      <label class="text-sm text-slate-300">💳 Como você recebe: sua chave PIX (aparece nas cobranças dos álbuns e nos pedidos de fotos de eventos)
+        <textarea id="instrucoes" class="campo mt-1 h-20" maxlength="500" placeholder="PIX (CNPJ): 12.345.678/0001-90 – Estúdio Aurora&#10;Banco: ..."></textarea>
       </label>
-      <button type="button" id="btnCliente" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Criar acesso</button>
+      <button type="button" id="btnInstrucoes" class="link mt-1">Salvar forma de recebimento</button>
+      <span id="instrOk" class="hidden text-sm text-emerald-300 ml-2">Salvo!</span>
+      <p class="text-xs text-slate-500 mt-1">O dinheiro vai direto para você. A Master Nuvem não cobra comissão.</p>
     </div>
-    <p id="cliErro" class="text-sm text-red-400 mt-3 min-h-[1.25rem]"></p>
-    <div id="listaClientes" class="space-y-2"></div>
+    </details>
   </section>
 
-  <!-- 3. Álbuns -->
-  <section id="secAlbuns" class="hidden glass rounded-3xl p-6">
-    <h2 class="text-lg font-bold">3. Álbuns</h2>
-    <div class="grid md:grid-cols-4 gap-3 mt-4 items-end">
-      <label class="text-sm text-slate-300">Cliente<select id="albCliente" class="campo mt-1"></select></label>
-      <label class="text-sm text-slate-300">Tipo de trabalho<select id="albTipo" class="campo mt-1"></select></label>
-      <label class="text-sm text-slate-300">Nome do álbum<input id="albTitulo" class="campo mt-1" maxlength="100" placeholder="Casamento Ana & Pedro"></label>
-      <button type="button" id="btnAlbum" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Criar álbum</button>
-    </div>
-    <p id="albErro" class="text-sm text-red-400 mt-3 min-h-[1.25rem]"></p>
-    <div id="listaAlbuns" class="grid md:grid-cols-2 gap-3"></div>
-  </section>
-
-  <!-- 4. Cobranças -->
+  <!-- Cobranças dos links fechados -->
   <section id="secCobrancas" class="hidden glass rounded-3xl p-6 space-y-5">
     <div>
-      <h2 class="text-lg font-bold">4. Acesso e cobranças</h2>
-      <p class="text-sm text-slate-400 mt-1">Como os seus clientes recebem as fotos?</p>
+      <h2 class="text-lg font-bold">💰 Cobranças dos álbuns <span class="text-sm font-normal text-slate-400">(links fechados, opcional)</span></h2>
+      <p class="text-sm text-slate-400 mt-1">Como os clientes dos álbuns pagam? (as fotos de eventos já têm o preço por foto)</p>
     </div>
     <div class="grid md:grid-cols-2 gap-3">
       <label class="cursor-pointer bg-slate-900/50 rounded-2xl p-4 border-2 border-transparent has-[:checked]:border-cyan-400 flex gap-3">
@@ -122,13 +221,6 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <div class="bg-slate-900/50 rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">A receber</p><p id="resReceber" class="text-xl font-bold mt-1">-</p></div>
       <div class="bg-slate-900/50 rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">Atrasado</p><p id="resAtrasado" class="text-xl font-bold mt-1 text-red-300">-</p></div>
       <div class="bg-slate-900/50 rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">Recebido no mês</p><p id="resMes" class="text-xl font-bold mt-1 text-emerald-300">-</p></div>
-    </div>
-    <div>
-      <label class="text-sm text-slate-300">Como você recebe (aparece para o cliente em toda cobrança)
-        <textarea id="instrucoes" class="campo mt-1 h-20" maxlength="500" placeholder="PIX (CNPJ): 12.345.678/0001-90 – Estúdio Aurora&#10;Banco: ..."></textarea>
-      </label>
-      <button type="button" id="btnInstrucoes" class="link mt-1">Salvar forma de recebimento</button>
-      <span id="instrOk" class="hidden text-sm text-emerald-300 ml-2">Salvo!</span>
     </div>
 
     <!-- Tabela de preços -->
@@ -194,10 +286,48 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <textarea id="favLista" readonly class="campo h-32 text-xs"></textarea>
       <button type="button" id="btnCopiarFav" class="link mt-2">Copiar lista</button>
     </div>
+    <!-- Regras de acesso do cliente -->
+    <details id="caixaRegras" class="bg-slate-900/50 rounded-2xl p-4">
+      <summary class="cursor-pointer font-bold">🔐 Regras de acesso do cliente <span id="resumoRegras" class="text-sm font-normal text-slate-400"></span></summary>
+      <div class="grid md:grid-cols-2 gap-4 mt-4">
+        <label class="text-sm text-slate-300">⏳ Prazo de acesso
+          <select id="rgPrazo" class="campo mt-1">
+            <option value="">Manter como está</option>
+            <option value="0">Sem prazo</option>
+            <option value="2">2 dias a partir de agora</option>
+            <option value="3">3 dias a partir de agora</option>
+            <option value="4">4 dias a partir de agora</option>
+            <option value="7">7 dias a partir de agora</option>
+            <option value="15">15 dias a partir de agora</option>
+            <option value="30">30 dias a partir de agora</option>
+          </select>
+          <span id="rgPrazoAtual" class="block text-xs text-slate-400 mt-1"></span>
+        </label>
+        <div class="space-y-3 text-sm text-slate-300">
+          <p class="font-semibold">🎯 O que o cliente pode fazer (ver as fotos ele sempre pode)</p>
+          <label class="flex items-center gap-2 flex-wrap"><input id="rgEscolher" type="checkbox"> ❤️ Escolher fotos para o álbum, até
+            <input id="rgLimite" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> fotos</label>
+          <label class="flex items-center gap-2"><input id="rgEditar" type="checkbox"> ✏️ Pedir edição de fotos, com comentário</label>
+          <label class="flex items-center gap-2 flex-wrap"><input id="rgBaixar" type="checkbox"> ⬇️ Baixar os originais, até
+            <input id="rgMaxDown" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> vez(es) cada foto</label>
+        </div>
+      </div>
+      <p class="text-xs text-slate-500 mt-3">Exemplo de seleção: 7 dias, escolher até 60 e sem baixar. Depois de editar, libere o download por mais 15 dias. O cliente vê na tela quanto tempo falta e quantas escolheu.</p>
+      <p id="rgErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+      <button type="button" id="btnRegras" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Salvar regras</button>
+      <span id="rgOk" class="hidden text-sm text-emerald-300 ml-2">Salvo!</span>
+    </details>
+
+    <!-- Pedidos de edição -->
+    <div id="caixaEdicoes" class="hidden bg-slate-900/50 rounded-2xl p-4">
+      <p class="font-bold">✏️ Pedidos de edição do cliente</p>
+      <div id="listaEdicoes" class="space-y-2 mt-2"></div>
+    </div>
+
     <div class="border border-dashed border-blue-800 rounded-2xl p-5 text-center">
       <input id="arquivosEnviar" type="file" multiple accept="image/*,video/*" class="hidden">
       <button type="button" id="btnEnviar" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">⬆ Enviar fotos e vídeos</button>
-      <p class="text-xs text-slate-500 mt-2">Pode escolher muitas de uma vez. Limite de 4,5 GB por arquivo.</p>
+      <p class="text-xs text-slate-500 mt-2">Pode escolher muitas de uma vez. Limite de 4,5 GB por arquivo. Para fotos JPG, PNG e WEBP, o seu navegador cria também uma prévia leve: o cliente vê a prévia e só recebe o original se você liberar o download.</p>
       <div id="progresso" class="hidden mt-4 text-left">
         <p id="progTexto" class="text-sm text-slate-300 mb-1"></p>
         <div class="barra"><i id="progBarra"></i></div>
@@ -209,6 +339,108 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <button type="button" id="btnApagarAlbum" class="perigo">Apagar álbum e todas as fotos</button>
     </div>
   </section>
+  <!-- Links abertos (eventos): o JavaScript coloca cada parte no lugar certo da página -->
+  <div id="evHolder" class="hidden">
+<div>
+    <h1 class="text-2xl md:text-3xl font-bold">Meus eventos <span class="grad">· venda de fotos</span></h1>
+    <p class="text-slate-400 mt-1">Corrida, futebol, formatura, convidados da festa... Publique as fotos com marca d'água num link aberto. A pessoa escolhe, paga no <strong class="text-white">seu PIX</strong> e baixa o original quando você confirmar. <strong class="text-emerald-300">0% de comissão.</strong></p>
+  </div>
+  <p id="ev_carregando" class="text-slate-400">Carregando...</p>
+  <p id="ev_semPortal" class="hidden glass rounded-2xl p-5 text-amber-300">Primeiro crie o seu portal (nome do estúdio e cor) em <a href="/meu-portal" class="link">Meu portal →</a></p>
+  <section id="ev_secPix" class="hidden glass rounded-3xl p-5 space-y-2">
+    <p id="ev_pixTitulo" class="font-bold">💳 Onde você recebe</p>
+    <p id="ev_pixAviso" class="hidden text-sm text-amber-300">⚠️ Cadastre a sua chave PIX: sem ela, ninguém consegue fazer pedido.</p>
+    <textarea id="ev_pixTexto" class="campo h-20" maxlength="500" placeholder="PIX (celular, e-mail, CPF ou CNPJ): ...&#10;Nome que aparece no banco: ..."></textarea>
+    <div class="flex items-center gap-3">
+      <button type="button" id="ev_btnPix" class="cta font-bold px-4 py-2 rounded-xl text-sm">Salvar</button>
+      <span id="ev_pixOk" class="hidden text-sm text-emerald-300">Salvo!</span>
+      <span class="text-xs text-slate-500">Aparece para o comprador junto com o valor do pedido. É o mesmo de Meu portal.</span>
+    </div>
+  </section>
+
+  <!-- Criar / editar evento -->
+  <section id="ev_secForm" class="hidden glass rounded-3xl p-6 space-y-4">
+    <h2 id="ev_formTitulo" class="text-lg font-bold">Novo evento</h2>
+    <div class="grid md:grid-cols-3 gap-3">
+      <label class="text-sm text-slate-300 md:col-span-2">Nome do evento<input id="ev_evTitulo" class="campo mt-1" maxlength="100" placeholder="Corrida de Goiânia 2026"></label>
+      <label class="text-sm text-slate-300">Tipo<select id="ev_evTipo" class="campo mt-1"></select></label>
+      <label class="text-sm text-slate-300">Endereço do link
+        <div class="flex items-center mt-1"><span class="text-xs text-slate-500 mr-1">/e/</span><input id="ev_evSlug" class="campo" maxlength="60" placeholder="corrida-goiania-2026"></div>
+      </label>
+      <label class="text-sm text-slate-300">Data<input id="ev_evData" type="date" class="campo mt-1"></label>
+      <label class="text-sm text-slate-300">Local<input id="ev_evLocal" class="campo mt-1" maxlength="100" placeholder="Parque Vaca Brava"></label>
+    </div>
+    <div class="bg-slate-900/40 rounded-2xl p-4 space-y-3">
+      <p class="font-bold">Preço</p>
+      <div class="grid md:grid-cols-3 gap-3 items-end">
+        <label class="text-sm text-slate-300">1 foto (R$)<input id="ev_evPreco" class="campo mt-1" inputmode="decimal" placeholder="15,00"></label>
+        <div class="md:col-span-2 text-sm text-slate-400">Desconto por quantidade (opcional): quem leva mais paga menos por foto.</div>
+      </div>
+      <div id="ev_faixas" class="space-y-2"></div>
+      <p id="ev_exemploPreco" class="text-sm text-cyan-200"></p>
+    </div>
+    <div class="grid md:grid-cols-2 gap-3">
+      <label class="text-sm text-slate-300">Texto da marca d'água<input id="ev_evMarca" class="campo mt-1" maxlength="40" placeholder="nome do seu estúdio"></label>
+      <label class="flex items-center gap-2 text-sm text-slate-300 mt-6"><input id="ev_evPublicado" type="checkbox" checked> Link no ar (desmarque para esconder o evento)</label>
+    </div>
+    <p id="ev_evErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+    <div class="flex gap-4 items-center">
+      <button type="button" id="ev_btnSalvarEv" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Criar evento</button>
+      <button type="button" id="ev_btnCancelarEv" class="hidden text-sm text-slate-400 hover:text-white">Cancelar edição</button>
+    </div>
+  </section>
+
+  <section id="ev_secLista" class="hidden space-y-3"></section>
+
+  <!-- Evento aberto -->
+  <section id="ev_secAberto" class="hidden glass rounded-3xl p-6 space-y-5">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <p id="ev_abTipo" class="text-xs uppercase tracking-wider text-slate-400"></p>
+        <h2 id="ev_abTitulo" class="text-xl font-bold"></h2>
+        <p class="text-sm text-slate-400">Link para divulgar: <a id="ev_abLink" target="_blank" class="link break-all"></a> <button type="button" id="ev_abCopiar" class="link ml-2">Copiar</button></p>
+      </div>
+      <button type="button" id="ev_btnFechar" class="link">Fechar</button>
+    </div>
+
+    <div class="border border-dashed border-blue-800 rounded-2xl p-5 space-y-3">
+      <div class="grid md:grid-cols-3 gap-3 items-end">
+        <label class="text-sm text-slate-300 md:col-span-2">Números de peito/camisa destas fotos (opcional)
+          <input id="ev_numerosLeva" class="campo mt-1" maxlength="200" placeholder="ex.: 123, 456 — dá para marcar foto por foto depois">
+        </label>
+        <div>
+          <input id="ev_arquivosEnviar" type="file" multiple accept="image/jpeg,image/png,image/webp" class="hidden">
+          <button type="button" id="ev_btnEnviar" class="cta w-full font-bold px-5 py-2.5 rounded-xl text-sm">⬆ Enviar fotos</button>
+        </div>
+      </div>
+      <p class="text-xs text-slate-500">JPG, PNG ou WEBP. O seu navegador cria uma prévia pequena com a marca d'água; o original fica guardado e só é liberado para quem pagou. Original + prévia usam o espaço do seu plano.</p>
+      <div id="ev_progresso" class="hidden">
+        <p id="ev_progTexto" class="text-sm text-slate-300 mb-1"></p>
+        <div class="barra"><i id="ev_progBarra"></i></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="flex items-center justify-between gap-3">
+        <p class="font-bold">Pedidos</p>
+        <button type="button" id="ev_btnAtualizarPedidos" class="link">Atualizar</button>
+      </div>
+      <p class="text-xs text-slate-400 mt-1">Conferiu o PIX? Clique em "✔ Pago": a pessoa recebe na hora o e-mail para baixar os originais.</p>
+      <div id="ev_listaPedidos" class="space-y-2 mt-2"></div>
+    </div>
+
+    <div>
+      <p class="font-bold">Fotos <span id="ev_abInfo" class="text-sm font-normal text-slate-400"></span></p>
+      <div id="ev_grade" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 mt-2"></div>
+      <div class="text-center mt-3"><button type="button" id="ev_btnMais" class="hidden link">Carregar mais</button></div>
+    </div>
+
+    <div class="pt-2 border-t border-blue-900/60 flex flex-wrap gap-6">
+      <button type="button" id="ev_btnEditar" class="link">✏️ Editar evento e preços</button>
+      <button type="button" id="ev_btnApagar" class="perigo">Apagar evento, fotos e pedidos</button>
+    </div>
+  </section>
+  </div>
 </main>
 
 <script>
@@ -265,6 +497,7 @@ async function carregar() {
     document.getElementById("cfgNome").value = dados.portal.nome;
     document.getElementById("cfgSlug").value = dados.portal.slug;
     document.getElementById("cfgCor").value = dados.portal.cor;
+    document.getElementById("temas").style.setProperty("--cfgcor", dados.portal.cor);
     var link = window.location.origin + "/p/" + dados.portal.slug;
     var a = document.getElementById("cfgUrl");
     a.textContent = link;
@@ -272,9 +505,12 @@ async function carregar() {
     mostrar("cfgLink", true);
     document.getElementById("btnSalvar").textContent = "Salvar alterações";
   }
-  mostrar("secClientes", !!dados.portal);
-  mostrar("secAlbuns", !!dados.portal);
-  mostrar("secCobrancas", !!dados.portal);
+  var temaAtual = document.querySelector("input[name=tema][value=" + ((dados.portal && dados.portal.tema) || "classico") + "]");
+  if (temaAtual) temaAtual.checked = true;
+  mostrar("blocoPix", !!dados.portal);
+  ["painelEstudio", "secCriar", "secCentral", "secCobrancas"].forEach(function (id) { mostrar(id, !!dados.portal); });
+  // Sem portal ainda: as configurações vêm abertas (é o primeiro passo). Depois, ficam fechadas para não ocupar espaço.
+  document.getElementById("cfgDetalhes").open = !dados.portal;
   if (dados.portal) document.getElementById("instrucoes").value = dados.portal.instrucoes_pagamento || "";
   var tipo = document.getElementById("albTipo");
   if (!tipo.options.length) dados.tipos.forEach(function (t) { tipo.appendChild(new Option(t, t)); });
@@ -284,6 +520,217 @@ async function carregar() {
     await carregarCobrancas();
   }
 }
+
+/* ---------- painel do estúdio e central de acesso ---------- */
+
+var central = { clientes: [] };   // carregarCentral() fica em window e é chamada também pela venda de eventos
+
+function hubAba(qual) {
+  var abertos = qual === "abertos";
+  mostrar("painelAbertos", abertos);
+  mostrar("painelFechados", !abertos);
+  document.getElementById("abaAbertos").classList.toggle("on", abertos);
+  document.getElementById("abaFechados").classList.toggle("on", !abertos);
+}
+window.hubAba = hubAba;
+document.getElementById("abaAbertos").addEventListener("click", function () { hubAba("abertos"); });
+document.getElementById("abaFechados").addEventListener("click", function () { hubAba("fechados"); });
+
+// Coloca as partes da venda de eventos (vindas de /eventos-painel.js) nos lugares do Meu portal.
+function montarEventos() {
+  var form = document.getElementById("ev_secForm");
+  if (!form || form.parentNode.id === "wzAberto") return;
+  document.getElementById("wzAberto").appendChild(form);
+  form.classList.remove("glass", "p-6");
+  document.getElementById("painelAbertos").appendChild(document.getElementById("ev_secLista"));
+  document.getElementById("painelAbertos").appendChild(document.getElementById("ev_secAberto"));
+  var vazio = el("p", "text-sm text-slate-400", "Nenhum evento ainda. Clique em ➕ Criar novo → 🌐 Link aberto.");
+  vazio.id = "evVazio";
+  document.getElementById("painelAbertos").insertBefore(vazio, document.getElementById("ev_secLista"));
+}
+
+function horaBr(t) {
+  if (!t) return "";
+  return new Date(String(t).replace(" ", "T") + "Z").toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+// 🔴 precisa de atenção · ❓ ainda não acessou / prazo acabando · ✅ tudo certo
+function sinalCliente(c) {
+  var motivos = [];
+  if (c.edicoes_abertas) motivos.push(c.edicoes_abertas + " pedido(s) de edição");
+  if (c.atrasadas) motivos.push(c.atrasadas + " cobrança(s) atrasada(s)");
+  if (c.travada_em) motivos.push("acesso trancado pela sentinela");
+  if (motivos.length) return ["🔴", "Precisa de atenção: " + motivos.join(", "), "text-red-300"];
+  var duvidas = [];
+  if (c.albuns && !c.ultimo_acesso) duvidas.push("ainda não acessou");
+  if (c.vencidos) duvidas.push(c.vencidos + " álbum(ns) com prazo encerrado");
+  if (c.prazo_proximo && new Date(String(c.prazo_proximo).replace(" ", "T") + "Z") - Date.now() < 2 * 86400000) duvidas.push("prazo acaba em " + horaBr(c.prazo_proximo));
+  if (!c.albuns) duvidas.push("ainda sem álbum");
+  if (duvidas.length) return ["❓", duvidas.join(" · "), "text-amber-300"];
+  return ["✅", "Tudo certo", "text-emerald-300"];
+}
+
+async function carregarCentral() {
+  var r = await api("/api/portal/central");
+  if (!r.ok || !r.dados.resumo) return;
+  var s = r.dados.resumo;
+  central = r.dados;
+  document.getElementById("stMes").textContent = reais(s.recebido_mes);
+  document.getElementById("stTotal").textContent = "Total: " + reais(s.recebido_total);
+  document.getElementById("stReceber").textContent = reais(s.a_receber);
+  document.getElementById("stPedidos").textContent = s.pedidos_pendentes ? "🔴 " + s.pedidos_pendentes + " pedido(s) de fotos esperando o PIX" : "cobranças e pedidos pendentes";
+  document.getElementById("stEventos").textContent = s.eventos;
+  document.getElementById("stClientes").textContent = s.clientes;
+  var atencao = r.dados.clientes.filter(function (c) { return sinalCliente(c)[0] === "🔴"; }).length;
+  var st = document.getElementById("stAtencao");
+  st.textContent = atencao ? "🔴 " + atencao + " precisa(m) de atenção" : "clientes";
+  st.className = "text-xs mt-1 " + (atencao ? "text-red-300 font-semibold" : "text-slate-500");
+  document.getElementById("abaAbertos").textContent = "🌐 Links abertos" + (s.pedidos_pendentes ? " 🔴" : "");
+  document.getElementById("abaFechados").textContent = "🔒 Links fechados" + (atencao ? " 🔴" : "");
+  desenharCentral();
+}
+
+function desenharCentral() {
+  var lista = document.getElementById("listaCentral");
+  lista.innerHTML = "";
+  if (!central.clientes.length) {
+    lista.appendChild(el("p", "text-sm text-slate-400", "Nenhum cliente ainda. Clique em ➕ Criar novo → 🔒 Link fechado."));
+    return;
+  }
+  central.clientes.forEach(function (c) {
+    var sinal = sinalCliente(c);
+    var caixa = el("div", "bg-slate-900/50 rounded-2xl p-4 space-y-2");
+    var topo = el("div", "flex flex-wrap items-start justify-between gap-2");
+    var quem = el("div", "min-w-0");
+    var nome = el("p", "font-bold");
+    nome.appendChild(el("span", "mr-1", sinal[0]));
+    nome.appendChild(document.createTextNode(c.nome));
+    quem.appendChild(nome);
+    quem.appendChild(el("p", "text-xs text-slate-400 break-all", c.email));
+    quem.appendChild(el("p", "text-xs " + sinal[2], sinal[1]));
+    topo.appendChild(quem);
+    var acoes = el("div", "flex flex-wrap gap-3");
+    function botao(txt, classe, fn) {
+      var b = el("button", classe, txt);
+      b.type = "button";
+      b.addEventListener("click", fn);
+      acoes.appendChild(b);
+    }
+    botao("+ Álbum", "link", function () { abrirCriar("fechado", c.id); });
+    botao("Copiar acesso", "link", function () {
+      navigator.clipboard.writeText("Olá, " + c.nome.split(" ")[0] + "! Suas fotos estão no portal " + dados.portal.nome + ":\n" +
+        window.location.origin + "/p/" + dados.portal.slug + "\nE-mail: " + c.email + "\n(a senha é a que eu te mandei)");
+      this.textContent = "Copiado!";
+    });
+    botao("Nova senha", "link", async function () {
+      var nova = prompt("Nova senha para " + c.nome + " (mínimo 8 caracteres):", gerarSenha());
+      if (!nova) return;
+      var r2 = await api("/api/portal/clientes/senha", { cliente_id: c.id, senha: nova });
+      alert(r2.ok ? "Senha trocada. Envie a nova senha para o cliente: " + nova : (r2.dados.error || "Não foi possível."));
+      carregarCentral();
+    });
+    botao("Remover", "perigo", async function () {
+      if (!confirm("Remover o acesso de " + c.nome + "?")) return;
+      var r2 = await api("/api/portal/clientes/remover", { cliente_id: c.id });
+      if (!r2.ok) { alert(r2.dados.error || "Não foi possível."); return; }
+      await carregarClientes();
+      carregarCentral();
+    });
+    topo.appendChild(acoes);
+    caixa.appendChild(topo);
+    // Números do acesso do cliente.
+    var nums = [
+      ["👁️", c.visitas + " acesso(s)"], ["🕒", c.ultimo_acesso ? "último " + horaBr(c.ultimo_acesso) : "nunca acessou"],
+      ["⬇️", c.downloads + " download(s)"], ["❤️", c.escolhidas + " escolhida(s)"], ["✏️", c.edicoes_abertas + " edição(ões) pedida(s)"]
+    ];
+    if (c.cobrancas_pendentes) nums.push(["💰", c.cobrancas_pendentes + " cobrança(s) pendente(s)"]);
+    var linha = el("div", "flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-300");
+    nums.forEach(function (n) { linha.appendChild(el("span", "", n[0] + " " + n[1])); });
+    caixa.appendChild(linha);
+    // Álbuns do cliente.
+    var albs = dados.albuns.filter(function (a) { return a.cliente_id === c.id; });
+    if (albs.length) {
+      var grade = el("div", "flex flex-wrap gap-2 pt-1");
+      albs.forEach(function (a) {
+        var b = el("button", "text-left text-sm bg-slate-950/60 hover:bg-slate-900 border border-blue-900/60 rounded-xl px-3 py-2");
+        b.type = "button";
+        b.appendChild(el("span", "block font-semibold", (a.trancado ? "🔒 " : "") + a.titulo + (a.edicoes_abertas ? " 🔴" : "")));
+        b.appendChild(el("span", "block text-xs text-slate-400", a.arquivos + " foto(s)" + (textoRegras(a.regras) ? " · " + textoRegras(a.regras) : "")));
+        b.addEventListener("click", function () { abrirAlbum(a); });
+        grade.appendChild(b);
+      });
+      caixa.appendChild(grade);
+    }
+    lista.appendChild(caixa);
+  });
+}
+
+/* ---------- criar novo (passo a passo) ---------- */
+
+function abrirCriar(tipo, clienteId) {
+  mostrar("wzPasso1", !tipo);
+  mostrar("wzVoltar", !!tipo);
+  mostrar("wzAberto", tipo === "aberto");
+  mostrar("wzFechado", tipo === "fechado");
+  if (tipo === "aberto" && window.EV) window.EV.novo();
+  if (tipo === "fechado") {
+    var existente = !!clienteId || false;
+    document.querySelector("input[name=wzCli][value=" + (existente ? "existente" : "novo") + "]").checked = true;
+    trocarTipoCliente();
+    if (clienteId) document.getElementById("albCliente").value = clienteId;
+    document.getElementById("wzErro").textContent = "";
+  }
+  document.getElementById("secCriar").scrollIntoView({ behavior: "smooth" });
+}
+
+function trocarTipoCliente() {
+  var novo = document.querySelector("input[name=wzCli]:checked").value === "novo";
+  mostrar("wzCliNovo", novo);
+  mostrar("wzCliExistente", !novo);
+}
+
+document.getElementById("criarAberto").addEventListener("click", function () { abrirCriar("aberto"); });
+document.getElementById("criarFechado").addEventListener("click", function () { abrirCriar("fechado"); });
+document.getElementById("wzVoltar").addEventListener("click", function () { abrirCriar(null); });
+document.querySelectorAll("input[name=wzCli]").forEach(function (x) { x.addEventListener("change", trocarTipoCliente); });
+
+document.getElementById("btnCriarFechado").addEventListener("click", async function () {
+  var botao = this;
+  var erro = document.getElementById("wzErro");
+  erro.textContent = "";
+  var novo = document.querySelector("input[name=wzCli]:checked").value === "novo";
+  var nome = document.getElementById("cliNome").value, email = document.getElementById("cliEmail").value, senha = document.getElementById("cliSenha").value;
+  botao.disabled = true;
+  try {
+    var clienteId = document.getElementById("albCliente").value;
+    if (novo) {
+      var c = await api("/api/portal/clientes/novo", { nome: nome, email: email, senha: senha });
+      if (!c.ok) { erro.textContent = c.dados.error || "Não foi possível criar o cliente."; return; }
+      clienteId = c.dados.id;
+    } else if (!clienteId) { erro.textContent = "Escolha o cliente"; return; }
+    var a = await api("/api/portal/albuns/novo", { cliente_id: clienteId, tipo: document.getElementById("albTipo").value, titulo: document.getElementById("albTitulo").value });
+    if (!a.ok) { erro.textContent = a.dados.error || "Não foi possível criar o álbum."; if (novo) { await carregarClientes(); document.querySelector("input[name=wzCli][value=existente]").checked = true; trocarTipoCliente(); document.getElementById("albCliente").value = clienteId; } return; }
+    await api("/api/portal/albuns/regras", {
+      id: a.dados.id,
+      prazo_dias: document.getElementById("wzPrazo").value,
+      pode_escolher: document.getElementById("wzEscolher").checked,
+      limite_escolha: document.getElementById("wzLimite").value,
+      pode_editar: document.getElementById("wzEditar").checked,
+      pode_baixar: document.getElementById("wzBaixar").checked,
+      max_downloads: document.getElementById("wzMaxDown").value
+    });
+    if (novo) alert("Pronto! Envie para " + nome + ":\n\nLink: " + window.location.origin + "/p/" + dados.portal.slug + "\nE-mail: " + email + "\nSenha: " + senha + "\n\nAgora envie as fotos do álbum.");
+    ["cliNome", "cliEmail", "cliSenha", "albTitulo", "wzLimite", "wzMaxDown"].forEach(function (id) { document.getElementById(id).value = ""; });
+    abrirCriar(null);
+    await carregarClientes();
+    await carregarAlbuns();
+    carregarCobrancas();
+    var criado = dados.albuns.find(function (x) { return x.id === a.dados.id; });
+    if (criado) abrirAlbum(criado);
+  } finally {
+    botao.disabled = false;
+  }
+});
 
 /* ---------- cobranças ---------- */
 
@@ -579,68 +1026,29 @@ document.getElementById("btnCobranca").addEventListener("click", async function 
   carregarAlbuns();
 });
 
+// Clientes e álbuns: só os dados (a central de acesso mostra tudo).
 async function carregarClientes() {
   var r = await api("/api/portal/clientes");
   dados.clientes = r.dados.clientes || [];
-  var lista = document.getElementById("listaClientes");
-  lista.innerHTML = "";
   var sel = document.getElementById("albCliente");
+  var antes = sel.value;
   sel.innerHTML = "";
-  if (!dados.clientes.length) {
-    lista.appendChild(el("p", "text-sm text-slate-400", "Nenhum cliente ainda."));
-    sel.appendChild(new Option("Crie um cliente primeiro", ""));
-  }
-  dados.clientes.forEach(function (c) {
-    sel.appendChild(new Option(c.nome + " (" + c.email + ")", c.id));
-    var linha = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/50 rounded-xl px-4 py-3");
-    var info = el("div");
-    info.appendChild(el("p", "font-semibold", c.nome));
-    info.appendChild(el("p", "text-xs text-slate-400 break-all", c.email + " · " + c.albuns + " álbum(ns)"));
-    if (c.travada_em) info.appendChild(el("p", "text-xs text-red-300 font-semibold", "🔒 Acesso trancado pela sentinela (atividade suspeita). Clique em \"Nova senha\" para liberar."));
-    linha.appendChild(info);
-    var acoes = el("div", "flex gap-4");
-    var bSenha = el("button", "link", "Nova senha");
-    bSenha.type = "button";
-    bSenha.addEventListener("click", async function () {
-      var nova = prompt("Nova senha para " + c.nome + " (mínimo 8 caracteres):", gerarSenha());
-      if (!nova) return;
-      var r2 = await api("/api/portal/clientes/senha", { cliente_id: c.id, senha: nova });
-      alert(r2.ok ? "Senha trocada. Envie a nova senha para o cliente: " + nova : (r2.dados.error || "Não foi possível."));
-    });
-    var bRem = el("button", "perigo", "Remover");
-    bRem.type = "button";
-    bRem.addEventListener("click", async function () {
-      if (!confirm("Remover o acesso de " + c.nome + "?")) return;
-      var r2 = await api("/api/portal/clientes/remover", { cliente_id: c.id });
-      if (!r2.ok) { alert(r2.dados.error || "Não foi possível."); return; }
-      carregarClientes();
-    });
-    acoes.appendChild(bSenha);
-    acoes.appendChild(bRem);
-    linha.appendChild(acoes);
-    lista.appendChild(linha);
-  });
+  if (!dados.clientes.length) sel.appendChild(new Option("Você ainda não tem clientes", ""));
+  dados.clientes.forEach(function (c) { sel.appendChild(new Option(c.nome + " (" + c.email + ")", c.id)); });
+  if (antes) sel.value = antes;
 }
 
 async function carregarAlbuns() {
   var r = await api("/api/portal/albuns");
   dados.albuns = r.dados.albuns || [];
-  var lista = document.getElementById("listaAlbuns");
-  lista.innerHTML = "";
-  if (!dados.albuns.length) lista.appendChild(el("p", "text-sm text-slate-400", "Nenhum álbum ainda."));
-  dados.albuns.forEach(function (a) {
-    var c = el("button", "text-left bg-slate-900/50 hover:bg-slate-900 rounded-2xl p-4 border border-blue-900/60");
-    c.type = "button";
-    c.appendChild(el("p", "text-xs uppercase tracking-wider text-slate-400", a.tipo || ""));
-    c.appendChild(el("p", "font-bold", (a.trancado ? "🔒 " : "") + a.titulo));
-    c.appendChild(el("p", "text-sm text-slate-400", a.cliente + " · " + a.arquivos + " arquivo(s) · " + formatarBytes(a.bytes) + (a.favoritas ? " · ♥ " + a.favoritas : "")));
-    c.addEventListener("click", function () { abrirAlbum(a); });
-    lista.appendChild(c);
-  });
   preencherAlbunsCobranca();
+  await carregarCentral();
 }
-
 /* ---------- ações ---------- */
+
+document.getElementById("cfgCor").addEventListener("input", function () {
+  document.getElementById("temas").style.setProperty("--cfgcor", this.value);
+});
 
 document.getElementById("cfgNome").addEventListener("input", function () {
   if (!dados.portal) document.getElementById("cfgSlug").value = paraSlug(this.value);
@@ -652,7 +1060,8 @@ document.getElementById("btnSalvar").addEventListener("click", async function ()
   var r = await api("/api/portal/salvar", {
     nome: document.getElementById("cfgNome").value,
     slug: document.getElementById("cfgSlug").value,
-    cor: document.getElementById("cfgCor").value
+    cor: document.getElementById("cfgCor").value,
+    tema: (document.querySelector("input[name=tema]:checked") || {}).value
   });
   if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
   carregar();
@@ -667,33 +1076,81 @@ document.getElementById("btnGerar").addEventListener("click", function () {
   document.getElementById("cliSenha").value = gerarSenha();
 });
 
-document.getElementById("btnCliente").addEventListener("click", async function () {
-  var erro = document.getElementById("cliErro");
-  erro.textContent = "";
-  var nome = document.getElementById("cliNome").value;
-  var email = document.getElementById("cliEmail").value;
-  var senha = document.getElementById("cliSenha").value;
-  var r = await api("/api/portal/clientes/novo", { nome: nome, email: email, senha: senha });
-  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível criar."; return; }
-  alert("Acesso criado! Envie para " + nome + ":\n\nLink: " + window.location.origin + "/p/" + dados.portal.slug + "\nE-mail: " + email + "\nSenha: " + senha);
-  ["cliNome", "cliEmail", "cliSenha"].forEach(function (id) { document.getElementById(id).value = ""; });
-  await carregarClientes();
-  carregarCobrancas();
-});
+/* ---------- regras de acesso e pedidos de edição ---------- */
 
-document.getElementById("btnAlbum").addEventListener("click", async function () {
-  var erro = document.getElementById("albErro");
-  erro.textContent = "";
-  var r = await api("/api/portal/albuns/novo", {
-    cliente_id: document.getElementById("albCliente").value,
-    tipo: document.getElementById("albTipo").value,
-    titulo: document.getElementById("albTitulo").value
+function dataHoraBr(t) {
+  var d = new Date(String(t).replace(" ", "T") + "Z");
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+// Resumo curto das regras (vazio quando está tudo liberado e sem prazo).
+function textoRegras(r) {
+  if (!r) return "";
+  var p = [];
+  if (r.vencido) p.push("⏳ acesso encerrado");
+  else if (r.acesso_ate) p.push("⏳ até " + dataHoraBr(r.acesso_ate));
+  if (!r.pode_baixar) p.push("sem download");
+  else if (r.max_downloads) p.push("⬇️ " + r.max_downloads + "x por foto");
+  if (!r.pode_escolher) p.push("sem escolha");
+  else if (r.limite_escolha) p.push("❤️ até " + r.limite_escolha);
+  if (r.pode_editar) p.push("✏️ edição");
+  return p.join(" · ");
+}
+
+function preencherRegras(r) {
+  document.getElementById("rgPrazo").value = "";
+  document.getElementById("rgPrazoAtual").textContent = r.vencido ? "Agora: o acesso já terminou. Escolha um prazo novo para liberar." :
+    r.acesso_ate ? "Agora: vale até " + dataHoraBr(r.acesso_ate) + "." : "Agora: sem prazo.";
+  document.getElementById("rgEscolher").checked = r.pode_escolher;
+  document.getElementById("rgLimite").value = r.limite_escolha || "";
+  document.getElementById("rgEditar").checked = r.pode_editar;
+  document.getElementById("rgBaixar").checked = r.pode_baixar;
+  document.getElementById("rgMaxDown").value = r.max_downloads || "";
+  document.getElementById("resumoRegras").textContent = textoRegras(r) ? "· " + textoRegras(r) : "· tudo liberado, sem prazo";
+}
+
+function desenharEdicoes(lista) {
+  var caixa = document.getElementById("listaEdicoes");
+  caixa.innerHTML = "";
+  mostrar("caixaEdicoes", lista.length > 0);
+  lista.forEach(function (e) {
+    var l = el("div", "flex flex-wrap items-start justify-between gap-2 bg-slate-900/60 rounded-xl px-3 py-2 text-sm" + (e.status === "feito" ? " opacity-60" : ""));
+    var t = el("div", "min-w-0");
+    t.appendChild(el("p", "font-semibold break-all", e.name + (e.status === "feito" ? " · ✔ feito" : "")));
+    t.appendChild(el("p", "text-slate-300 break-words", "“" + e.comentario + "”"));
+    l.appendChild(t);
+    var b = el("button", "link whitespace-nowrap", e.status === "feito" ? "Reabrir" : "✔ Marcar como feito");
+    b.type = "button";
+    b.addEventListener("click", async function () {
+      await api("/api/portal/edicoes/status", { id: e.id, status: e.status === "feito" ? "aberto" : "feito" });
+      document.getElementById("grade").innerHTML = "";
+      paginaAtual = 0;
+      carregarPagina();
+    });
+    l.appendChild(b);
+    caixa.appendChild(l);
   });
-  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível criar."; return; }
-  document.getElementById("albTitulo").value = "";
-  await carregarAlbuns();
-  var novo = dados.albuns.find(function (a) { return a.id === r.dados.id; });
-  if (novo) abrirAlbum(novo);
+}
+
+document.getElementById("btnRegras").addEventListener("click", async function () {
+  var erro = document.getElementById("rgErro");
+  erro.textContent = "";
+  var r = await api("/api/portal/albuns/regras", {
+    id: aberto.id,
+    prazo_dias: document.getElementById("rgPrazo").value,
+    pode_escolher: document.getElementById("rgEscolher").checked,
+    limite_escolha: document.getElementById("rgLimite").value,
+    pode_editar: document.getElementById("rgEditar").checked,
+    pode_baixar: document.getElementById("rgBaixar").checked,
+    max_downloads: document.getElementById("rgMaxDown").value
+  });
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
+  mostrar("rgOk", true);
+  setTimeout(function () { mostrar("rgOk", false); }, 2500);
+  document.getElementById("grade").innerHTML = "";
+  paginaAtual = 0;
+  carregarPagina();
+  carregarAlbuns();
 });
 
 /* ---------- álbum aberto ---------- */
@@ -716,6 +1173,10 @@ async function carregarPagina() {
   if (!r.ok) return;
   var d = r.dados;
   document.getElementById("abInfo").textContent = "Cliente: " + d.album.cliente + " · " + d.total + " arquivo(s) · " + formatarBytes(d.bytes);
+  if (paginaAtual === 0) {
+    preencherRegras(d.album.regras);
+    desenharEdicoes(d.edicoes || []);
+  }
   var grade = document.getElementById("grade");
   d.arquivos.forEach(function (f) {
     var m = el("div", "miniatura");
@@ -733,6 +1194,8 @@ async function carregarPagina() {
       m.appendChild(icone);
     }
     if (f.favorito) m.appendChild(el("span", "selo", "♥"));
+    if (f.edicao === "aberto") m.appendChild(el("span", "absolute left-1.5 top-1.5 text-xs bg-amber-400 text-slate-900 font-bold rounded-full px-2", "✏️"));
+    if (f.baixados) m.title += " · baixada " + f.baixados + "x";
     grade.appendChild(m);
   });
   mostrar("btnMais", (d.pagina + 1) * d.por_pagina < d.total);
@@ -799,6 +1262,26 @@ document.getElementById("btnEnviar").addEventListener("click", function () {
   document.getElementById("arquivosEnviar").click();
 });
 
+// Versão leve da foto (lado maior de 1600 px, JPG): carrega rápido para o cliente e não é o original.
+async function criarPreviaLeve(arquivo) {
+  var img;
+  try { img = await createImageBitmap(arquivo, { imageOrientation: "from-image" }); }
+  catch (e) {
+    img = await new Promise(function (ok, falha) {
+      var i = new Image();
+      i.onload = function () { ok(i); };
+      i.onerror = falha;
+      i.src = URL.createObjectURL(arquivo);
+    });
+  }
+  var esc = Math.min(1, 1600 / Math.max(img.width, img.height));
+  var c = document.createElement("canvas");
+  c.width = Math.round(img.width * esc);
+  c.height = Math.round(img.height * esc);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return await new Promise(function (ok) { c.toBlob(ok, "image/jpeg", 0.8); });
+}
+
 document.getElementById("arquivosEnviar").addEventListener("change", async function () {
   var lista = Array.from(this.files);
   this.value = "";
@@ -820,6 +1303,18 @@ document.getElementById("arquivosEnviar").addEventListener("change", async funct
       });
       var fim = await api("/api/files/complete", { id: p.dados.id });
       if (!fim.ok) throw new Error(fim.dados.error || "Não foi possível finalizar");
+      // Prévia leve (o cliente vê esta; o original só sai se o download estiver liberado). Se falhar, a foto continua enviada.
+      if (/^image\/(jpeg|png|webp)$/.test(f.type)) {
+        try {
+          var previa = await criarPreviaLeve(f);
+          var pp = await api("/api/files/upload-url", { name: "previa-" + f.name.replace(/\.[^.]+$/, "") + ".jpg", size: previa.size, album_id: aberto.id, previa: true });
+          if (pp.ok) {
+            await enviarParaB2(pp.dados.url, previa);
+            var fp = await api("/api/files/complete", { id: pp.dados.id });
+            if (fp.ok) await api("/api/portal/previa", { original_id: p.dados.id, previa_id: pp.dados.id });
+          }
+        } catch (e2) {}
+      }
     } catch (e) {
       falhas++;
       if (/Espaço insuficiente|plano/.test(e.message)) { alert(e.message); break; }
@@ -834,8 +1329,13 @@ document.getElementById("arquivosEnviar").addEventListener("change", async funct
   carregarPagina();
 });
 
-carregar().catch(function () {});
+montarEventos();
+hubAba(new URLSearchParams(window.location.search).get("aba") === "abertos" ? "abertos" : "fechados");
+carregar().then(function () {
+  if (new URLSearchParams(window.location.search).get("aba") === "abertos") document.getElementById("secCentral").scrollIntoView();
+}).catch(function () {});
 </script>
+<script src="/eventos-painel.js"></script>
 <script src="/assistente.js" defer></script>
 </body>
 </html>
