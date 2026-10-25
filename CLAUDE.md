@@ -256,5 +256,10 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
      (`files.e_previa = 1`), ligado ao original por `POST /api/portal/previa` (`files.previa_id`). O cliente vê a prévia; o original só
      no download. Fotos antigas sem prévia continuam usando o original.
    - 4 layouts da área do cliente (`portais.tema`: classico | escuro | minimalista | delicado), capa do álbum = 1ª foto.
+   - **Telas limpas (pedido do João, 2026-10-25):** uma tela por vez (`mostrarTela`: home | criar | config | cobrancas | album |
+     evento). Home = 3 números + "➕ Criar novo" + cartões dos links (álbuns e eventos, filtros, 🔴 primeiro). Criar novo =
+     assistente com uma pergunta por tela (álbum: cliente → nome → regras; evento: dados → preço; os campos do formulário do
+     evento são movidos para os passos por `montarEventos`). Álbum e evento abrem com abas (Fotos | Regras | Escolhas e edições |
+     Mais; Fotos | Pedidos | Mais). Regra de UX: não colocar muita coisa numa tela só; cada função atrás de um clique.
 5. Pendências menores: Turnstile no login e cadastro; upload acima de 4,5 GB (multipart); preço duplicado em
    `app.js` e `worker.js`; responder e-mails como @masternuvem.com.br; WhatsApp.

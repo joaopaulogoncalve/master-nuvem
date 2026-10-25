@@ -42,111 +42,127 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
   </div>
 </nav>
 
-<main class="max-w-5xl mx-auto px-4 py-10 space-y-6">
-  <div>
-    <h1 class="text-2xl md:text-3xl font-bold">Meu <span class="grad">estúdio</span></h1>
-    <p class="text-slate-400 mt-1">Entregue álbuns com login para cada cliente (link fechado) ou venda fotos de eventos com marca d'água (link aberto). Tudo aqui, num lugar só.</p>
-  </div>
+<main class="max-w-5xl mx-auto px-4 py-8 space-y-6">
   <p id="carregando" class="text-slate-400">Carregando...</p>
   <p id="semPlano" class="hidden glass rounded-2xl p-5 text-amber-300">Para criar o seu portal, você precisa de um plano ativo. <a href="/#calculadora" class="link">Contratar plano →</a></p>
 
-  <!-- Painel do estúdio -->
-  <section id="painelEstudio" class="hidden grid grid-cols-2 md:grid-cols-4 gap-3">
-    <div class="glass rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">Recebido no mês</p><p id="stMes" class="text-2xl font-bold mt-1 text-emerald-300">-</p><p id="stTotal" class="text-xs text-slate-500 mt-1"></p></div>
-    <div class="glass rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">A receber</p><p id="stReceber" class="text-2xl font-bold mt-1 text-amber-300">-</p><p id="stPedidos" class="text-xs text-slate-500 mt-1"></p></div>
-    <div class="glass rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">🌐 Links abertos</p><p id="stEventos" class="text-2xl font-bold mt-1">-</p><p class="text-xs text-slate-500 mt-1">eventos à venda</p></div>
-    <div class="glass rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">🔒 Links fechados</p><p id="stClientes" class="text-2xl font-bold mt-1">-</p><p id="stAtencao" class="text-xs mt-1 text-slate-500">clientes</p></div>
-  </section>
-
-  <!-- Criar novo (passo a passo) -->
-  <section id="secCriar" class="hidden glass rounded-3xl p-6 space-y-4">
-    <div class="flex flex-wrap items-center justify-between gap-2">
-      <h2 class="text-lg font-bold">➕ Criar novo</h2>
-      <button type="button" id="wzVoltar" class="hidden link">← Voltar</button>
-    </div>
-    <div id="wzPasso1">
-      <p class="text-sm text-slate-300 mb-3">Passo 1: o que você quer criar?</p>
-      <div class="grid md:grid-cols-2 gap-3">
-        <button type="button" id="criarAberto" class="text-left bg-slate-900/50 hover:bg-slate-900 border border-emerald-400/40 rounded-2xl p-5">
-          <span class="block text-lg font-bold text-emerald-200">🌐 Link aberto</span>
-          <span class="block text-sm text-slate-300 mt-1">Para eventos: corrida, futebol, formatura, convidados da festa...</span>
-          <span class="block text-xs text-slate-400 mt-2">Qualquer pessoa vê as fotos com marca d'água, escolhe, paga por foto no seu PIX e baixa o original. Não precisa cadastrar ninguém.</span>
-        </button>
-        <button type="button" id="criarFechado" class="text-left bg-slate-900/50 hover:bg-slate-900 border border-cyan-400/40 rounded-2xl p-5">
-          <span class="block text-lg font-bold text-cyan-200">🔒 Link fechado</span>
-          <span class="block text-sm text-slate-300 mt-1">Para um cliente: casamento, 15 anos, ensaio, empresa...</span>
-          <span class="block text-xs text-slate-400 mt-2">O cliente entra com login e senha e vê só o álbum dele. Você escolhe o prazo e se ele pode escolher, pedir edição ou baixar.</span>
-        </button>
+  <!-- TELA: início -->
+  <div id="vHome" class="hidden space-y-6">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold">Meu <span class="grad">estúdio</span></h1>
+        <p id="homeSub" class="text-slate-400 text-sm mt-1"></p>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" id="irCobrancas" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">💰 Cobranças</button>
+        <button type="button" id="irConfig" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">⚙️ Configurações</button>
       </div>
     </div>
 
-    <!-- Passo 2: link aberto (o formulário do evento é colocado aqui) -->
-    <div id="wzAberto" class="hidden"><p class="text-sm text-slate-300 mb-2">Passo 2: os dados do evento e o preço das fotos. Depois você envia as fotos.</p></div>
+    <div class="grid grid-cols-3 gap-3">
+      <div class="glass rounded-2xl p-4"><p class="text-xs text-slate-400">Recebido no mês</p><p id="stMes" class="text-xl md:text-2xl font-bold mt-1 text-emerald-300">-</p></div>
+      <div class="glass rounded-2xl p-4"><p class="text-xs text-slate-400">A receber</p><p id="stReceber" class="text-xl md:text-2xl font-bold mt-1 text-amber-300">-</p></div>
+      <div class="glass rounded-2xl p-4"><p class="text-xs text-slate-400">Precisam de você</p><p id="stAtencao" class="text-xl md:text-2xl font-bold mt-1">-</p></div>
+    </div>
 
-    <!-- Passo 2: link fechado -->
-    <div id="wzFechado" class="hidden space-y-4">
-      <p class="text-sm text-slate-300">Passo 2: o cliente, o álbum e as regras. Depois você envia as fotos.</p>
-      <div class="bg-slate-900/40 rounded-2xl p-4 space-y-3">
-        <p class="font-bold">👤 Cliente</p>
+    <button type="button" id="btnNovo" class="cta w-full font-bold text-lg px-6 py-4 rounded-2xl">➕ Criar novo</button>
+
+    <div class="space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-lg font-bold">Seus links</h2>
+        <div class="flex gap-2">
+          <button type="button" data-filtro="" class="filtro aba text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-800">Todos</button>
+          <button type="button" data-filtro="fechado" class="filtro aba text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-800">🔒 Fechados</button>
+          <button type="button" data-filtro="aberto" class="filtro aba text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-800">🌐 Abertos</button>
+        </div>
+      </div>
+      <div id="tiles" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+      <p id="tilesVazio" class="hidden glass rounded-2xl p-6 text-center text-slate-400">Você ainda não criou nenhum link. Clique em <strong class="text-white">➕ Criar novo</strong>.</p>
+      <p class="text-xs text-slate-500">🔴 precisa de você · ❓ cliente ainda não viu ou o prazo está acabando · ✅ tudo certo</p>
+    </div>
+  </div>
+
+  <!-- TELA: criar novo (uma pergunta por vez) -->
+  <div id="vCriar" class="hidden">
+    <div class="glass rounded-3xl p-6 max-w-2xl mx-auto space-y-5">
+      <div class="flex items-center justify-between gap-3">
+        <button type="button" id="wzVoltar" class="link">← Voltar</button>
+        <p id="wzPassoTxt" class="text-xs text-slate-400"></p>
+        <button type="button" id="wzCancelar" class="text-sm text-slate-400 hover:text-white">✕ Cancelar</button>
+      </div>
+
+      <div id="wzP1" class="wz space-y-4">
+        <h2 class="text-xl font-bold">O que você quer criar?</h2>
+        <button type="button" id="criarFechado" class="w-full text-left bg-slate-900/50 hover:bg-slate-900 border border-cyan-400/40 rounded-2xl p-5">
+          <span class="block text-lg font-bold text-cyan-200">🔒 Álbum para um cliente</span>
+          <span class="block text-sm text-slate-400 mt-1">Casamento, 15 anos, ensaio, empresa... O cliente entra com login e senha.</span>
+        </button>
+        <button type="button" id="criarAberto" class="w-full text-left bg-slate-900/50 hover:bg-slate-900 border border-emerald-400/40 rounded-2xl p-5">
+          <span class="block text-lg font-bold text-emerald-200">🌐 Evento com fotos à venda</span>
+          <span class="block text-sm text-slate-400 mt-1">Corrida, rua, futebol, formatura... Link aberto, marca d'água e preço por foto.</span>
+        </button>
+      </div>
+
+      <!-- Álbum (link fechado) -->
+      <div id="wzF1" class="wz hidden space-y-4">
+        <h2 class="text-xl font-bold">Para quem é o álbum?</h2>
         <div class="flex flex-wrap gap-4 text-sm">
           <label class="flex items-center gap-2"><input type="radio" name="wzCli" value="novo" checked> Cliente novo</label>
           <label class="flex items-center gap-2"><input type="radio" name="wzCli" value="existente"> Cliente que já tenho</label>
         </div>
-        <div id="wzCliNovo" class="grid md:grid-cols-3 gap-3">
-          <label class="text-sm text-slate-300">Nome<input id="cliNome" class="campo mt-1" maxlength="80" placeholder="Ana e Pedro" autocomplete="off"></label>
-          <label class="text-sm text-slate-300">E-mail (é o login)<input id="cliEmail" type="email" class="campo mt-1" maxlength="120" placeholder="ana@email.com" autocomplete="off"></label>
-          <label class="text-sm text-slate-300">Senha
+        <div id="wzCliNovo" class="space-y-3">
+          <label class="text-sm text-slate-300 block">Nome<input id="cliNome" class="campo mt-1" maxlength="80" placeholder="Ana e João" autocomplete="off"></label>
+          <label class="text-sm text-slate-300 block">E-mail (é o login dele)<input id="cliEmail" type="email" class="campo mt-1" maxlength="120" placeholder="ana@email.com" autocomplete="off"></label>
+          <label class="text-sm text-slate-300 block">Senha
             <div class="flex gap-2 mt-1"><input id="cliSenha" class="campo" maxlength="100" placeholder="mín. 8 caracteres" autocomplete="new-password"><button type="button" id="btnGerar" class="link whitespace-nowrap">Gerar</button></div>
           </label>
         </div>
         <label id="wzCliExistente" class="hidden text-sm text-slate-300 block">Escolha o cliente<select id="albCliente" class="campo mt-1"></select></label>
+        <button type="button" id="wzF1ok" class="cta w-full font-bold px-6 py-3 rounded-xl">Próximo →</button>
       </div>
-      <div class="bg-slate-900/40 rounded-2xl p-4 space-y-3">
-        <p class="font-bold">📁 Álbum</p>
-        <div class="grid md:grid-cols-2 gap-3">
-          <label class="text-sm text-slate-300">Nome do álbum<input id="albTitulo" class="campo mt-1" maxlength="100" placeholder="Casamento Ana & Pedro"></label>
-          <label class="text-sm text-slate-300">Tipo de trabalho<select id="albTipo" class="campo mt-1"></select></label>
-        </div>
+
+      <div id="wzF2" class="wz hidden space-y-4">
+        <h2 class="text-xl font-bold">Como se chama o álbum?</h2>
+        <label class="text-sm text-slate-300 block">Nome do álbum<input id="albTitulo" class="campo mt-1" maxlength="100" placeholder="Casamento Ana & João"></label>
+        <label class="text-sm text-slate-300 block">Tipo de trabalho<select id="albTipo" class="campo mt-1"></select></label>
+        <button type="button" id="wzF2ok" class="cta w-full font-bold px-6 py-3 rounded-xl">Próximo →</button>
       </div>
-      <div class="bg-slate-900/40 rounded-2xl p-4 space-y-3 text-sm text-slate-300">
-        <p class="font-bold text-white">🔐 Regras de acesso <span class="font-normal text-slate-400">(dá para mudar depois)</span></p>
-        <label class="block">⏳ Por quanto tempo o cliente pode acessar
-          <select id="wzPrazo" class="campo mt-1" style="max-width:260px">
+
+      <div id="wzF3" class="wz hidden space-y-4 text-sm text-slate-300">
+        <h2 class="text-xl font-bold text-white">O que o cliente pode fazer?</h2>
+        <label class="block">⏳ Por quanto tempo ele acessa
+          <select id="wzPrazo" class="campo mt-1">
             <option value="0">Sem prazo</option><option value="2">2 dias</option><option value="3">3 dias</option><option value="4">4 dias</option>
             <option value="7" selected>7 dias</option><option value="15">15 dias</option><option value="30">30 dias</option>
           </select>
         </label>
-        <label class="flex items-center gap-2 flex-wrap"><input id="wzEscolher" type="checkbox" checked> ❤️ Escolher fotos para o álbum, até
-          <input id="wzLimite" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> fotos</label>
-        <label class="flex items-center gap-2"><input id="wzEditar" type="checkbox"> ✏️ Pedir edição de fotos, com comentário</label>
-        <label class="flex items-center gap-2 flex-wrap"><input id="wzBaixar" type="checkbox" checked> ⬇️ Baixar os originais, até
-          <input id="wzMaxDown" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> vez(es) cada foto</label>
+        <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="wzEscolher" type="checkbox" checked> ❤️ Escolher fotos, até
+          <input id="wzLimite" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"></label>
+        <label class="flex items-center gap-2 bg-slate-900/50 rounded-xl p-3"><input id="wzEditar" type="checkbox"> ✏️ Pedir edição de fotos</label>
+        <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="wzBaixar" type="checkbox" checked> ⬇️ Baixar os originais, até
+          <input id="wzMaxDown" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> vez(es)</label>
+        <p class="text-xs text-slate-500">Dá para mudar depois, no álbum.</p>
+        <p id="wzErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+        <button type="button" id="btnCriarFechado" class="cta w-full font-bold px-6 py-3 rounded-xl">Criar álbum ✓</button>
       </div>
-      <p id="wzErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
-      <button type="button" id="btnCriarFechado" class="cta font-bold px-6 py-3 rounded-xl">Criar e enviar as fotos →</button>
-    </div>
-  </section>
 
-  <!-- Central de acesso -->
-  <section id="secCentral" class="hidden glass rounded-3xl p-6 space-y-4">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <h2 class="text-lg font-bold">📋 Central de acesso</h2>
-      <div class="flex gap-2">
-        <button type="button" id="abaFechados" class="aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800">🔒 Links fechados</button>
-        <button type="button" id="abaAbertos" class="aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800">🌐 Links abertos</button>
+      <!-- Evento (link aberto): os campos do formulário do evento são colocados aqui -->
+      <div id="wzA1" class="wz hidden space-y-4">
+        <h2 class="text-xl font-bold">Sobre o evento</h2>
+        <div id="wzA1campos"></div>
+        <button type="button" id="wzA1ok" class="cta w-full font-bold px-6 py-3 rounded-xl">Próximo →</button>
+      </div>
+      <div id="wzA2" class="wz hidden space-y-4">
+        <h2 class="text-xl font-bold">Quanto custa cada foto?</h2>
+        <div id="wzA2campos" class="space-y-4"></div>
       </div>
     </div>
-    <div id="painelFechados" class="space-y-3">
-      <p class="text-xs text-slate-400">🔴 precisa de atenção (edição pedida, cobrança atrasada, acesso trancado) · ❓ ainda não acessou ou o prazo está acabando · ✅ tudo certo</p>
-      <div id="listaCentral" class="space-y-2"></div>
-    </div>
-    <div id="painelAbertos" class="hidden space-y-3"></div>
-  </section>
+  </div>
 
   <!-- 1. Configuração -->
   <section id="secConfig" class="hidden glass rounded-3xl p-6">
-    <details id="cfgDetalhes" open>
-    <summary class="cursor-pointer text-lg font-bold">⚙️ Configurações do estúdio <span class="text-sm font-normal text-slate-400">nome, endereço, cor, layout e o seu PIX</span></summary>
+    <div id="cfgDetalhes">
+    <div class="flex items-center justify-between gap-3"><h2 class="text-lg font-bold">⚙️ Configurações do estúdio</h2><button type="button" id="cfgVoltar" class="link">← Meus links</button></div>
     <div class="grid md:grid-cols-3 gap-4 mt-4">
       <label class="text-sm text-slate-300 md:col-span-1">Nome do estúdio
         <input id="cfgNome" class="campo mt-1" maxlength="60" placeholder="Estúdio Aurora" autocomplete="organization">
@@ -194,11 +210,12 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <span id="instrOk" class="hidden text-sm text-emerald-300 ml-2">Salvo!</span>
       <p class="text-xs text-slate-500 mt-1">O dinheiro vai direto para você. A Master Nuvem não cobra comissão.</p>
     </div>
-    </details>
+    </div>
   </section>
 
   <!-- Cobranças dos links fechados -->
   <section id="secCobrancas" class="hidden glass rounded-3xl p-6 space-y-5">
+    <button type="button" id="cobVoltar" class="link">← Meus links</button>
     <div>
       <h2 class="text-lg font-bold">💰 Cobranças dos álbuns <span class="text-sm font-normal text-slate-400">(links fechados, opcional)</span></h2>
       <p class="text-sm text-slate-400 mt-1">Como os clientes dos álbuns pagam? (as fotos de eventos já têm o preço por foto)</p>
@@ -268,77 +285,100 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
     </div>
   </section>
 
-  <!-- Álbum aberto -->
-  <section id="secAberto" class="hidden glass rounded-3xl p-6 space-y-4">
-    <div class="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <p id="abTipo" class="text-xs uppercase tracking-wider text-slate-400"></p>
-        <h2 id="abTitulo" class="text-xl font-bold"></h2>
-        <p id="abInfo" class="text-sm text-slate-400"></p>
-      </div>
-      <div class="flex flex-wrap gap-4">
-        <button type="button" id="btnFavoritas" class="link">♥ Ver favoritas do cliente</button>
-        <button type="button" id="btnFechar" class="link">Fechar</button>
-      </div>
+  <!-- TELA: álbum (link fechado) -->
+  <section id="secAberto" class="hidden space-y-4">
+    <button type="button" id="btnFechar" class="link">← Meus links</button>
+    <div class="glass rounded-3xl p-5">
+      <p id="abTipo" class="text-xs uppercase tracking-wider text-slate-400"></p>
+      <h2 id="abTitulo" class="text-xl font-bold"></h2>
+      <p id="abInfo" class="text-sm text-slate-400"></p>
+      <p id="resumoRegras" class="text-xs text-slate-500 mt-1"></p>
     </div>
-    <div id="caixaFavoritas" class="hidden bg-slate-900/60 rounded-2xl p-4 text-sm">
-      <p class="font-semibold mb-2">Fotos escolhidas pelo cliente: <span id="favQtd"></span></p>
-      <textarea id="favLista" readonly class="campo h-32 text-xs"></textarea>
-      <button type="button" id="btnCopiarFav" class="link mt-2">Copiar lista</button>
+    <div class="flex flex-wrap gap-2">
+      <button type="button" data-aba="fotos" class="abaAlb aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800">📷 Fotos</button>
+      <button type="button" data-aba="regras" class="abaAlb aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800">🔐 Regras</button>
+      <button type="button" data-aba="cliente" class="abaAlb aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800" id="abaCliente">❤️ Escolhas e edições</button>
+      <button type="button" data-aba="mais" class="abaAlb aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800">⚙️ Mais</button>
     </div>
-    <!-- Regras de acesso do cliente -->
-    <details id="caixaRegras" class="bg-slate-900/50 rounded-2xl p-4">
-      <summary class="cursor-pointer font-bold">🔐 Regras de acesso do cliente <span id="resumoRegras" class="text-sm font-normal text-slate-400"></span></summary>
-      <div class="grid md:grid-cols-2 gap-4 mt-4">
-        <label class="text-sm text-slate-300">⏳ Prazo de acesso
-          <select id="rgPrazo" class="campo mt-1">
-            <option value="">Manter como está</option>
-            <option value="0">Sem prazo</option>
-            <option value="2">2 dias a partir de agora</option>
-            <option value="3">3 dias a partir de agora</option>
-            <option value="4">4 dias a partir de agora</option>
-            <option value="7">7 dias a partir de agora</option>
-            <option value="15">15 dias a partir de agora</option>
-            <option value="30">30 dias a partir de agora</option>
-          </select>
-          <span id="rgPrazoAtual" class="block text-xs text-slate-400 mt-1"></span>
-        </label>
-        <div class="space-y-3 text-sm text-slate-300">
-          <p class="font-semibold">🎯 O que o cliente pode fazer (ver as fotos ele sempre pode)</p>
-          <label class="flex items-center gap-2 flex-wrap"><input id="rgEscolher" type="checkbox"> ❤️ Escolher fotos para o álbum, até
-            <input id="rgLimite" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> fotos</label>
-          <label class="flex items-center gap-2"><input id="rgEditar" type="checkbox"> ✏️ Pedir edição de fotos, com comentário</label>
-          <label class="flex items-center gap-2 flex-wrap"><input id="rgBaixar" type="checkbox"> ⬇️ Baixar os originais, até
-            <input id="rgMaxDown" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> vez(es) cada foto</label>
+
+    <div id="paneFotos" class="pane glass rounded-3xl p-5 space-y-4">
+      <div class="border border-dashed border-blue-800 rounded-2xl p-5 text-center">
+        <input id="arquivosEnviar" type="file" multiple accept="image/*,video/*" class="hidden">
+        <button type="button" id="btnEnviar" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">⬆ Enviar fotos e vídeos</button>
+        <p class="text-xs text-slate-500 mt-2">Pode escolher muitas de uma vez (até 4,5 GB cada). O cliente vê uma prévia leve; o original só se você liberar o download.</p>
+        <div id="progresso" class="hidden mt-4 text-left">
+          <p id="progTexto" class="text-sm text-slate-300 mb-1"></p>
+          <div class="barra"><i id="progBarra"></i></div>
         </div>
       </div>
-      <p class="text-xs text-slate-500 mt-3">Exemplo de seleção: 7 dias, escolher até 60 e sem baixar. Depois de editar, libere o download por mais 15 dias. O cliente vê na tela quanto tempo falta e quantas escolheu.</p>
+      <div id="grade" class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-2"></div>
+      <div class="text-center"><button type="button" id="btnMais" class="hidden link">Carregar mais</button></div>
+    </div>
+
+    <div id="paneRegras" class="pane hidden glass rounded-3xl p-5 space-y-4 text-sm text-slate-300">
+      <label class="block">⏳ Prazo de acesso
+        <select id="rgPrazo" class="campo mt-1" style="max-width:320px">
+          <option value="">Manter como está</option>
+          <option value="0">Sem prazo</option>
+          <option value="2">2 dias a partir de agora</option>
+          <option value="3">3 dias a partir de agora</option>
+          <option value="4">4 dias a partir de agora</option>
+          <option value="7">7 dias a partir de agora</option>
+          <option value="15">15 dias a partir de agora</option>
+          <option value="30">30 dias a partir de agora</option>
+        </select>
+        <span id="rgPrazoAtual" class="block text-xs text-slate-400 mt-1"></span>
+      </label>
+      <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="rgEscolher" type="checkbox"> ❤️ Escolher fotos, até
+        <input id="rgLimite" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"></label>
+      <label class="flex items-center gap-2 bg-slate-900/50 rounded-xl p-3"><input id="rgEditar" type="checkbox"> ✏️ Pedir edição de fotos</label>
+      <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="rgBaixar" type="checkbox"> ⬇️ Baixar os originais, até
+        <input id="rgMaxDown" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> vez(es)</label>
+      <p class="text-xs text-slate-500">Exemplo: 7 dias para escolher até 60, sem baixar. Depois de editar, libere o download por mais 15 dias.</p>
       <p id="rgErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
       <button type="button" id="btnRegras" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Salvar regras</button>
       <span id="rgOk" class="hidden text-sm text-emerald-300 ml-2">Salvo!</span>
-    </details>
-
-    <!-- Pedidos de edição -->
-    <div id="caixaEdicoes" class="hidden bg-slate-900/50 rounded-2xl p-4">
-      <p class="font-bold">✏️ Pedidos de edição do cliente</p>
-      <div id="listaEdicoes" class="space-y-2 mt-2"></div>
     </div>
 
-    <div class="border border-dashed border-blue-800 rounded-2xl p-5 text-center">
-      <input id="arquivosEnviar" type="file" multiple accept="image/*,video/*" class="hidden">
-      <button type="button" id="btnEnviar" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">⬆ Enviar fotos e vídeos</button>
-      <p class="text-xs text-slate-500 mt-2">Pode escolher muitas de uma vez. Limite de 4,5 GB por arquivo. Para fotos JPG, PNG e WEBP, o seu navegador cria também uma prévia leve: o cliente vê a prévia e só recebe o original se você liberar o download.</p>
-      <div id="progresso" class="hidden mt-4 text-left">
-        <p id="progTexto" class="text-sm text-slate-300 mb-1"></p>
-        <div class="barra"><i id="progBarra"></i></div>
+    <div id="paneCliente" class="pane hidden glass rounded-3xl p-5 space-y-4">
+      <div>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p class="font-bold">❤️ Fotos escolhidas</p>
+          <button type="button" id="btnFavoritas" class="link">Ver a lista</button>
+        </div>
+        <div id="caixaFavoritas" class="hidden bg-slate-900/60 rounded-2xl p-4 text-sm mt-2">
+          <p class="font-semibold mb-2">Escolhidas pelo cliente: <span id="favQtd"></span></p>
+          <textarea id="favLista" readonly class="campo h-32 text-xs"></textarea>
+          <button type="button" id="btnCopiarFav" class="link mt-2">Copiar lista</button>
+        </div>
+      </div>
+      <div id="caixaEdicoes">
+        <p class="font-bold">✏️ Pedidos de edição</p>
+        <div id="listaEdicoes" class="space-y-2 mt-2"></div>
       </div>
     </div>
-    <div id="grade" class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-2"></div>
-    <div class="text-center"><button type="button" id="btnMais" class="hidden link">Carregar mais</button></div>
-    <div class="pt-2 border-t border-blue-900/60">
-      <button type="button" id="btnApagarAlbum" class="perigo">Apagar álbum e todas as fotos</button>
+
+    <div id="paneMais" class="pane hidden glass rounded-3xl p-5 space-y-4">
+      <div>
+        <p class="font-bold">👤 Cliente</p>
+        <p id="abCliente" class="text-sm text-slate-300 mt-1"></p>
+        <p id="abClienteNums" class="text-xs text-slate-400 mt-1"></p>
+      </div>
+      <div class="flex flex-wrap gap-4">
+        <button type="button" id="abCopiarAcesso" class="link">📋 Copiar o acesso para enviar</button>
+        <button type="button" id="abNovaSenha" class="link">🔑 Nova senha</button>
+      </div>
+      <div class="pt-3 border-t border-blue-900/60">
+        <button type="button" id="btnApagarAlbum" class="perigo">Apagar álbum e todas as fotos</button>
+      </div>
     </div>
   </section>
+
+  <!-- TELA: evento (link aberto) — o painel do evento é colocado aqui -->
+  <section id="vEvento" class="hidden space-y-4">
+    <button type="button" id="evVoltar" class="link">← Meus links</button>
+  </section>
+
   <!-- Links abertos (eventos): o JavaScript coloca cada parte no lugar certo da página -->
   <div id="evHolder" class="hidden">
 <div>
@@ -492,7 +532,6 @@ async function carregar() {
   dados.tipos = r.dados.tipos || [];
   mostrar("carregando", false);
   mostrar("semPlano", !dados.portal && !r.dados.plano);
-  mostrar("secConfig", !!dados.portal || r.dados.plano);
   if (dados.portal) {
     document.getElementById("cfgNome").value = dados.portal.nome;
     document.getElementById("cfgSlug").value = dados.portal.slug;
@@ -508,9 +547,11 @@ async function carregar() {
   var temaAtual = document.querySelector("input[name=tema][value=" + ((dados.portal && dados.portal.tema) || "classico") + "]");
   if (temaAtual) temaAtual.checked = true;
   mostrar("blocoPix", !!dados.portal);
-  ["painelEstudio", "secCriar", "secCentral", "secCobrancas"].forEach(function (id) { mostrar(id, !!dados.portal); });
-  // Sem portal ainda: as configurações vêm abertas (é o primeiro passo). Depois, ficam fechadas para não ocupar espaço.
-  document.getElementById("cfgDetalhes").open = !dados.portal;
+  mostrar("cfgVoltar", !!dados.portal);
+  // Sem portal ainda: o primeiro passo é configurar o estúdio. Depois, a tela inicial com os links.
+  if (dados.portal) mostrarTela(document.getElementById("secConfig").classList.contains("hidden") || telaInicial ? "home" : "config");
+  else if (r.dados.plano) mostrarTela("config");
+  telaInicial = false;
   if (dados.portal) document.getElementById("instrucoes").value = dados.portal.instrucoes_pagamento || "";
   var tipo = document.getElementById("albTipo");
   if (!tipo.options.length) dados.tipos.forEach(function (t) { tipo.appendChild(new Option(t, t)); });
@@ -521,32 +562,74 @@ async function carregar() {
   }
 }
 
-/* ---------- painel do estúdio e central de acesso ---------- */
+/* ---------- telas: uma coisa de cada vez ---------- */
 
+var TELAS = { home: "vHome", criar: "vCriar", config: "secConfig", cobrancas: "secCobrancas", album: "secAberto", evento: "vEvento" };
 var central = { clientes: [] };   // carregarCentral() fica em window e é chamada também pela venda de eventos
+var eventosLista = [];
+var filtroAtual = "";
 
-function hubAba(qual) {
-  var abertos = qual === "abertos";
-  mostrar("painelAbertos", abertos);
-  mostrar("painelFechados", !abertos);
-  document.getElementById("abaAbertos").classList.toggle("on", abertos);
-  document.getElementById("abaFechados").classList.toggle("on", !abertos);
+function mostrarTela(nome) {
+  Object.keys(TELAS).forEach(function (k) { mostrar(TELAS[k], k === nome); });
+  window.scrollTo(0, 0);
 }
-window.hubAba = hubAba;
-document.getElementById("abaAbertos").addEventListener("click", function () { hubAba("abertos"); });
-document.getElementById("abaFechados").addEventListener("click", function () { hubAba("fechados"); });
 
-// Coloca as partes da venda de eventos (vindas de /eventos-painel.js) nos lugares do Meu portal.
+function abaAlbum(qual) {
+  document.querySelectorAll(".abaAlb").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-aba") === qual); });
+  ["Fotos", "Regras", "Cliente", "Mais"].forEach(function (p) { mostrar("pane" + p, p.toLowerCase() === qual); });
+}
+document.querySelectorAll(".abaAlb").forEach(function (b) { b.addEventListener("click", function () { abaAlbum(b.getAttribute("data-aba")); }); });
+
+document.getElementById("irConfig").addEventListener("click", function () { mostrarTela("config"); });
+document.getElementById("irCobrancas").addEventListener("click", function () { mostrarTela("cobrancas"); });
+document.getElementById("cfgVoltar").addEventListener("click", function () { mostrarTela(dados.portal ? "home" : "config"); });
+document.getElementById("cobVoltar").addEventListener("click", function () { mostrarTela("home"); });
+document.getElementById("evVoltar").addEventListener("click", function () { mostrarTela("home"); carregarCentral(); });
+
+// A venda de eventos (/eventos-painel.js) chama isto quando abre um evento.
+window.hubAba = function () { mostrarTela("evento"); abaEvento("fotos"); };
+
+// Coloca as partes da venda de eventos nas telas: campos do evento no assistente (2 passos) e o painel do evento em vEvento.
+var partesEvento = {};
 function montarEventos() {
   var form = document.getElementById("ev_secForm");
-  if (!form || form.parentNode.id === "wzAberto") return;
-  document.getElementById("wzAberto").appendChild(form);
-  form.classList.remove("glass", "p-6");
-  document.getElementById("painelAbertos").appendChild(document.getElementById("ev_secLista"));
-  document.getElementById("painelAbertos").appendChild(document.getElementById("ev_secAberto"));
-  var vazio = el("p", "text-sm text-slate-400", "Nenhum evento ainda. Clique em ➕ Criar novo → 🌐 Link aberto.");
-  vazio.id = "evVazio";
-  document.getElementById("painelAbertos").insertBefore(vazio, document.getElementById("ev_secLista"));
+  if (!form || partesEvento.ok) return;
+  var filhos = Array.from(form.children);   // [título, dados, preço, marca/publicado, erro, botões]
+  document.getElementById("ev_formTitulo").classList.add("hidden");
+  document.getElementById("wzA1campos").appendChild(filhos[1]);
+  [filhos[2], filhos[3], filhos[4], filhos[5]].forEach(function (x) { document.getElementById("wzA2campos").appendChild(x); });
+  filhos[1].className = "space-y-3";
+  var botao = document.getElementById("ev_btnSalvarEv");
+  botao.className = "cta w-full font-bold px-6 py-3 rounded-xl";
+  // Painel do evento com abas: Fotos | Pedidos | Editar.
+  var painel = document.getElementById("ev_secAberto");
+  document.getElementById("vEvento").appendChild(painel);
+  painel.classList.remove("space-y-5");
+  painel.classList.add("space-y-4");
+  var partes = Array.from(painel.children);   // [cabeçalho, envio, pedidos, fotos, ações]
+  document.getElementById("ev_btnFechar").classList.add("hidden");
+  var abas = el("div", "flex flex-wrap gap-2");
+  [["fotos", "📷 Fotos"], ["pedidos", "🧾 Pedidos"], ["editar", "⚙️ Mais"]].forEach(function (a) {
+    var b = el("button", "abaEv aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800", a[1]);
+    b.type = "button";
+    b.setAttribute("data-aba", a[0]);
+    b.addEventListener("click", function () { abaEvento(a[0]); });
+    abas.appendChild(b);
+  });
+  painel.insertBefore(abas, partes[1]);
+  partesEvento = { ok: true, fotos: [partes[1], partes[3]], pedidos: [partes[2]], editar: [partes[4]] };
+  // Editar o evento abre o assistente já preenchido.
+  document.getElementById("ev_btnEditar").addEventListener("click", function () {
+    mostrarTela("criar");
+    passoAssistente("A1");
+    document.getElementById("wzPassoTxt").textContent = "Editando o evento";
+  });
+}
+
+function abaEvento(qual) {
+  if (!partesEvento.ok) return;
+  document.querySelectorAll(".abaEv").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-aba") === qual); });
+  ["fotos", "pedidos", "editar"].forEach(function (k) { partesEvento[k].forEach(function (x) { x.classList.toggle("hidden", k !== qual); }); });
 }
 
 function horaBr(t) {
@@ -554,133 +637,112 @@ function horaBr(t) {
   return new Date(String(t).replace(" ", "T") + "Z").toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
-// 🔴 precisa de atenção · ❓ ainda não acessou / prazo acabando · ✅ tudo certo
-function sinalCliente(c) {
-  var motivos = [];
-  if (c.edicoes_abertas) motivos.push(c.edicoes_abertas + " pedido(s) de edição");
-  if (c.atrasadas) motivos.push(c.atrasadas + " cobrança(s) atrasada(s)");
-  if (c.travada_em) motivos.push("acesso trancado pela sentinela");
-  if (motivos.length) return ["🔴", "Precisa de atenção: " + motivos.join(", "), "text-red-300"];
-  var duvidas = [];
-  if (c.albuns && !c.ultimo_acesso) duvidas.push("ainda não acessou");
-  if (c.vencidos) duvidas.push(c.vencidos + " álbum(ns) com prazo encerrado");
-  if (c.prazo_proximo && new Date(String(c.prazo_proximo).replace(" ", "T") + "Z") - Date.now() < 2 * 86400000) duvidas.push("prazo acaba em " + horaBr(c.prazo_proximo));
-  if (!c.albuns) duvidas.push("ainda sem álbum");
-  if (duvidas.length) return ["❓", duvidas.join(" · "), "text-amber-300"];
-  return ["✅", "Tudo certo", "text-emerald-300"];
+// 🔴 precisa de você · ❓ ainda não viu / prazo acabando · ✅ tudo certo
+function sinalCliente(c, a) {
+  if (!c) return ["✅", "Tudo certo"];
+  if ((a && a.edicoes_abertas) || (!a && c.edicoes_abertas)) return ["🔴", "Pediu edição"];
+  if (c.atrasadas) return ["🔴", "Cobrança atrasada"];
+  if (c.travada_em) return ["🔴", "Acesso trancado"];
+  if (a && a.regras && a.regras.vencido) return ["❓", "Prazo encerrado"];
+  if (!c.ultimo_acesso) return ["❓", "Ainda não viu"];
+  if (a && a.regras && a.regras.acesso_ate && new Date(String(a.regras.acesso_ate).replace(" ", "T") + "Z") - Date.now() < 2 * 86400000) return ["❓", "Prazo acabando"];
+  return ["✅", "Tudo certo"];
 }
 
 async function carregarCentral() {
   var r = await api("/api/portal/central");
   if (!r.ok || !r.dados.resumo) return;
-  var s = r.dados.resumo;
   central = r.dados;
+  var ev = await api("/api/eventos");
+  eventosLista = (ev.dados && ev.dados.eventos) || [];
+  var s = r.dados.resumo;
   document.getElementById("stMes").textContent = reais(s.recebido_mes);
-  document.getElementById("stTotal").textContent = "Total: " + reais(s.recebido_total);
   document.getElementById("stReceber").textContent = reais(s.a_receber);
-  document.getElementById("stPedidos").textContent = s.pedidos_pendentes ? "🔴 " + s.pedidos_pendentes + " pedido(s) de fotos esperando o PIX" : "cobranças e pedidos pendentes";
-  document.getElementById("stEventos").textContent = s.eventos;
-  document.getElementById("stClientes").textContent = s.clientes;
-  var atencao = r.dados.clientes.filter(function (c) { return sinalCliente(c)[0] === "🔴"; }).length;
-  var st = document.getElementById("stAtencao");
-  st.textContent = atencao ? "🔴 " + atencao + " precisa(m) de atenção" : "clientes";
-  st.className = "text-xs mt-1 " + (atencao ? "text-red-300 font-semibold" : "text-slate-500");
-  document.getElementById("abaAbertos").textContent = "🌐 Links abertos" + (s.pedidos_pendentes ? " 🔴" : "");
-  document.getElementById("abaFechados").textContent = "🔒 Links fechados" + (atencao ? " 🔴" : "");
-  desenharCentral();
+  desenharTiles();
 }
 
-function desenharCentral() {
-  var lista = document.getElementById("listaCentral");
-  lista.innerHTML = "";
-  if (!central.clientes.length) {
-    lista.appendChild(el("p", "text-sm text-slate-400", "Nenhum cliente ainda. Clique em ➕ Criar novo → 🔒 Link fechado."));
-    return;
-  }
-  central.clientes.forEach(function (c) {
-    var sinal = sinalCliente(c);
-    var caixa = el("div", "bg-slate-900/50 rounded-2xl p-4 space-y-2");
-    var topo = el("div", "flex flex-wrap items-start justify-between gap-2");
-    var quem = el("div", "min-w-0");
-    var nome = el("p", "font-bold");
-    nome.appendChild(el("span", "mr-1", sinal[0]));
-    nome.appendChild(document.createTextNode(c.nome));
-    quem.appendChild(nome);
-    quem.appendChild(el("p", "text-xs text-slate-400 break-all", c.email));
-    quem.appendChild(el("p", "text-xs " + sinal[2], sinal[1]));
-    topo.appendChild(quem);
-    var acoes = el("div", "flex flex-wrap gap-3");
-    function botao(txt, classe, fn) {
-      var b = el("button", classe, txt);
-      b.type = "button";
-      b.addEventListener("click", fn);
-      acoes.appendChild(b);
-    }
-    botao("+ Álbum", "link", function () { abrirCriar("fechado", c.id); });
-    botao("Copiar acesso", "link", function () {
-      navigator.clipboard.writeText("Olá, " + c.nome.split(" ")[0] + "! Suas fotos estão no portal " + dados.portal.nome + ":\n" +
-        window.location.origin + "/p/" + dados.portal.slug + "\nE-mail: " + c.email + "\n(a senha é a que eu te mandei)");
-      this.textContent = "Copiado!";
-    });
-    botao("Nova senha", "link", async function () {
-      var nova = prompt("Nova senha para " + c.nome + " (mínimo 8 caracteres):", gerarSenha());
-      if (!nova) return;
-      var r2 = await api("/api/portal/clientes/senha", { cliente_id: c.id, senha: nova });
-      alert(r2.ok ? "Senha trocada. Envie a nova senha para o cliente: " + nova : (r2.dados.error || "Não foi possível."));
-      carregarCentral();
-    });
-    botao("Remover", "perigo", async function () {
-      if (!confirm("Remover o acesso de " + c.nome + "?")) return;
-      var r2 = await api("/api/portal/clientes/remover", { cliente_id: c.id });
-      if (!r2.ok) { alert(r2.dados.error || "Não foi possível."); return; }
-      await carregarClientes();
-      carregarCentral();
-    });
-    topo.appendChild(acoes);
-    caixa.appendChild(topo);
-    // Números do acesso do cliente.
-    var nums = [
-      ["👁️", c.visitas + " acesso(s)"], ["🕒", c.ultimo_acesso ? "último " + horaBr(c.ultimo_acesso) : "nunca acessou"],
-      ["⬇️", c.downloads + " download(s)"], ["❤️", c.escolhidas + " escolhida(s)"], ["✏️", c.edicoes_abertas + " edição(ões) pedida(s)"]
-    ];
-    if (c.cobrancas_pendentes) nums.push(["💰", c.cobrancas_pendentes + " cobrança(s) pendente(s)"]);
-    var linha = el("div", "flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-300");
-    nums.forEach(function (n) { linha.appendChild(el("span", "", n[0] + " " + n[1])); });
-    caixa.appendChild(linha);
-    // Álbuns do cliente.
-    var albs = dados.albuns.filter(function (a) { return a.cliente_id === c.id; });
-    if (albs.length) {
-      var grade = el("div", "flex flex-wrap gap-2 pt-1");
-      albs.forEach(function (a) {
-        var b = el("button", "text-left text-sm bg-slate-950/60 hover:bg-slate-900 border border-blue-900/60 rounded-xl px-3 py-2");
-        b.type = "button";
-        b.appendChild(el("span", "block font-semibold", (a.trancado ? "🔒 " : "") + a.titulo + (a.edicoes_abertas ? " 🔴" : "")));
-        b.appendChild(el("span", "block text-xs text-slate-400", a.arquivos + " foto(s)" + (textoRegras(a.regras) ? " · " + textoRegras(a.regras) : "")));
-        b.addEventListener("click", function () { abrirAlbum(a); });
-        grade.appendChild(b);
-      });
-      caixa.appendChild(grade);
-    }
-    lista.appendChild(caixa);
+function cartao(icone, titulo, sub, sinal, linha, aoClicar) {
+  var b = el("button", "glass rounded-2xl p-4 text-left hover:border-cyan-400 transition flex flex-col gap-2 min-h-[132px]");
+  b.type = "button";
+  var topo = el("div", "flex items-start justify-between gap-2");
+  var t = el("div", "min-w-0");
+  t.appendChild(el("p", "font-bold leading-tight truncate", icone + " " + titulo));
+  t.appendChild(el("p", "text-xs text-slate-400 truncate mt-0.5", sub));
+  topo.appendChild(t);
+  topo.appendChild(el("span", "text-lg shrink-0", sinal[0]));
+  b.appendChild(topo);
+  b.appendChild(el("p", "text-xs " + (sinal[0] === "🔴" ? "text-red-300" : sinal[0] === "❓" ? "text-amber-300" : "text-emerald-300"), sinal[1]));
+  b.appendChild(el("p", "text-xs text-slate-300 mt-auto", linha));
+  b.addEventListener("click", aoClicar);
+  return b;
+}
+
+function desenharTiles() {
+  var grade = document.getElementById("tiles");
+  grade.innerHTML = "";
+  var itens = [];
+  dados.albuns.forEach(function (a) {
+    var c = central.clientes.find(function (x) { return x.id === a.cliente_id; });
+    var sinal = sinalCliente(c, a);
+    itens.push({ tipo: "fechado", sinal: sinal, no: cartao("🔒", a.titulo, a.cliente, sinal,
+      a.arquivos + " foto(s) · ❤️ " + (a.favoritas || 0) + (c ? " · 👁️ " + c.visitas : ""), function () { abrirAlbum(a); }) });
   });
+  // Cliente criado sem álbum: um cartão para criar o álbum dele.
+  central.clientes.filter(function (c) { return !c.albuns; }).forEach(function (c) {
+    itens.push({ tipo: "fechado", sinal: ["❓", "Sem álbum"], no: cartao("🔒", c.nome, c.email, ["❓", "Ainda sem álbum: toque para criar"], "", function () { abrirCriar("fechado", c.id); }) });
+  });
+  eventosLista.forEach(function (e) {
+    var sinal = e.pendentes ? ["🔴", e.pendentes + " pedido(s) esperando o PIX"] : !e.fotos ? ["❓", "Ainda sem fotos"] : !e.publicado ? ["❓", "Fora do ar"] : ["✅", "No ar"];
+    itens.push({ tipo: "aberto", sinal: sinal, no: cartao("🌐", e.titulo, (e.data ? dataBr(e.data) + " · " : "") + "venda por foto", sinal,
+      e.fotos + " foto(s) · " + e.fotos_vendidas + " vendida(s) · " + reais(e.vendido), function () { if (window.EV) window.EV.abrir(e); }) });
+  });
+  // Primeiro o que precisa de atenção.
+  var ordem = { "🔴": 0, "❓": 1, "✅": 2 };
+  itens.sort(function (x, y) { return ordem[x.sinal[0]] - ordem[y.sinal[0]]; });
+  var atencao = itens.filter(function (i) { return i.sinal[0] === "🔴"; }).length;
+  var st = document.getElementById("stAtencao");
+  st.textContent = atencao ? "🔴 " + atencao : "✅ 0";
+  st.className = "text-xl md:text-2xl font-bold mt-1 " + (atencao ? "text-red-300" : "text-emerald-300");
+  document.getElementById("homeSub").textContent = (dados.portal ? dados.portal.nome + " · " : "") + itens.length + " link(s)";
+  var visiveis = itens.filter(function (i) { return !filtroAtual || i.tipo === filtroAtual; });
+  visiveis.forEach(function (i) { grade.appendChild(i.no); });
+  mostrar("tilesVazio", !itens.length);
+  document.querySelectorAll(".filtro").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-filtro") === filtroAtual); });
 }
 
-/* ---------- criar novo (passo a passo) ---------- */
+document.querySelectorAll(".filtro").forEach(function (b) {
+  b.addEventListener("click", function () { filtroAtual = b.getAttribute("data-filtro"); desenharTiles(); });
+});
+
+/* ---------- criar novo: uma pergunta por tela ---------- */
+
+var PASSOS = { P1: ["", "wzP1"], F1: ["Álbum · passo 1 de 3", "wzF1"], F2: ["Álbum · passo 2 de 3", "wzF2"], F3: ["Álbum · passo 3 de 3", "wzF3"],
+  A1: ["Evento · passo 1 de 2", "wzA1"], A2: ["Evento · passo 2 de 2", "wzA2"] };
+var VOLTA = { F1: "P1", F2: "F1", F3: "F2", A1: "P1", A2: "A1" };
+var passoAtual = "P1";
+
+function passoAssistente(p) {
+  passoAtual = p;
+  document.querySelectorAll(".wz").forEach(function (x) { x.classList.add("hidden"); });
+  mostrar(PASSOS[p][1], true);
+  document.getElementById("wzPassoTxt").textContent = PASSOS[p][0];
+  document.getElementById("wzVoltar").classList.toggle("invisible", p === "P1");
+  var campo = document.querySelector("#" + PASSOS[p][1] + " input:not([type=radio]):not([type=checkbox])");
+  if (campo && window.innerWidth > 700) campo.focus();
+}
 
 function abrirCriar(tipo, clienteId) {
-  mostrar("wzPasso1", !tipo);
-  mostrar("wzVoltar", !!tipo);
-  mostrar("wzAberto", tipo === "aberto");
-  mostrar("wzFechado", tipo === "fechado");
-  if (tipo === "aberto" && window.EV) window.EV.novo();
+  mostrarTela("criar");
+  document.getElementById("wzErro").textContent = "";
+  if (tipo === "aberto") { if (window.EV) window.EV.novo(); passoAssistente("A1"); return; }
   if (tipo === "fechado") {
-    var existente = !!clienteId || false;
-    document.querySelector("input[name=wzCli][value=" + (existente ? "existente" : "novo") + "]").checked = true;
+    document.querySelector("input[name=wzCli][value=" + (clienteId ? "existente" : "novo") + "]").checked = true;
     trocarTipoCliente();
     if (clienteId) document.getElementById("albCliente").value = clienteId;
-    document.getElementById("wzErro").textContent = "";
+    passoAssistente(clienteId ? "F2" : "F1");
+    return;
   }
-  document.getElementById("secCriar").scrollIntoView({ behavior: "smooth" });
+  passoAssistente("P1");
 }
 
 function trocarTipoCliente() {
@@ -689,10 +751,30 @@ function trocarTipoCliente() {
   mostrar("wzCliExistente", !novo);
 }
 
+document.getElementById("btnNovo").addEventListener("click", function () { abrirCriar(null); });
 document.getElementById("criarAberto").addEventListener("click", function () { abrirCriar("aberto"); });
 document.getElementById("criarFechado").addEventListener("click", function () { abrirCriar("fechado"); });
-document.getElementById("wzVoltar").addEventListener("click", function () { abrirCriar(null); });
+document.getElementById("wzVoltar").addEventListener("click", function () { if (VOLTA[passoAtual]) passoAssistente(VOLTA[passoAtual]); });
+document.getElementById("wzCancelar").addEventListener("click", function () { mostrarTela("home"); });
 document.querySelectorAll("input[name=wzCli]").forEach(function (x) { x.addEventListener("change", trocarTipoCliente); });
+
+document.getElementById("wzF1ok").addEventListener("click", function () {
+  var novo = document.querySelector("input[name=wzCli]:checked").value === "novo";
+  if (novo) {
+    if (document.getElementById("cliNome").value.trim().length < 2) { alert("Digite o nome do cliente"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById("cliEmail").value.trim())) { alert("Digite um e-mail válido: é o login do cliente"); return; }
+    if (document.getElementById("cliSenha").value.length < 8) { alert("A senha precisa ter pelo menos 8 caracteres (use o botão Gerar)"); return; }
+  } else if (!document.getElementById("albCliente").value) { alert("Escolha o cliente"); return; }
+  passoAssistente("F2");
+});
+document.getElementById("wzF2ok").addEventListener("click", function () {
+  if (document.getElementById("albTitulo").value.trim().length < 2) { alert("Digite o nome do álbum"); return; }
+  passoAssistente("F3");
+});
+document.getElementById("wzA1ok").addEventListener("click", function () {
+  if (document.getElementById("ev_evTitulo").value.trim().length < 3) { alert("Dê um nome ao evento"); return; }
+  passoAssistente("A2");
+});
 
 document.getElementById("btnCriarFechado").addEventListener("click", async function () {
   var botao = this;
@@ -707,9 +789,13 @@ document.getElementById("btnCriarFechado").addEventListener("click", async funct
       var c = await api("/api/portal/clientes/novo", { nome: nome, email: email, senha: senha });
       if (!c.ok) { erro.textContent = c.dados.error || "Não foi possível criar o cliente."; return; }
       clienteId = c.dados.id;
+      await carregarClientes();
+      document.querySelector("input[name=wzCli][value=existente]").checked = true;
+      trocarTipoCliente();
+      document.getElementById("albCliente").value = clienteId;
     } else if (!clienteId) { erro.textContent = "Escolha o cliente"; return; }
     var a = await api("/api/portal/albuns/novo", { cliente_id: clienteId, tipo: document.getElementById("albTipo").value, titulo: document.getElementById("albTitulo").value });
-    if (!a.ok) { erro.textContent = a.dados.error || "Não foi possível criar o álbum."; if (novo) { await carregarClientes(); document.querySelector("input[name=wzCli][value=existente]").checked = true; trocarTipoCliente(); document.getElementById("albCliente").value = clienteId; } return; }
+    if (!a.ok) { erro.textContent = a.dados.error || "Não foi possível criar o álbum."; return; }
     await api("/api/portal/albuns/regras", {
       id: a.dados.id,
       prazo_dias: document.getElementById("wzPrazo").value,
@@ -721,15 +807,46 @@ document.getElementById("btnCriarFechado").addEventListener("click", async funct
     });
     if (novo) alert("Pronto! Envie para " + nome + ":\n\nLink: " + window.location.origin + "/p/" + dados.portal.slug + "\nE-mail: " + email + "\nSenha: " + senha + "\n\nAgora envie as fotos do álbum.");
     ["cliNome", "cliEmail", "cliSenha", "albTitulo", "wzLimite", "wzMaxDown"].forEach(function (id) { document.getElementById(id).value = ""; });
-    abrirCriar(null);
-    await carregarClientes();
+    document.querySelector("input[name=wzCli][value=novo]").checked = true;
+    trocarTipoCliente();
     await carregarAlbuns();
     carregarCobrancas();
     var criado = dados.albuns.find(function (x) { return x.id === a.dados.id; });
-    if (criado) abrirAlbum(criado);
+    if (criado) abrirAlbum(criado); else mostrarTela("home");
   } finally {
     botao.disabled = false;
   }
+});
+
+/* ---------- ações do cliente (aba Mais do álbum) ---------- */
+
+// Aba Mais: quem é o cliente e como ele está usando o álbum.
+function preencherCliente() {
+  var c = clienteDoAlbum();
+  document.getElementById("abCliente").textContent = c ? c.nome + " · " + c.email : (aberto ? aberto.cliente : "");
+  document.getElementById("abClienteNums").textContent = c ? "👁️ " + c.visitas + " acesso(s) · 🕒 " + (c.ultimo_acesso ? "último " + horaBr(c.ultimo_acesso) : "ainda não acessou") + " · ⬇️ " + c.downloads + " download(s) · ❤️ " + c.escolhidas + " escolhida(s)" : "";
+}
+
+function clienteDoAlbum() {
+  return aberto ? central.clientes.find(function (c) { return c.id === aberto.cliente_id; }) : null;
+}
+
+document.getElementById("abCopiarAcesso").addEventListener("click", function () {
+  var c = clienteDoAlbum();
+  if (!c) return;
+  navigator.clipboard.writeText("Olá, " + c.nome.split(" ")[0] + "! Suas fotos estão no portal " + dados.portal.nome + ":\n" +
+    window.location.origin + "/p/" + dados.portal.slug + "\nE-mail: " + c.email + "\n(a senha é a que eu te mandei)");
+  this.textContent = "Copiado!";
+});
+
+document.getElementById("abNovaSenha").addEventListener("click", async function () {
+  var c = clienteDoAlbum();
+  if (!c) return;
+  var nova = prompt("Nova senha para " + c.nome + " (mínimo 8 caracteres):", gerarSenha());
+  if (!nova) return;
+  var r2 = await api("/api/portal/clientes/senha", { cliente_id: c.id, senha: nova });
+  alert(r2.ok ? "Senha trocada. Envie a nova senha para o cliente: " + nova : (r2.dados.error || "Não foi possível."));
+  carregarCentral();
 });
 
 /* ---------- cobranças ---------- */
@@ -1106,13 +1223,15 @@ function preencherRegras(r) {
   document.getElementById("rgEditar").checked = r.pode_editar;
   document.getElementById("rgBaixar").checked = r.pode_baixar;
   document.getElementById("rgMaxDown").value = r.max_downloads || "";
-  document.getElementById("resumoRegras").textContent = textoRegras(r) ? "· " + textoRegras(r) : "· tudo liberado, sem prazo";
+  document.getElementById("resumoRegras").textContent = textoRegras(r) || "Tudo liberado, sem prazo";
 }
 
 function desenharEdicoes(lista) {
   var caixa = document.getElementById("listaEdicoes");
   caixa.innerHTML = "";
-  mostrar("caixaEdicoes", lista.length > 0);
+  if (!lista.length) caixa.appendChild(el("p", "text-sm text-slate-400", "Nenhum pedido de edição."));
+  var abertas = lista.filter(function (e) { return e.status === "aberto"; }).length;
+  document.getElementById("abaCliente").textContent = "❤️ Escolhas e edições" + (abertas ? " 🔴" : "");
   lista.forEach(function (e) {
     var l = el("div", "flex flex-wrap items-start justify-between gap-2 bg-slate-900/60 rounded-xl px-3 py-2 text-sm" + (e.status === "feito" ? " opacity-60" : ""));
     var t = el("div", "min-w-0");
@@ -1163,8 +1282,9 @@ async function abrirAlbum(a) {
   document.getElementById("abInfo").textContent = "Cliente: " + a.cliente;
   document.getElementById("grade").innerHTML = "";
   mostrar("caixaFavoritas", false);
-  mostrar("secAberto", true);
-  document.getElementById("secAberto").scrollIntoView({ behavior: "smooth" });
+  mostrarTela("album");
+  abaAlbum("fotos");
+  preencherCliente();
   await carregarPagina();
 }
 
@@ -1207,7 +1327,7 @@ document.getElementById("btnMais").addEventListener("click", function () {
 });
 
 document.getElementById("btnFechar").addEventListener("click", function () {
-  mostrar("secAberto", false);
+  mostrarTela("home");
   aberto = null;
   carregarAlbuns();
 });
@@ -1239,7 +1359,7 @@ document.getElementById("btnApagarAlbum").addEventListener("click", async functi
   }
   botao.disabled = false;
   botao.textContent = "Apagar álbum e todas as fotos";
-  mostrar("secAberto", false);
+  mostrarTela("home");
   aberto = null;
   carregarAlbuns();
   carregarClientes();
@@ -1329,11 +1449,10 @@ document.getElementById("arquivosEnviar").addEventListener("change", async funct
   carregarPagina();
 });
 
+var telaInicial = true;
 montarEventos();
-hubAba(new URLSearchParams(window.location.search).get("aba") === "abertos" ? "abertos" : "fechados");
-carregar().then(function () {
-  if (new URLSearchParams(window.location.search).get("aba") === "abertos") document.getElementById("secCentral").scrollIntoView();
-}).catch(function () {});
+if (new URLSearchParams(window.location.search).get("aba") === "abertos") filtroAtual = "aberto";
+carregar().catch(function () {});
 </script>
 <script src="/eventos-painel.js"></script>
 <script src="/assistente.js" defer></script>

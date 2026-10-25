@@ -243,7 +243,8 @@ export async function tratarEventosDono(request, env, url) {
     for (const f of Array.isArray(corpo.faixas) ? corpo.faixas.slice(0, 5) : []) {
       const qtd = parseInt(f.a_partir, 10);
       const valor = paraCentavos(f.preco);
-      if (!qtd && !String(f.preco || "").trim()) continue;
+      // Linha sem preço = desconto não usado (o formulário já vem com as quantidades 5 e 10 preenchidas).
+      if (!String(f.preco || "").trim()) continue;
       if (!qtd || qtd < 2 || qtd > 1000) return resp({ error: "Desconto: a quantidade precisa ser de 2 fotos ou mais" }, 400);
       if (valor === null || valor >= preco) return resp({ error: "Desconto: o preço com desconto precisa ser menor que o preço de 1 foto" }, 400);
       faixas.push({ a_partir: qtd, preco_centavos: valor });
