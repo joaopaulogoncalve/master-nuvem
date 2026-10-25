@@ -1,5 +1,3 @@
-var TEXTO_BOTAO = "Contratar Agora via PIX/Cartão";
-
 function calcularPreco(gb) {
   var valor;
   if (gb <= 1000) {
@@ -37,37 +35,47 @@ function atualizar() {
   });
 }
 
-async function processarPagamento() {
-  var btn = document.getElementById("checkoutBtn");
+// metodo "pix" = QR code na própria Master Nuvem (tela do painel); "cartao" = Checkout do Mercado Pago.
+async function processarPagamento(metodo) {
+  var btn = document.getElementById(metodo === "cartao" ? "cartaoBtn" : "checkoutBtn");
   var slider = document.getElementById("gbSlider");
   var gb = parseInt(slider.value, 10);
 
-  btn.textContent = "Conectando ao Mercado Pago...";
+  // Página inicial: o pagamento acontece no painel (lá tem a tela do PIX), passando pelo login se precisar.
+  if (!window.mostrarPix) {
+    window.location.href = "/painel?gb=" + gb + "&contratar=1";
+    return;
+  }
+
+  var textoAntes = btn.textContent;
+  btn.textContent = metodo === "cartao" ? "Conectando ao Mercado Pago..." : "Gerando o PIX...";
   btn.disabled = true;
 
   try {
     var resp = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gb: gb })
+      body: JSON.stringify({ gb: gb, metodo: metodo })
     });
     var data = await resp.json();
     if (resp.status === 401 && data.login) {
-      // Precisa de conta: depois do login volta para cá com o mesmo tamanho escolhido.
-      window.location.href = "/entrar?volta=" + encodeURIComponent("/?gb=" + gb + "#calculadora");
+      window.location.href = "/entrar?volta=" + encodeURIComponent("/painel?gb=" + gb + "&contratar=1");
       return;
     }
-    if (data.init_point) {
+    if (data.pix) {
+      window.mostrarPix(data.pix);
+    } else if (data.init_point) {
       window.location.href = data.init_point;
       return;
+    } else {
+      throw new Error(data.error || "Resposta sem pagamento");
     }
-    throw new Error(data.error || "Resposta sem link de pagamento");
   } catch (erro) {
-    console.error("Erro no Checkout:", erro);
-    alert("Não foi possível iniciar o pagamento. Tente novamente em instantes.");
-    btn.textContent = TEXTO_BOTAO;
-    btn.disabled = false;
+    console.error("Erro no pagamento:", erro);
+    alert(erro.message && erro.message.indexOf("PIX") > -1 ? erro.message : "Não foi possível iniciar o pagamento. Tente novamente em instantes.");
   }
+  btn.textContent = textoAntes;
+  btn.disabled = false;
 }
 
 function iniciar() {
@@ -87,7 +95,11 @@ function iniciar() {
     });
   });
   if (btn) {
-    btn.addEventListener("click", processarPagamento);
+    btn.addEventListener("click", function () { processarPagamento("pix"); });
+  }
+  var cartao = document.getElementById("cartaoBtn");
+  if (cartao) {
+    cartao.addEventListener("click", function () { processarPagamento("cartao"); });
   }
   atualizar();
 

@@ -222,5 +222,12 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
      nosniff, Referrer-Policy) nas páginas (`_headers`) e na API (`comProtecao`, + `Cache-Control: no-store`).
    - Conhecido, não corrigido: a URL de envio assinada não trava o tamanho (quem pede URL para 1 byte pode subir até 4,5 GB e
      não concluir; o objeto fica até a limpeza apagar o `pending` com 1 dia). Cupom de preço conta o uso ao clicar, não ao pagar.
+   **PIX dentro do site — 2026-10-25**: `/api/checkout` e `/api/cupom` aceitam `metodo: "pix"` → `criarPix` chama
+   `POST /v1/payments` do MP (`payment_method_id: pix`, validade 30 min, `X-Idempotency-Key = pedido-<id>`) e devolve o QR
+   (`qr_code` + `qr_code_base64`); o id do pagamento fica em `subscriptions.mp_payment_id` enquanto o pedido está `pending`.
+   `GET /api/pagamento/status?pedido=` (dono do pedido) consulta o MP se o webhook atrasar e usa `aplicarPagamento` (mesma conferência
+   de valor). Tela `#pixTela` no painel (QR, copia e cola, contagem, "Pagamento confirmado"). Cartão continua no Checkout Pro
+   ("Prefiro cartão de crédito"). O "Contratar" da página inicial leva a `/painel?gb=N&contratar=1`.
+   Teste real do PIX (Checkout Pro) feito em 2026-10-25: R$ 1,00 com o cupom PIX1REAL na conta jovensnovaliancaadmim@ → ativou sozinho em ~1 min.
 5. Pendências menores: Turnstile no login e cadastro; upload acima de 4,5 GB (multipart); preço duplicado em
    `app.js` e `worker.js`; responder e-mails como @masternuvem.com.br; WhatsApp.

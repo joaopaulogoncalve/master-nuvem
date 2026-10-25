@@ -142,7 +142,10 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
             <span class="text-xs text-slate-400">/mês</span>
           </div>
         </div>
-        <button type="button" id="checkoutBtn" class="cta w-full sm:w-auto font-bold px-8 py-3.5 rounded-xl transition active:scale-95">Pagar com PIX ou cartão</button>
+        <div class="flex flex-col items-stretch sm:items-end gap-2 w-full sm:w-auto">
+          <button type="button" id="checkoutBtn" class="cta font-bold px-8 py-3.5 rounded-xl transition active:scale-95">⚡ Pagar com PIX</button>
+          <button type="button" id="cartaoBtn" class="text-sm font-semibold text-slate-300 hover:text-white underline">Prefiro cartão de crédito</button>
+        </div>
       </div>
       <div class="flex flex-wrap items-center justify-end gap-2 mt-4">
         <span class="text-sm text-slate-400">Tem cupom?</span>
@@ -150,10 +153,47 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
         <button type="button" id="btnCupomCalc" class="font-semibold text-sm text-cyan-200 border border-cyan-400/50 px-4 py-2.5 rounded-xl hover:bg-cyan-500/10">Aplicar</button>
       </div>
       <p id="erroCupomCalc" class="text-sm text-red-400 text-right min-h-[1.25rem]"></p>
-      <p class="text-xs text-slate-500 mt-4">Pagamento seguro pelo Mercado Pago. O plano ativa sozinho assim que o pagamento é aprovado.</p>
+      <p class="text-xs text-slate-500 mt-4">PIX aqui mesmo, na Master Nuvem; cartão pela página segura do Mercado Pago. O plano ativa sozinho assim que o pagamento é aprovado.</p>
     </div>
   </div>
 </main>
+
+<!-- Tela do PIX (QR code gerado pelo Mercado Pago, mostrado aqui com a nossa marca) -->
+<div id="pixTela" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-sm overflow-y-auto" style="z-index:2147483600">
+  <div class="min-h-full flex items-center justify-center p-4">
+    <div class="glass rounded-3xl p-6 sm:p-8 w-full max-w-md text-center">
+      <div id="pixAguardando">
+        <img src="/marca/mascote.svg" alt="" class="h-14 mx-auto">
+        <p class="text-sm text-slate-400 mt-3">Master <span class="grad font-bold">Nuvem</span> · <span id="pixPlano"></span></p>
+        <h2 class="text-2xl font-extrabold mt-1">Pague <span id="pixValor"></span> com PIX</h2>
+        <p class="text-sm text-slate-400 mt-1">Abra o app do seu banco e escaneie o código:</p>
+        <div class="mt-4 inline-block bg-white rounded-2xl p-3"><img id="pixQr" alt="QR code do PIX" class="w-56 h-56"></div>
+        <p class="text-sm text-slate-300 mt-4">Ou use o <strong>PIX Copia e Cola</strong>:</p>
+        <div class="flex gap-2 mt-2">
+          <input id="pixCodigo" readonly class="campo text-xs font-mono" style="padding:10px">
+          <button type="button" id="pixCopiar" class="cta font-bold px-4 rounded-xl text-sm whitespace-nowrap">Copiar</button>
+        </div>
+        <p class="flex items-center justify-center gap-2 text-sm text-cyan-200 mt-5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-cyan-300 animate-pulse"></span> Aguardando o pagamento… esta tela muda sozinha.</p>
+        <p id="pixTempo" class="text-xs text-slate-500 mt-1"></p>
+        <p class="text-xs text-slate-500 mt-4">🔒 Pagamento processado com segurança pelo Mercado Pago. No app do banco, o recebedor aparece com o nome do titular da Master Nuvem.</p>
+        <button type="button" id="pixFechar" class="text-sm text-slate-400 hover:text-white mt-4">Cancelar e voltar</button>
+      </div>
+      <div id="pixPago" class="hidden">
+        <img src="/marca/mascote.svg" alt="" class="h-20 mx-auto">
+        <h2 class="text-2xl font-extrabold mt-3 text-emerald-300">Pagamento confirmado! 🎉</h2>
+        <p id="pixPagoTexto" class="text-slate-300 mt-2"></p>
+        <a href="/arquivos" class="cta inline-block font-bold px-6 py-3 rounded-xl mt-6">Enviar meus arquivos</a>
+        <button type="button" id="pixOk" class="block mx-auto text-sm text-slate-400 hover:text-white mt-4">Voltar ao painel</button>
+      </div>
+      <div id="pixExpirou" class="hidden">
+        <img src="/marca/mascote.svg" alt="" class="h-14 mx-auto">
+        <h2 class="text-xl font-bold mt-3">O código PIX expirou</h2>
+        <p class="text-slate-400 mt-2">Nenhum valor foi cobrado. Gere um novo código para pagar.</p>
+        <button type="button" id="pixDeNovo" class="cta font-bold px-6 py-3 rounded-xl mt-6">Gerar outro PIX</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 async function postar(rota, corpo) {
@@ -286,13 +326,97 @@ async function usarCupom(codigo, botao, idErro) {
   var erro = document.getElementById(idErro || "erroCupom");
   erro.textContent = "";
   botao.disabled = true;
-  var r = await postar("/api/cupom", { codigo: codigo });
+  var r = await postar("/api/cupom", { codigo: codigo, metodo: "pix" });
   botao.disabled = false;
   if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível ativar."; return; }
-  // Cupom de preço: vai direto para o pagamento no Mercado Pago.
+  // Cupom de preço: abre a tela do PIX com o valor do cupom.
+  if (r.dados.pix) { mostrarPix(r.dados.pix); return; }
   if (r.dados.init_point) { window.location.href = r.dados.init_point; return; }
   window.location.href = "/painel";
 }
+
+/* ---------- PIX dentro do site ---------- */
+
+var pixAtual = null;
+var pixRelogio = null;
+var pixConsulta = null;
+
+function pararPix() {
+  clearInterval(pixRelogio);
+  clearTimeout(pixConsulta);
+  pixRelogio = null;
+  pixConsulta = null;
+}
+
+function telaPix(qual) {
+  ["pixAguardando", "pixPago", "pixExpirou"].forEach(function (id) { mostrar(id, id === qual); });
+}
+
+window.mostrarPix = function (pix) {
+  pararPix();
+  pixAtual = pix;
+  document.getElementById("pixPlano").textContent = formatarEspaco(pix.gb) + " por 30 dias";
+  document.getElementById("pixValor").textContent = "R$ " + (pix.valor_centavos / 100).toFixed(2).replace(".", ",");
+  document.getElementById("pixCodigo").value = pix.qr_code;
+  var img = document.getElementById("pixQr");
+  if (pix.qr_code_base64) {
+    img.src = "data:image/png;base64," + pix.qr_code_base64;
+  } else if (typeof QRCode !== "undefined") {
+    // Sem imagem do Mercado Pago: desenha o QR aqui mesmo a partir do código.
+    var tmp = document.createElement("div");
+    new QRCode(tmp, { text: pix.qr_code, width: 224, height: 224 });
+    var c = tmp.querySelector("canvas");
+    if (c) img.src = c.toDataURL();
+  }
+  telaPix("pixAguardando");
+  mostrar("pixTela", true);
+  document.body.style.overflow = "hidden";
+
+  // Contagem regressiva até o código expirar.
+  var fim = pix.expira_em ? new Date(pix.expira_em).getTime() : Date.now() + (pix.minutos || 30) * 60000;
+  function relogio() {
+    var s = Math.max(0, Math.round((fim - Date.now()) / 1000));
+    document.getElementById("pixTempo").textContent = "O código vale por mais " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+    if (s === 0) { pararPix(); telaPix("pixExpirou"); }
+  }
+  relogio();
+  pixRelogio = setInterval(relogio, 1000);
+  consultarPix();
+};
+
+async function consultarPix() {
+  if (!pixAtual) return;
+  try {
+    var r = await fetch("/api/pagamento/status?pedido=" + pixAtual.pedido);
+    var d = await r.json();
+    if (d.situacao === "pago") {
+      pararPix();
+      document.getElementById("pixPagoTexto").textContent = "Seu plano de " + formatarEspaco(d.quota_gb) + " já está ativo. Pode começar a enviar seus arquivos.";
+      telaPix("pixPago");
+      return;
+    }
+    if (d.situacao === "expirado" || d.situacao === "cancelado") { pararPix(); telaPix("pixExpirou"); return; }
+  } catch (e) {}
+  if (pixRelogio) pixConsulta = setTimeout(consultarPix, 4000);
+}
+
+function fecharPix() {
+  pararPix();
+  pixAtual = null;
+  mostrar("pixTela", false);
+  document.body.style.overflow = "";
+}
+
+document.getElementById("pixCopiar").addEventListener("click", function () {
+  var campo = document.getElementById("pixCodigo");
+  var botao = this;
+  function feito() { botao.textContent = "Copiado!"; setTimeout(function () { botao.textContent = "Copiar"; }, 2500); }
+  if (navigator.clipboard) navigator.clipboard.writeText(campo.value).then(feito, function () { campo.select(); document.execCommand("copy"); feito(); });
+  else { campo.select(); document.execCommand("copy"); feito(); }
+});
+document.getElementById("pixFechar").addEventListener("click", fecharPix);
+document.getElementById("pixOk").addEventListener("click", function () { window.location.href = "/painel"; });
+document.getElementById("pixDeNovo").addEventListener("click", function () { fecharPix(); document.getElementById("checkoutBtn").click(); });
 document.getElementById("btnTesteGratis").addEventListener("click", function () { usarCupom("NUVEM1DIA", this); });
 document.getElementById("btnCupom").addEventListener("click", function () { usarCupom(document.getElementById("cupom").value, this); });
 // Cupom ao lado do botão de pagar: cupom de preço vai para o pagamento; cupom de teste ativa o teste.
@@ -306,7 +430,8 @@ var cupomUrl = parametros.get("cupom");
 
 fetch("/api/me").then(function (r) {
   if (!r.ok) {
-    window.location.href = "/entrar" + (cupomUrl ? "?volta=" + encodeURIComponent("/painel?cupom=" + cupomUrl) : "");
+    // Depois do login volta para cá com o mesmo pedido (cupom ou tamanho escolhido na página inicial).
+    window.location.href = "/entrar" + (window.location.search ? "?volta=" + encodeURIComponent("/painel" + window.location.search) : "");
     return null;
   }
   return r.json();
@@ -326,6 +451,8 @@ fetch("/api/me").then(function (r) {
     mostrar("blocoCupom", true);
     document.getElementById("cupom").value = cupomUrl.toUpperCase();
   }
+  // Veio do "Contratar" da página inicial: já abre a calculadora com o tamanho escolhido.
+  if (parametros.get("contratar") === "1") abrirCalculadora();
 });
 
 // Volta do Mercado Pago: o plano é ativado pelo aviso (webhook), que pode levar alguns segundos.

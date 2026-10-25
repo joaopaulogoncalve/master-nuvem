@@ -14,6 +14,7 @@ const MAX_ERROS_2FA_CONTA = 10;
 const MAX_CADASTROS_IP = 5;
 const MSG_MUITAS_TENTATIVAS = "Muitas tentativas. Espere 1 hora e tente de novo, ou use \"Esqueci minha senha\".";
 const DIAS_PLANO = 30;
+const MINUTOS_PIX = 30;   // tempo para pagar o QR code do PIX
 // Backblaze B2 (pague pelo uso): US$ 6,95 por TB a cada 30 dias, primeiros 10 GB grátis.
 // Conferir em backblaze.com/cloud-storage/pricing se o preço mudar.
 const B2_US_POR_TB = 6.95;
@@ -681,8 +682,56 @@ async function tratarAssistente(request, env, url) {
   return resposta({ error: "Rota não encontrada" }, 404);
 }
 
-// Cria o pedido "pending" (com o valor cobrado) e o link de pagamento no Mercado Pago.
-async function criarPagamento(env, url, u, gb, precoCentavos) {
+// Data no formato que o Mercado Pago pede, no horário de Brasília (ex.: 2026-10-25T12:30:00.000-03:00).
+function dataMp(minutosAFrente) {
+  const d = new Date(Date.now() + minutosAFrente * 60000 - 3 * 3600000);
+  return d.toISOString().slice(0, 23) + "-03:00";
+}
+
+// PIX dentro do site: cria o pagamento direto na API do Mercado Pago e devolve o QR code.
+// O id do pagamento fica guardado no pedido (ainda "pending") para a tela consultar se já caiu.
+async function criarPix(env, url, u, pedidoId, gb, precoCentavos, nome) {
+  const mp = await fetch("https://api.mercadopago.com/v1/payments", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + env.MP_ACCESS_TOKEN,
+      "Content-Type": "application/json",
+      "X-Idempotency-Key": "pedido-" + pedidoId
+    },
+    body: JSON.stringify({
+      transaction_amount: precoCentavos / 100,
+      description: "Master Nuvem - " + nome + " Armazenamento (30 dias)",
+      payment_method_id: "pix",
+      payer: { email: u.email },
+      external_reference: String(pedidoId),
+      notification_url: url.origin + "/api/mp/webhook",
+      date_of_expiration: dataMp(MINUTOS_PIX)
+    })
+  });
+  const dados = await mp.json();
+  const td = dados.point_of_interaction && dados.point_of_interaction.transaction_data;
+  if (!mp.ok || !dados.id || !td || !td.qr_code) {
+    console.error("Mercado Pago recusou o PIX:", mp.status, JSON.stringify(dados).slice(0, 500));
+    return resposta({ error: "Não foi possível gerar o PIX agora. Tente de novo ou pague com cartão." }, 502);
+  }
+  await env.DB.prepare("UPDATE subscriptions SET mp_payment_id = ? WHERE id = ? AND status = 'pending'")
+    .bind(String(dados.id), pedidoId).run();
+  return resposta({
+    pix: {
+      pedido: pedidoId,
+      gb: gb,
+      valor_centavos: precoCentavos,
+      qr_code: td.qr_code,
+      qr_code_base64: td.qr_code_base64 || null,
+      expira_em: dados.date_of_expiration || null,
+      minutos: MINUTOS_PIX
+    }
+  }, 200);
+}
+
+// Cria o pedido "pending" (com o valor cobrado) e o pagamento no Mercado Pago:
+// metodo "pix" = QR code na própria Master Nuvem; senão = link do Checkout do Mercado Pago (cartão, PIX, etc.).
+async function criarPagamento(env, url, u, gb, precoCentavos, metodo) {
   const nome = gb >= 1000 ? (gb / 1000).toFixed(2) + "TB" : gb + "GB";
 
   // Pedido fica "pending" até o webhook confirmar o pagamento; pedidos abandonados com mais de 2 dias são limpos.
@@ -695,6 +744,7 @@ async function criarPagamento(env, url, u, gb, precoCentavos) {
   const pedidoId = pedido.meta.last_row_id;
 
   try {
+    if (metodo === "pix") return await criarPix(env, url, u, pedidoId, gb, precoCentavos, nome);
     const mp = await fetch("https://api.mercadopago.com/checkout/preferences", {
       method: "POST",
       headers: {
@@ -1043,7 +1093,7 @@ async function tratarApi(request, env, url) {
       const gbCupom = Math.max(1, Math.round(cupom.quota_mb / 1000));
       await env.DB.prepare("UPDATE cupons SET usos = usos + 1 WHERE codigo = ?").bind(cupom.codigo).run();
       console.log("Cupom de preço", cupom.codigo, "usado pelo usuário", u.id);
-      return await criarPagamento(env, url, u, gbCupom, cupom.preco_centavos);
+      return await criarPagamento(env, url, u, gbCupom, cupom.preco_centavos, corpo.metodo);
     }
 
     if (await planoAtual(env, u.id)) return resposta({ error: "Você já tem um plano ativo. O cupom é para quem ainda não tem plano." }, 400);
@@ -1078,7 +1128,32 @@ async function tratarApi(request, env, url) {
       return resposta({ error: "Quantidade inválida" }, 400);
     }
 
-    return await criarPagamento(env, url, u, gb, Math.round(calcularPreco(gb) * 100));
+    return await criarPagamento(env, url, u, gb, Math.round(calcularPreco(gb) * 100), corpo.metodo);
+  }
+
+  // A tela do PIX pergunta a cada poucos segundos se o pagamento já caiu.
+  // Normalmente quem ativa é o aviso (webhook); se ele atrasar, consulta o pagamento direto no Mercado Pago.
+  if (caminho === "/api/pagamento/status" && request.method === "GET") {
+    const u = await usuarioLogado(request, env);
+    if (!u) return resposta({ error: "Não autenticado" }, 401);
+    const id = parseInt(url.searchParams.get("pedido"), 10) || 0;
+    let sub = await env.DB.prepare("SELECT id, status, quota_gb, paid_until, mp_payment_id FROM subscriptions WHERE id = ? AND user_id = ?").bind(id, u.id).first();
+    if (!sub) return resposta({ error: "Pedido não encontrado" }, 404);
+    let situacao = sub.status === "pending" ? "aguardando" : "pago";
+    if (sub.status === "pending" && /^\d+$/.test(String(sub.mp_payment_id || ""))) {
+      const mp = await fetch("https://api.mercadopago.com/v1/payments/" + sub.mp_payment_id, {
+        headers: { "Authorization": "Bearer " + env.MP_ACCESS_TOKEN }
+      });
+      if (mp.ok) {
+        const pg = await mp.json();
+        if (pg.status === "approved") await aplicarPagamento(env, pg);
+        else if (pg.status === "cancelled" || pg.status === "rejected") situacao = "expirado";
+        sub = await env.DB.prepare("SELECT id, status, quota_gb, paid_until FROM subscriptions WHERE id = ?").bind(sub.id).first();
+        if (sub.status !== "pending") situacao = "pago";
+      }
+    }
+    if (sub.status === "cancelled") situacao = "cancelado";
+    return resposta({ situacao: situacao, quota_gb: sub.quota_gb, paid_until: sub.paid_until }, 200);
   }
 
   if (caminho === "/api/mp/webhook") {
