@@ -148,6 +148,17 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
           <button type="button" id="cartaoBtn" class="text-sm font-semibold text-slate-300 hover:text-white underline">Prefiro cartão de crédito</button>
         </div>
       </div>
+      <!-- Já tem plano e escolheu um tamanho maior: renovar (+30 dias) ou aumentar agora (paga só os dias que faltam). -->
+      <div id="blocoAumento" class="hidden mt-5 grid sm:grid-cols-2 gap-3">
+        <label class="cursor-pointer bg-slate-900/50 rounded-2xl p-4 border-2 border-transparent has-[:checked]:border-cyan-400 flex gap-3">
+          <input type="radio" name="modoPag" value="" class="mt-1" checked>
+          <span><span class="font-bold block">🔁 Renovar</span><span id="txtRenovar" class="text-sm text-slate-400"></span></span>
+        </label>
+        <label class="cursor-pointer bg-slate-900/50 rounded-2xl p-4 border-2 border-transparent has-[:checked]:border-cyan-400 flex gap-3">
+          <input type="radio" name="modoPag" value="aumentar" class="mt-1">
+          <span><span class="font-bold block">⚡ Aumentar agora</span><span id="txtAumentar" class="text-sm text-slate-400"></span></span>
+        </label>
+      </div>
       <div class="flex flex-wrap items-center justify-end gap-2 mt-4">
         <span class="text-sm text-slate-400">Tem cupom?</span>
         <input id="cupomCalc" class="campo uppercase" style="max-width:190px;padding:9px 12px" maxlength="30" placeholder="Digite o cupom" autocomplete="off">
@@ -308,6 +319,7 @@ function mostrarPlano(plano) {
 function abrirCalculadora() {
   mostrar("blocoOpcoes", false);
   mostrar("blocoCalculadora", true);
+  setTimeout(conferirAumento, 50);
   document.getElementById("blocoCalculadora").scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
@@ -335,6 +347,34 @@ async function usarCupom(codigo, botao, idErro) {
   if (r.dados.init_point) { window.location.href = r.dados.init_point; return; }
   window.location.href = "/painel";
 }
+
+/* ---------- aumentar espaço no meio do plano ---------- */
+
+var esperaAumento = null;
+function reaisTxt(c) { return "R$ " + (c / 100).toFixed(2).replace(".", ","); }
+
+async function conferirAumento() {
+  var gb = parseInt(document.getElementById("gbSlider").value, 10);
+  var bloco = document.getElementById("blocoAumento");
+  window.modoPagamento = "";
+  if (!planoAtual || planoAtual.teste || gb <= planoAtual.quota_gb) { bloco.classList.add("hidden"); return; }
+  var r = await fetch("/api/plano/aumento?gb=" + gb);
+  var d = r.ok ? await r.json() : {};
+  if (!d.pode) { bloco.classList.add("hidden"); return; }
+  var ate = d.ate.slice(0, 10).split("-");
+  document.getElementById("txtRenovar").textContent = formatarEspaco(gb) + " por 30 dias, a partir de hoje: " + document.getElementById("priceDisplay").textContent.replace(/^/, "R$ ") + ".";
+  document.getElementById("txtAumentar").textContent = "Fica com " + formatarEspaco(gb) + " já, até " + ate[2] + "/" + ate[1] + " (o vencimento não muda). Paga só os " + d.dias + " dia(s) que faltam: " + reaisTxt(d.valor_centavos) + ".";
+  bloco.classList.remove("hidden");
+  window.modoPagamento = (document.querySelector("input[name=modoPag]:checked") || {}).value || "";
+}
+document.querySelectorAll("input[name=modoPag]").forEach(function (x) {
+  x.addEventListener("change", function () { window.modoPagamento = this.value; });
+});
+document.getElementById("gbSlider").addEventListener("input", function () {
+  clearTimeout(esperaAumento);
+  esperaAumento = setTimeout(conferirAumento, 350);
+});
+document.querySelectorAll("[data-gb]").forEach(function (b) { b.addEventListener("click", function () { setTimeout(conferirAumento, 50); }); });
 
 /* ---------- PIX dentro do site ---------- */
 

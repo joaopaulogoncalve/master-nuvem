@@ -6,13 +6,48 @@
 <meta name="robots" content="noindex">
 <title>Área do cliente</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Great+Vibes&family=Playfair+Display:wght@500;700&family=Poppins:wght@600;800&display=swap" rel="stylesheet">
 <style>
 /* Layouts escolhidos pelo fotógrafo: classico (padrão), escuro, minimalista, delicado. --marca = cor do estúdio. */
 :root{--marca:#be185d;--fundo:#f1f5f9;--texto:#0f172a;--suave:#64748b;--cartao:#fff;--borda:#e2e8f0;--raio:16px;--titulo:inherit;--topo:var(--marca);--topotexto:#fff}
 body.tema-escuro{--fundo:#0a0a0a;--texto:#e5e5e5;--suave:#a3a3a3;--cartao:#141414;--borda:#262626;--raio:10px;--topo:#0a0a0a;--topotexto:#fafafa}
 body.tema-minimalista{--fundo:#fff;--texto:#111;--suave:#737373;--cartao:#fff;--borda:#ececec;--raio:2px;--titulo:Georgia,"Times New Roman",serif;--topo:#fff;--topotexto:#111}
 body.tema-delicado{--fundo:#fdf6f0;--texto:#4a3b3b;--suave:#8c7b74;--cartao:#fff;--borda:#f1e4dc;--raio:22px;--titulo:Georgia,"Times New Roman",serif;--topo:linear-gradient(135deg,#f3d9d0,#ead7f3);--topotexto:#4a3b3b}
+/* Temáticos */
+body.tema-casamento{--fundo:#fbf8f3;--texto:#3b3226;--suave:#8a7d6b;--cartao:#fff;--borda:#eadfcc;--raio:4px;--titulo:"Playfair Display",Georgia,serif;--topo:#fffdf9;--topotexto:#3b3226;--ouro:#b08d57}
+body.tema-quinze{--fundo:#fff5f8;--texto:#4a2b3a;--suave:#9b7385;--cartao:#fff;--borda:#f3cfdb;--raio:20px;--titulo:"Playfair Display",Georgia,serif;--topo:linear-gradient(135deg,#f9d3df,#efc3e3 55%,#f6e3c3);--topotexto:#4a2b3a;--ouro:#c9a24f}
+body.tema-infantil{--fundo:#fffbea;--texto:#27364a;--suave:#64748b;--cartao:#fff;--borda:#ffe58a;--raio:26px;--titulo:"Baloo 2","Comic Sans MS",sans-serif;--topo:linear-gradient(90deg,#60a5fa,#a78bfa,#f472b6,#fbbf24);--topotexto:#fff}
+body.tema-festa{--fundo:#140d2b;--texto:#f5f3ff;--suave:#c4b5fd;--cartao:#1f1742;--borda:#3a2d6e;--raio:14px;--titulo:"Poppins",sans-serif;--topo:linear-gradient(120deg,#7c3aed,#db2777 60%,#f59e0b);--topotexto:#fff}
 body{background:var(--fundo);color:var(--texto)}
+body.tema-casamento .topo{border-bottom:1px solid var(--ouro)}
+body.tema-casamento #nomeEstudio{font-family:"Great Vibes",cursive;font-size:30px;font-weight:400;color:var(--ouro)}
+body.tema-casamento .titulo{letter-spacing:.02em}
+body.tema-casamento .btn{background:var(--ouro)}
+body.tema-casamento .btn2{border-color:var(--ouro);color:var(--ouro)}
+body.tema-casamento .cartao{box-shadow:0 1px 0 var(--borda)}
+body.tema-casamento .foto{border-radius:2px;outline:1px solid var(--borda);outline-offset:3px}
+body.tema-casamento .heroi .sobre{align-items:center;text-align:center}
+body.tema-casamento .heroi #heroiTitulo{font-family:"Great Vibes",cursive;font-weight:400;font-size:44px}
+body.tema-quinze #nomeEstudio{font-family:"Great Vibes",cursive;font-size:28px;font-weight:400}
+body.tema-quinze .btn{background:linear-gradient(90deg,#d9779a,#c9a24f)}
+body.tema-quinze .btn2{border-color:#d9779a;color:#b35b7c}
+body.tema-quinze .cartao{border-color:var(--borda);box-shadow:0 6px 20px #f3cfdb66}
+body.tema-quinze .foto{border:3px solid #fff;box-shadow:0 4px 14px #d9779a33}
+body.tema-quinze .heroi #heroiTitulo{font-family:"Great Vibes",cursive;font-weight:400;font-size:44px}
+body.tema-infantil .titulo,body.tema-infantil #nomeEstudio{font-weight:800}
+body.tema-infantil .btn{background:#f472b6;border-radius:999px}
+body.tema-infantil .btn2{border-color:#60a5fa;color:#2563eb;border-radius:999px}
+body.tema-infantil .cartao{border-width:2px}
+body.tema-infantil .foto{border:4px solid #60a5fa}
+body.tema-infantil .foto:nth-child(4n+2){border-color:#f472b6}
+body.tema-infantil .foto:nth-child(4n+3){border-color:#fbbf24}
+body.tema-infantil .foto:nth-child(4n+4){border-color:#34d399}
+body.tema-festa .btn{background:linear-gradient(90deg,#f59e0b,#db2777)}
+body.tema-festa .btn2{border-color:#a78bfa;color:#e9d5ff;background:transparent}
+body.tema-festa .cartao{box-shadow:0 0 24px #7c3aed33}
+body.tema-festa .foto{border-radius:12px;box-shadow:0 0 0 2px #7c3aed55}
+body.tema-festa .titulo{font-weight:800}
 .topo{background:var(--topo);color:var(--topotexto)}
 body.tema-escuro .topo,body.tema-minimalista .topo{border-bottom:1px solid var(--borda)}
 .titulo{font-family:var(--titulo)}
@@ -38,6 +73,8 @@ body.tema-escuro .foto{border-radius:4px}
 .heroi img{width:100%;height:280px;object-fit:cover;display:block}
 .heroi .sobre{position:absolute;inset:0;background:linear-gradient(transparent 35%,#000a);display:flex;flex-direction:column;justify-content:flex-end;padding:20px;color:#fff}
 body.tema-minimalista .heroi .sobre{align-items:center;text-align:center}
+.heroi #heroiTipo{margin-bottom:8px}
+.heroi #heroiTitulo{line-height:1.15}
 #tela{position:fixed;inset:0;background:#000e;display:none;flex-direction:column;z-index:50}
 #tela.aberta{display:flex}
 #tela img{max-width:100%;max-height:100%;object-fit:contain}
@@ -160,7 +197,7 @@ async function api(rota, corpo) {
 
 function aplicarMarca(p) {
   if (/^#[0-9a-fA-F]{6}$/.test(p.cor || "")) document.documentElement.style.setProperty("--marca", p.cor);
-  document.body.className = "font-sans antialiased min-h-screen tema-" + (["escuro", "minimalista", "delicado"].indexOf(p.tema) > -1 ? p.tema : "classico");
+  document.body.className = "font-sans antialiased min-h-screen tema-" + (["escuro", "minimalista", "delicado", "casamento", "quinze", "infantil", "festa"].indexOf(p.tema) > -1 ? p.tema : "classico");
   document.getElementById("nomeEstudio").textContent = p.nome;
   var ini = document.getElementById("iniciais");
   ini.textContent = p.nome.split(" ").filter(function (x) { return x.length > 2; }).slice(0, 2).map(function (x) { return x[0]; }).join("").toUpperCase() || p.nome[0];
@@ -175,7 +212,7 @@ function aplicarMarca(p) {
   var bio = document.getElementById("bio");
   bio.textContent = p.bio || "";
   bio.classList.toggle("hidden", !p.bio);
-  if (p.tema === "escuro" || p.tema === "delicado") ini.style.background = "var(--marca)", ini.style.color = "#fff";
+  if (["escuro", "delicado", "casamento", "quinze", "festa"].indexOf(p.tema) > -1) ini.style.background = "var(--marca)", ini.style.color = "#fff";
   document.title = p.nome + " - Área do cliente";
 }
 

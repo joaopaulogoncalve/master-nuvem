@@ -8,6 +8,7 @@
 <link rel="icon" type="image/png" href="/marca/icone-64.png">
 <link rel="apple-touch-icon" href="/marca/icone-180.png">
 <script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
 <style>
 body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
 .glass{background:linear-gradient(160deg,#0c1a3dcc,#07102acc);border:1px solid #1e40af88;box-shadow:0 0 50px #38bdf822;backdrop-filter:blur(10px)}
@@ -120,7 +121,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
           <label class="text-sm text-slate-300 block">Senha
             <div class="flex gap-2 mt-1"><input id="cliSenha" class="campo" maxlength="100" placeholder="mín. 8 caracteres" autocomplete="new-password"><button type="button" id="btnGerar" class="link whitespace-nowrap">Gerar</button></div>
           </label>
-          <label class="text-sm text-slate-300 block">🎨 Layout da área deste cliente<select id="cliTema" class="campo mt-1"><option value="">Igual ao do estúdio</option><option value="classico">Clássico</option><option value="escuro">Galeria escura</option><option value="minimalista">Minimalista</option><option value="delicado">Delicado</option></select></label>
+          <label class="text-sm text-slate-300 block">🎨 Layout da área deste cliente<select id="cliTema" class="campo mt-1"><option value="">Igual ao do estúdio</option><option value="classico">Clássico</option><option value="escuro">Galeria escura</option><option value="minimalista">Minimalista</option><option value="delicado">Delicado</option><option value="casamento">💍 Casamento</option><option value="quinze">👑 15 anos</option><option value="infantil">🎈 Infantil</option><option value="festa">🎉 Festa / aniversário</option></select></label>
         </div>
         <label id="wzCliExistente" class="hidden text-sm text-slate-300 block">Escolha o cliente<select id="albCliente" class="campo mt-1"></select></label>
         <button type="button" id="wzF1ok" class="cta w-full font-bold px-6 py-3 rounded-xl">Próximo →</button>
@@ -169,7 +170,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <div id="wzA2" class="wz hidden space-y-4">
         <h2 class="text-xl font-bold">Quanto custa cada foto?</h2>
         <div id="wzA2visual" class="space-y-3">
-          <label class="text-sm text-slate-300 block">🎨 Layout da página do evento<select id="evTema" class="campo mt-1"><option value="">Igual ao do estúdio</option><option value="classico">Clássico</option><option value="escuro">Galeria escura</option><option value="minimalista">Minimalista</option><option value="delicado">Delicado</option></select></label>
+          <label class="text-sm text-slate-300 block">🎨 Layout da página do evento<select id="evTema" class="campo mt-1"><option value="">Igual ao do estúdio</option><option value="classico">Clássico</option><option value="escuro">Galeria escura</option><option value="minimalista">Minimalista</option><option value="delicado">Delicado</option><option value="casamento">💍 Casamento</option><option value="quinze">👑 15 anos</option><option value="infantil">🎈 Infantil</option><option value="festa">🎉 Festa / aniversário</option></select></label>
           <label class="text-sm text-slate-300 block">Foto de capa (opcional: sem ela, usamos a primeira foto)<input id="evCapa" type="file" accept="image/jpeg,image/png,image/webp" class="campo mt-1 text-sm"></label>
         </div>
         <div id="wzA2campos" class="space-y-4"></div>
@@ -213,6 +214,26 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         <input type="radio" name="tema" value="delicado" class="hidden">
         <span class="block rounded-xl overflow-hidden" style="background:#fdf6f0"><span class="block h-8" style="background:linear-gradient(135deg,#f3d9d0,#e9d5f5)"></span><span class="grid grid-cols-3 gap-1 p-2"><i class="block aspect-square rounded-lg bg-rose-200"></i><i class="block aspect-square rounded-lg bg-rose-200"></i><i class="block aspect-square rounded-lg bg-rose-200"></i></span></span>
         <span class="block text-sm font-semibold mt-2">Delicado</span><span class="block text-xs text-slate-400">Tons suaves e capa com foto</span>
+      </label>
+      <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
+        <input type="radio" name="tema" value="casamento" class="hidden">
+        <span class="block rounded-xl overflow-hidden" style="background:#fbf8f3"><span class="block h-6 text-center" style="font:22px 'Great Vibes',cursive;color:#b08d57;border-bottom:1px solid #b08d57;line-height:24px">Ana &amp; João</span><span class="grid grid-cols-3 gap-1 p-2"><i class="block aspect-square bg-stone-300"></i><i class="block aspect-square bg-stone-300"></i><i class="block aspect-square bg-stone-300"></i></span></span>
+        <span class="block text-sm font-semibold mt-2">💍 Casamento</span><span class="block text-xs text-slate-400">Marfim e dourado, letra de convite</span>
+      </label>
+      <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
+        <input type="radio" name="tema" value="quinze" class="hidden">
+        <span class="block rounded-xl overflow-hidden" style="background:#fff5f8"><span class="block h-6" style="background:linear-gradient(135deg,#f9d3df,#efc3e3,#f6e3c3)"></span><span class="grid grid-cols-3 gap-1 p-2"><i class="block aspect-square rounded-lg bg-pink-200 border-2 border-white"></i><i class="block aspect-square rounded-lg bg-pink-200 border-2 border-white"></i><i class="block aspect-square rounded-lg bg-pink-200 border-2 border-white"></i></span></span>
+        <span class="block text-sm font-semibold mt-2">👑 15 anos</span><span class="block text-xs text-slate-400">Rosé com dourado</span>
+      </label>
+      <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
+        <input type="radio" name="tema" value="infantil" class="hidden">
+        <span class="block rounded-xl overflow-hidden" style="background:#fffbea"><span class="block h-6" style="background:linear-gradient(90deg,#60a5fa,#a78bfa,#f472b6,#fbbf24)"></span><span class="grid grid-cols-3 gap-1 p-2"><i class="block aspect-square rounded-xl border-4 border-blue-400"></i><i class="block aspect-square rounded-xl border-4 border-pink-400"></i><i class="block aspect-square rounded-xl border-4 border-yellow-400"></i></span></span>
+        <span class="block text-sm font-semibold mt-2">🎈 Infantil</span><span class="block text-xs text-slate-400">Colorido e alegre</span>
+      </label>
+      <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
+        <input type="radio" name="tema" value="festa" class="hidden">
+        <span class="block rounded-xl overflow-hidden" style="background:#140d2b"><span class="block h-6" style="background:linear-gradient(120deg,#7c3aed,#db2777,#f59e0b)"></span><span class="grid grid-cols-3 gap-1 p-2"><i class="block aspect-square rounded bg-violet-800"></i><i class="block aspect-square rounded bg-violet-800"></i><i class="block aspect-square rounded bg-violet-800"></i></span></span>
+        <span class="block text-sm font-semibold mt-2">🎉 Festa / aniversário</span><span class="block text-xs text-slate-400">Noite, roxo e dourado</span>
       </label>
     </div>
     <p id="cfgErro" class="text-sm text-red-400 mt-3 min-h-[1.25rem]"></p>
@@ -420,7 +441,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
     </div>
 
     <div id="paneVisual" class="pane hidden glass rounded-3xl p-5 space-y-4 text-sm text-slate-300">
-      <label class="block">🎨 Layout da área deste cliente (vale para todos os álbuns dele)<select id="vsTema" class="campo mt-1" style="max-width:320px"><option value="">Igual ao do estúdio</option><option value="classico">Clássico</option><option value="escuro">Galeria escura</option><option value="minimalista">Minimalista</option><option value="delicado">Delicado</option></select></label>
+      <label class="block">🎨 Layout da área deste cliente (vale para todos os álbuns dele)<select id="vsTema" class="campo mt-1" style="max-width:320px"><option value="">Igual ao do estúdio</option><option value="classico">Clássico</option><option value="escuro">Galeria escura</option><option value="minimalista">Minimalista</option><option value="delicado">Delicado</option><option value="casamento">💍 Casamento</option><option value="quinze">👑 15 anos</option><option value="infantil">🎈 Infantil</option><option value="festa">🎉 Festa / aniversário</option></select></label>
       <label class="block">💬 Recado para o cliente neste álbum<textarea id="vsDescricao" class="campo mt-1 h-20" maxlength="600"></textarea></label>
       <div>
         <p>🖼️ Foto de capa</p>
@@ -848,9 +869,32 @@ function cartao(icone, titulo, sub, sinal, linha, aoClicar, aoRemover) {
 }
 
 // Remoção com duas confirmações. O item vai para a lixeira: some para o cliente na hora e pode ser desfeito por 30 min.
+// Confirmação dentro da página (o Firefox bloqueia as janelas confirm() depois de algumas seguidas e responde "não" sozinho).
+function confirmar(titulo, texto, botaoSim) {
+  return new Promise(function (ok) {
+    var fundo = el("div", "fixed inset-0 bg-slate-950/80 flex items-center justify-center p-4");
+    fundo.style.zIndex = "2147483600";
+    var caixa = el("div", "glass rounded-3xl p-6 max-w-md w-full space-y-4");
+    caixa.appendChild(el("p", "text-lg font-bold", titulo));
+    caixa.appendChild(el("p", "text-sm text-slate-300 whitespace-pre-line", texto));
+    var botoes = el("div", "flex gap-3 justify-end");
+    var nao = el("button", "px-5 py-2.5 rounded-xl border border-slate-600 font-semibold", "Não");
+    var sim = el("button", "px-5 py-2.5 rounded-xl font-bold text-white", botaoSim || "Sim");
+    sim.style.background = "#dc2626";
+    [nao, sim].forEach(function (b) { b.type = "button"; botoes.appendChild(b); });
+    caixa.appendChild(botoes);
+    fundo.appendChild(caixa);
+    document.body.appendChild(fundo);
+    function fim(r) { fundo.remove(); ok(r); }
+    nao.addEventListener("click", function () { fim(false); });
+    sim.addEventListener("click", function () { fim(true); });
+    fundo.addEventListener("click", function (e) { if (e.target === fundo) fim(false); });
+  });
+}
+
 async function paraLixeira(rota, corpo, nome, aviso) {
-  if (!confirm("Remover " + nome + "?\n" + aviso)) return;
-  if (!confirm("Tem certeza?\n\nVocê terá 30 minutos para desfazer em \"Removidos recentemente\". Depois disso, as fotos são apagadas para sempre.")) return;
+  if (!(await confirmar("Remover " + nome + "?", aviso, "Sim, remover"))) return;
+  if (!(await confirmar("Tem certeza?", "Você terá 30 minutos para desfazer em \"Removidos recentemente\". Depois disso, as fotos são apagadas para sempre.", "Tenho certeza"))) return;
   var r = await api(rota, corpo);
   if (!r.ok) { alert(r.dados.error || "Não foi possível remover."); return; }
   mostrarTela("home");
@@ -1089,7 +1133,7 @@ function preencherCliente() {
   mostrarCapa(aberto && aberto.capa_url);
 }
 
-var NOMES_TEMA = { classico: "Clássico", escuro: "Galeria escura", minimalista: "Minimalista", delicado: "Delicado" };
+var NOMES_TEMA = { classico: "Clássico", escuro: "Galeria escura", minimalista: "Minimalista", delicado: "Delicado", casamento: "Casamento", quinze: "15 anos", infantil: "Infantil", festa: "Festa / aniversário" };
 
 // Aba Visual do álbum: layout do cliente, recado e foto de capa.
 var capaNova;   // undefined = não mexeu; null = voltar para a 1ª foto; Blob = capa nova escolhida

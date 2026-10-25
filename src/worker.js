@@ -289,7 +289,7 @@ async function aplicarPagamento(env, pg) {
   if (!subId) return "sem referência";
 
   const sub = await env.DB.prepare(
-    "SELECT id, user_id, quota_gb, status, mp_payment_id, valor_centavos FROM subscriptions WHERE id = ?"
+    "SELECT id, user_id, quota_gb, status, mp_payment_id, valor_centavos, aumento_ate FROM subscriptions WHERE id = ?"
   ).bind(subId).first();
   if (!sub) return "pedido não encontrado";
 
@@ -305,13 +305,20 @@ async function aplicarPagamento(env, pg) {
       return "valor não confere";
     }
 
-    // Renovação do mesmo tamanho soma os dias que faltam; troca de tamanho começa hoje.
-    const anterior = await planoAtual(env, sub.user_id);
-    const inicio = anterior && anterior.quota_gb === sub.quota_gb ? anterior.paid_until : null;
-
-    const r = await env.DB.prepare(
-      "UPDATE subscriptions SET status = 'active', mp_payment_id = ?, paid_until = datetime(COALESCE(?, datetime('now')), ?) WHERE id = ? AND status = 'pending'"
-    ).bind(idPg, inicio, "+" + DIAS_PLANO + " days", sub.id).run();
+    let r;
+    if (sub.aumento_ate) {
+      // Aumento de espaço no meio do plano: mantém o vencimento que o cliente já tinha (se já venceu, vale 30 dias).
+      r = await env.DB.prepare(
+        "UPDATE subscriptions SET status = 'active', mp_payment_id = ?, paid_until = CASE WHEN ? > datetime('now') THEN ? ELSE datetime('now', ?) END WHERE id = ? AND status = 'pending'"
+      ).bind(idPg, sub.aumento_ate, sub.aumento_ate, "+" + DIAS_PLANO + " days", sub.id).run();
+    } else {
+      // Renovação do mesmo tamanho soma os dias que faltam; troca de tamanho começa hoje.
+      const anterior = await planoAtual(env, sub.user_id);
+      const inicio = anterior && anterior.quota_gb === sub.quota_gb ? anterior.paid_until : null;
+      r = await env.DB.prepare(
+        "UPDATE subscriptions SET status = 'active', mp_payment_id = ?, paid_until = datetime(COALESCE(?, datetime('now')), ?) WHERE id = ? AND status = 'pending'"
+      ).bind(idPg, inicio, "+" + DIAS_PLANO + " days", sub.id).run();
+    }
     if (!r.meta.changes) return "já processado";
 
     await env.DB.prepare(
@@ -738,7 +745,15 @@ async function criarPix(env, url, u, pedidoId, gb, precoCentavos, nome) {
 
 // Cria o pedido "pending" (com o valor cobrado) e o pagamento no Mercado Pago:
 // metodo "pix" = QR code na própria Master Nuvem; senão = link do Checkout do Mercado Pago (cartão, PIX, etc.).
-async function criarPagamento(env, url, u, gb, precoCentavos, metodo) {
+// Aumentar espaço no meio do plano: paga a diferença de preço só pelos dias que faltam (mínimo R$ 2,00).
+const MINIMO_AUMENTO_CENTAVOS = 200;
+function precoAumento(gbAtual, gbNovo, paidUntil) {
+  const dias = Math.max(0, (new Date(String(paidUntil).replace(" ", "T") + "Z").getTime() - Date.now()) / 86400000);
+  const centavos = Math.round((calcularPreco(gbNovo) - calcularPreco(gbAtual)) * dias / 30 * 100);
+  return { centavos: Math.max(MINIMO_AUMENTO_CENTAVOS, centavos), dias: Math.ceil(dias) };
+}
+
+async function criarPagamento(env, url, u, gb, precoCentavos, metodo, aumentoAte) {
   const nome = gb >= 1000 ? (gb / 1000).toFixed(2) + "TB" : gb + "GB";
 
   // Pedido fica "pending" até o webhook confirmar o pagamento; pedidos abandonados com mais de 2 dias são limpos.
@@ -746,8 +761,8 @@ async function criarPagamento(env, url, u, gb, precoCentavos, metodo) {
     "DELETE FROM subscriptions WHERE user_id = ? AND status = 'pending' AND created_at < datetime('now', '-2 days')"
   ).bind(u.id).run();
   const pedido = await env.DB.prepare(
-    "INSERT INTO subscriptions (user_id, quota_gb, status, valor_centavos) VALUES (?, ?, 'pending', ?)"
-  ).bind(u.id, gb, precoCentavos).run();
+    "INSERT INTO subscriptions (user_id, quota_gb, status, valor_centavos, aumento_ate) VALUES (?, ?, 'pending', ?, ?)"
+  ).bind(u.id, gb, precoCentavos, aumentoAte || null).run();
   const pedidoId = pedido.meta.last_row_id;
 
   try {
@@ -1135,7 +1150,27 @@ async function tratarApi(request, env, url) {
       return resposta({ error: "Quantidade inválida" }, 400);
     }
 
+    if (corpo.modo === "aumentar") {
+      // Só para quem tem plano pago ativo e quer um tamanho maior.
+      const plano = await planoAtual(env, u.id);
+      if (!plano || String(plano.mp_payment_id || "").indexOf("cupom:") === 0) return resposta({ error: "Para aumentar, é preciso ter um plano pago ativo. Contrate um plano normal." }, 400);
+      if (gb <= plano.quota_gb) return resposta({ error: "Escolha um tamanho maior que o seu plano atual (" + plano.quota_gb + " GB)" }, 400);
+      const p = precoAumento(plano.quota_gb, gb, plano.paid_until);
+      return await criarPagamento(env, url, u, gb, p.centavos, corpo.metodo, plano.paid_until);
+    }
+
     return await criarPagamento(env, url, u, gb, Math.round(calcularPreco(gb) * 100), corpo.metodo);
+  }
+
+  // Quanto custa aumentar para gb (só os dias que faltam). A tela mostra antes de pagar.
+  if (caminho === "/api/plano/aumento" && request.method === "GET") {
+    const u = await usuarioLogado(request, env);
+    if (!u) return resposta({ error: "Não autenticado" }, 401);
+    const plano = await planoAtual(env, u.id);
+    const gb = parseInt(url.searchParams.get("gb"), 10) || 0;
+    if (!plano || String(plano.mp_payment_id || "").indexOf("cupom:") === 0 || gb <= plano.quota_gb || gb > 5000) return resposta({ pode: false }, 200);
+    const p = precoAumento(plano.quota_gb, gb, plano.paid_until);
+    return resposta({ pode: true, valor_centavos: p.centavos, dias: p.dias, ate: plano.paid_until, atual_gb: plano.quota_gb }, 200);
   }
 
   // A tela do PIX pergunta a cada poucos segundos se o pagamento já caiu.

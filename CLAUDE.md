@@ -149,7 +149,7 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
 
 1. **Trocar `MP_ACCESS_TOKEN` pelo definitivo** (`scripts\segredo.ps1 -Nome MP_ACCESS_TOKEN`) e testar compra real de R$ 9,90 no PIX:
    pagar → plano ativo sozinho → enviar arquivo → baixar → apagar. Último passo para vender.
-2. João: conversar com o contador sobre o CNAE do MEI (hoje nenhuma atividade é de serviço de internet/armazenamento).
+2. ~~Contador/CNAE~~ Resolvido (2026-10-25): o João tem CNAE de e-commerce e o contador confirmou que o serviço se enquadra. Não tocar mais nesse assunto.
 3. **Depois dos primeiros clientes pagantes:** ligar o apagamento de verdade (`APAGAR_ARQUIVOS = "sim"` como variável do Worker),
    só depois de ver um ciclo completo de avisos (vence → venceu → último aviso) funcionando em modo teste.
 4. **Depois: Portal do Cliente** (fotógrafos, gráficas, contadores). Ideia do João: cada assinante tem um espaço com a cara dele
@@ -271,6 +271,9 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
      (CPF 11 / CNPJ 14 números; quem emite é o fotógrafo, a Master Nuvem não gera nota). `portais.link_pagamento` = botão "Pagar"
      no pedido. O assistente de evento pede o PIX quando falta. Rodapé "Portal criado com Master Nuvem" no portal do cliente.
      **Cuidado ao editar com PowerShell:** `funcao 'a' + "x" + 'b'` vira 3 argumentos — sempre usar parênteses `funcao ('a' + "x")`.
+   - **PENDENTE DE PUBLICAR (aprovado pelo João em 2026-10-25):** 4 layouts temáticos `casamento`, `quinze`, `infantil`, `festa`
+     (CSS em `portal-cliente.html` e `evento.html`, fontes Google, opções em `meu-portal.html`, `TEMAS` em `portal.js`) + capa do
+     evento sempre visível (`body.com-capa`). Não precisa de migração: é só `npx wrangler deploy` e commit no PR #1.
    - **Lixeira (`migrations/0017_lixeira.sql`, `src/lixeira.js`):** remover álbum, cliente (com todos os álbuns) ou evento pede 2
      confirmações e só marca `removido_em` → some na hora para o cliente/comprador. 30 min para "Desfazer" (`/api/portal/restaurar`,
      `/api/eventos/restaurar`). `purgarLixeira` roda no Cron de 20 min depois da sentinela e apaga de verdade (até 25 arquivos por

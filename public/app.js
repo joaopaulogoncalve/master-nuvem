@@ -55,7 +55,7 @@ async function processarPagamento(metodo) {
     var resp = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gb: gb, metodo: metodo })
+      body: JSON.stringify({ gb: gb, metodo: metodo, modo: window.modoPagamento || "" })
     });
     var data = await resp.json();
     if (resp.status === 401 && data.login) {

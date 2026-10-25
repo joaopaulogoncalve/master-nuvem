@@ -11,6 +11,42 @@ export const PALAVRAS_EM_ALTA = [
 
 export const POSTS = [
   {
+    slug: "aumentar-espaco-so-pelos-dias",
+    titulo: "Precisa de mais espaço só por uns dias? Aumente e pague só os dias que faltam",
+    descricao: "Na Master Nuvem você aumenta o espaço na hora, paga proporcional aos dias do seu plano e, no mês seguinte, volta para o tamanho que quiser. Sem fidelidade.",
+    palavras: "aumentar espaço, mais espaço na nuvem, armazenamento flexível, plano sem fidelidade, pagar proporcional, upgrade de plano",
+    categoria: "Dicas",
+    publicar: "2026-10-25",
+    leitura: 3,
+    corpo: `
+Fechou um casamento grande, uma formatura ou um ensaio com muitos vídeos e o espaço ficou apertado? Você não precisa trocar de plano nem pagar um mês inteiro por isso.
+
+## Como funciona
+
+1. No [Painel](/painel), clique em **Renovar ou aumentar**.
+2. Arraste a barrinha até o tamanho que você precisa.
+3. Escolha **⚡ Aumentar agora**.
+4. Pague no PIX: o espaço aumenta **na hora**.
+
+O **vencimento não muda**. Você paga só a **diferença de preço pelos dias que faltam** do seu plano (mínimo de R$ 2,00).
+
+## Exemplo
+
+Você tem **100 GB** e faltam **15 dias** para vencer. Precisa de **500 GB** para entregar um evento:
+
+- 100 GB custam R$ 10,40 por mês; 500 GB custam R$ 32,00 por mês.
+- A diferença é R$ 21,60 por mês. Por 15 dias, fica **R$ 10,80**.
+
+## E depois?
+
+Quando o plano vencer, você renova **no tamanho que quiser**: continua com 500 GB ou volta para 100 GB. Sem multa e sem fidelidade.
+
+> Prefere só adiantar a mensalidade? Escolha **🔁 Renovar**: renovando o mesmo tamanho, os dias são somados ao seu plano.
+
+Ainda não tem conta? Teste grátis por 24 horas no [Painel](/painel?cupom=NUVEM1DIA).
+`
+  },
+  {
     slug: "como-funciona-a-master-nuvem",
     titulo: "Como funciona a Master Nuvem, de ponta a ponta",
     descricao: "Do cadastro ao primeiro arquivo: como escolher o espaço, pagar no PIX, enviar, baixar e o que acontece quando o plano vence.",

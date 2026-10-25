@@ -4,7 +4,7 @@
 // O dinheiro vai direto para o fotógrafo: a Master Nuvem não cobra comissão nem passa o dinheiro pela conta dela.
 import { urlArquivo, removerObjeto } from "./arquivos.js";
 import { chaveIp, dentroDoLimite } from "./limite.js";
-import { urlDoArquivo } from "./portal.js";
+import { urlDoArquivo, TEMAS } from "./portal.js";
 
 const enc = new TextEncoder();
 const POR_PAGINA_DONO = 60;
@@ -256,7 +256,7 @@ export async function tratarEventosDono(request, env, url) {
     const id = parseInt(corpo.id, 10) || 0;
     const valores = [titulo, slug, data || null, texto(corpo.local, 100) || null, tipo, preco, JSON.stringify(faixas),
       texto(corpo.marca_texto, 40) || null, corpo.publicado === false ? 0 : 1,
-      ["classico", "escuro", "minimalista", "delicado"].indexOf(corpo.tema) > -1 ? corpo.tema : null,
+      TEMAS.indexOf(corpo.tema) > -1 ? corpo.tema : null,
       String(corpo.descricao || "").replace(/[\u0000-\u0009\u000b-\u001f]/g, " ").trim().slice(0, 600) || null];
     try {
       if (id) {

@@ -14,7 +14,8 @@ const MAX_APAGAR_POR_VEZ = 40;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SLUG_OK = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
 const COR_OK = /^#[0-9a-fA-F]{6}$/;
-const TEMAS = ["classico", "escuro", "minimalista", "delicado"];
+// Layouts: 4 gerais + 4 temáticos (casamento, 15 anos, infantil, festa/aniversário).
+export const TEMAS = ["classico", "escuro", "minimalista", "delicado", "casamento", "quinze", "infantil", "festa"];
 const IMAGEM = /\.(jpe?g|png|webp|gif|avif|jfif)$/i;
 const VIDEO = /\.(mp4|mov|m4v|webm|avi|mkv)$/i;
 // Como o fotógrafo cobra cada serviço da tabela de preços.
