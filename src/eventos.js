@@ -306,6 +306,14 @@ export async function tratarEventosDono(request, env, url) {
     return resp({ ok: true }, 200);
   }
 
+  // Lixeira: o link sai do ar na hora; 30 minutos para desfazer; depois o robô apaga (ver lixeira.js).
+  if (caminho === "/api/eventos/lixeira" || caminho === "/api/eventos/restaurar") {
+    const ev = await eventoDoDono(corpo.id);
+    if (!ev) return resp({ error: "Evento não encontrado" }, 404);
+    await env.DB.prepare("UPDATE eventos SET removido_em = " + (caminho === "/api/eventos/lixeira" ? "datetime('now')" : "NULL") + " WHERE id = ?").bind(ev.id).run();
+    return resp({ ok: true }, 200);
+  }
+
   if (caminho === "/api/eventos/remover") {
     const ev = await eventoDoDono(corpo.id);
     if (!ev) return resp({ error: "Evento não encontrado" }, 404);
@@ -356,15 +364,15 @@ export async function tratarEventosDono(request, env, url) {
 
 async function eventoPublico(env, slug) {
   return await env.DB.prepare(
-    "SELECT e.*, p.nome AS estudio, p.cor, p.instrucoes_pagamento, p.user_id FROM eventos e JOIN portais p ON p.id = e.portal_id WHERE e.slug = ? AND e.publicado = 1"
+    "SELECT e.*, p.nome AS estudio, p.cor, p.tema, p.instrucoes_pagamento, p.user_id FROM eventos e JOIN portais p ON p.id = e.portal_id WHERE e.slug = ? AND e.publicado = 1 AND e.removido_em IS NULL"
   ).bind(String(slug || "").toLowerCase()).first();
 }
 
 async function pedidoPorToken(env, token) {
   if (!/^[0-9a-f]{48}$/.test(String(token || ""))) return null;
   return await env.DB.prepare(
-    "SELECT p.*, e.slug, e.titulo, e.portal_id, pt.nome AS estudio, pt.cor, pt.instrucoes_pagamento FROM evento_pedidos p " +
-    "JOIN eventos e ON e.id = p.evento_id JOIN portais pt ON pt.id = e.portal_id WHERE p.token = ?"
+    "SELECT p.*, e.slug, e.titulo, e.portal_id, pt.nome AS estudio, pt.cor, pt.tema, pt.instrucoes_pagamento FROM evento_pedidos p " +
+    "JOIN eventos e ON e.id = p.evento_id JOIN portais pt ON pt.id = e.portal_id WHERE p.token = ? AND e.removido_em IS NULL"
   ).bind(token).first();
 }
 
@@ -381,6 +389,7 @@ export async function tratarEventoPublico(request, env, url) {
     delete t.id;
     t.estudio = ev.estudio;
     t.cor = ev.cor;
+    t.tema = ev.tema || "classico";
     t.total_fotos = n.n;
     return resp(t, 200);
   }
@@ -418,7 +427,7 @@ export async function tratarEventoPublico(request, env, url) {
       for (const f of r.results) fotos.push({ id: f.id, previa: await urlArquivo(env, f.object_key, f.name, false, 3600) });
     }
     return resp({
-      evento: { slug: p.slug, titulo: p.titulo, estudio: p.estudio, cor: p.cor },
+      evento: { slug: p.slug, titulo: p.titulo, estudio: p.estudio, cor: p.cor, tema: p.tema || "classico" },
       pedido: { nome: p.nome, qtd: p.qtd, valor_centavos: p.valor_centavos, status: p.status, pago_em: p.pago_em, criado: p.created_at },
       instrucoes_pagamento: p.status === "pendente" ? p.instrucoes_pagamento : null,
       fotos: fotos

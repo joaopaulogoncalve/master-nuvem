@@ -199,7 +199,7 @@ export async function tratarArquivos(request, env, url) {
     let albumId = null;
     if (corpo.album_id !== undefined && corpo.album_id !== null) {
       const album = await env.DB.prepare(
-        "SELECT a.id FROM albuns a JOIN portais p ON p.id = a.portal_id WHERE a.id = ? AND p.user_id = ?"
+        "SELECT a.id FROM albuns a JOIN portais p ON p.id = a.portal_id WHERE a.id = ? AND p.user_id = ? AND a.removido_em IS NULL"
       ).bind(parseInt(corpo.album_id, 10) || 0, u.id).first();
       if (!album) return resp({ error: "Álbum não encontrado" }, 404);
       albumId = album.id;
@@ -208,7 +208,7 @@ export async function tratarArquivos(request, env, url) {
     let eventoId = null;
     if (corpo.evento_id !== undefined && corpo.evento_id !== null) {
       const ev = await env.DB.prepare(
-        "SELECT e.id FROM eventos e JOIN portais p ON p.id = e.portal_id WHERE e.id = ? AND p.user_id = ?"
+        "SELECT e.id FROM eventos e JOIN portais p ON p.id = e.portal_id WHERE e.id = ? AND p.user_id = ? AND e.removido_em IS NULL"
       ).bind(parseInt(corpo.evento_id, 10) || 0, u.id).first();
       if (!ev) return resp({ error: "Evento não encontrado" }, 404);
       eventoId = ev.id;

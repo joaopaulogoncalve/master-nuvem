@@ -20,6 +20,27 @@ body{background:#f8fafc}
 .foto.on{outline:4px solid var(--cor);outline-offset:-4px}
 .foto.on .marca{background:var(--cor)}
 .foto .lupa{position:absolute;bottom:8px;right:8px;background:#0009;color:#fff;border-radius:999px;width:30px;height:30px;font-size:14px;display:flex;align-items:center;justify-content:center}
+/* Layouts do estúdio (os mesmos da área do cliente). O clássico é o padrão acima. */
+body.tema-escuro{background:#0a0a0a;color:#e5e5e5}
+body.tema-escuro #topo{background:#0a0a0a!important;border-bottom:1px solid #262626}
+body.tema-escuro .bg-white,body.tema-escuro #barra{background:#141414!important;border-color:#262626!important}
+body.tema-escuro .bg-slate-50{background:#1c1c1c!important}
+body.tema-escuro .text-slate-500,body.tema-escuro .text-slate-600,body.tema-escuro .text-slate-700,body.tema-escuro .text-slate-400{color:#a3a3a3!important}
+body.tema-escuro .campo{background:#141414;border-color:#333;color:#eee}
+body.tema-escuro .foto{background:#1f1f1f;border-radius:6px}
+body.tema-escuro #telaPedido>div>div{background:#141414!important;color:#e5e5e5}
+body.tema-minimalista{background:#fff;color:#111}
+body.tema-minimalista #topo{background:#fff!important;color:#111!important;border-bottom:1px solid #ececec;text-align:center}
+body.tema-minimalista #topo h1,body.tema-delicado #topo h1{font-family:Georgia,"Times New Roman",serif;font-weight:700}
+body.tema-minimalista #precos{background:#f4f4f4!important}
+body.tema-minimalista .bg-white{box-shadow:none!important;border:1px solid #ececec}
+body.tema-minimalista .foto{border-radius:2px;aspect-ratio:4/5}
+body.tema-minimalista .foto img{aspect-ratio:4/5}
+body.tema-delicado{background:#fdf6f0;color:#4a3b3b}
+body.tema-delicado #topo{background:linear-gradient(135deg,#f3d9d0,#ead7f3)!important;color:#4a3b3b!important}
+body.tema-delicado #precos{background:#ffffff99!important}
+body.tema-delicado .bg-white{border-radius:22px}
+body.tema-delicado .foto{border-radius:18px}
 </style>
 </head>
 <body class="text-slate-800 font-sans antialiased min-h-screen pb-28">
@@ -148,15 +169,16 @@ function lembrar() {
   try { (JSON.parse(localStorage.getItem(CHAVE) || "[]")).forEach(function (id) { escolhidas[id] = true; }); } catch (e) {}
 }
 
-function aplicarCor(cor) {
+function aplicarCor(cor, tema) {
   if (/^#[0-9a-fA-F]{6}$/.test(cor || "")) document.documentElement.style.setProperty("--cor", cor);
+  if (["escuro", "minimalista", "delicado"].indexOf(tema) > -1) document.body.classList.add("tema-" + tema);
 }
 
 async function carregarEvento() {
   var r = await fetch("/api/e/info?slug=" + encodeURIComponent(slug));
   if (!r.ok) { document.getElementById("titulo").textContent = "Evento não encontrado"; mostrar("naoEncontrado", true); return false; }
   evento = await r.json();
-  aplicarCor(evento.cor);
+  aplicarCor(evento.cor, evento.tema);
   document.title = evento.titulo + " - fotos por " + evento.estudio;
   document.getElementById("estudio").textContent = "📸 " + evento.estudio;
   document.getElementById("titulo").textContent = evento.titulo;
@@ -288,7 +310,7 @@ async function carregarPedido() {
   if (!r.ok) { document.getElementById("titulo").textContent = "Pedido não encontrado"; mostrar("naoEncontrado", true); return; }
   var d = await r.json();
   pedidoDados = d;
-  aplicarCor(d.evento.cor);
+  aplicarCor(d.evento.cor, d.evento.tema);
   document.getElementById("estudio").textContent = "📸 " + d.evento.estudio;
   document.getElementById("titulo").textContent = d.evento.titulo;
   document.getElementById("detalhes").textContent = "Pedido de " + d.pedido.nome;

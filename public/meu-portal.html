@@ -78,7 +78,11 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       </div>
       <div id="tiles" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
       <p id="tilesVazio" class="hidden glass rounded-2xl p-6 text-center text-slate-400">Você ainda não criou nenhum link. Clique em <strong class="text-white">➕ Criar novo</strong>.</p>
-      <p class="text-xs text-slate-500">🔴 precisa de você · ❓ cliente ainda não viu ou o prazo está acabando · ✅ tudo certo</p>
+      <p class="text-xs text-slate-500">🔴 precisa de você · ❓ cliente ainda não viu ou o prazo está acabando · ✅ tudo certo · 🗑️ remover</p>
+      <div id="lixeira" class="hidden glass rounded-2xl p-4 space-y-2">
+        <p class="text-sm font-semibold text-slate-200">🗑️ Removidos recentemente <span class="font-normal text-slate-400">· dá para desfazer por 30 minutos; depois as fotos são apagadas para sempre</span></p>
+        <div id="listaLixeira" class="space-y-2"></div>
+      </div>
     </div>
   </div>
 
@@ -174,7 +178,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         <input id="cfgCor" type="color" value="#be185d" class="mt-1 w-full h-11 rounded-xl bg-transparent border border-blue-900 cursor-pointer">
       </label>
     </div>
-    <p class="text-sm text-slate-300 mt-5 mb-2">Layout da área do cliente</p>
+    <p class="text-sm text-slate-300 mt-5 mb-2">🎨 Layout: vale para os álbuns dos clientes e para as páginas dos eventos. Escolha e clique em Salvar.</p>
     <div id="temas" class="grid grid-cols-2 md:grid-cols-4 gap-3">
       <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
         <input type="radio" name="tema" value="classico" class="hidden">
@@ -293,6 +297,19 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <h2 id="abTitulo" class="text-xl font-bold"></h2>
       <p id="abInfo" class="text-sm text-slate-400"></p>
       <p id="resumoRegras" class="text-xs text-slate-500 mt-1"></p>
+      <div class="mt-4 bg-slate-900/60 rounded-2xl p-4 space-y-3">
+        <p class="text-sm font-semibold">🔗 Link para enviar ao cliente</p>
+        <div class="flex gap-2">
+          <input id="abLinkCliente" readonly class="campo text-sm" style="padding:8px 10px">
+          <button type="button" id="abCopiarLink" class="cta font-bold px-4 rounded-xl text-sm whitespace-nowrap">Copiar</button>
+        </div>
+        <div class="flex flex-wrap gap-3 items-center">
+          <a id="abWhatsapp" target="_blank" rel="noopener" class="inline-block font-bold text-sm px-4 py-2 rounded-xl" style="background:#16a34a">💬 Enviar no WhatsApp</a>
+          <button type="button" id="abCopiarMsg" class="link">📋 Copiar mensagem com o login</button>
+          <button type="button" id="abVerVisual" class="link">🎨 Visual: <span id="abTema"></span> (trocar)</button>
+        </div>
+        <p class="text-xs text-slate-500">A senha não vai na mensagem, por segurança: mande do jeito que você combinou com o cliente (ou use "Nova senha" em ⚙️ Mais).</p>
+      </div>
     </div>
     <div class="flex flex-wrap gap-2">
       <button type="button" data-aba="fotos" class="abaAlb aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800">📷 Fotos</button>
@@ -369,7 +386,8 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         <button type="button" id="abNovaSenha" class="link">🔑 Nova senha</button>
       </div>
       <div class="pt-3 border-t border-blue-900/60">
-        <button type="button" id="btnApagarAlbum" class="perigo">Apagar álbum e todas as fotos</button>
+        <div class="flex flex-wrap gap-6"><button type="button" id="btnApagarAlbum" class="perigo">🗑️ Remover este álbum</button><button type="button" id="btnRemoverCliente" class="perigo">🗑️ Remover o cliente e todos os álbuns</button></div>
+        <p class="text-xs text-slate-500 mt-2">Você tem 30 minutos para desfazer, na tela inicial. Depois, as fotos são apagadas para sempre.</p>
       </div>
     </div>
   </section>
@@ -618,6 +636,13 @@ function montarEventos() {
   });
   painel.insertBefore(abas, partes[1]);
   partesEvento = { ok: true, fotos: [partes[1], partes[3]], pedidos: [partes[2]], editar: [partes[4]] };
+  var velho = document.getElementById("ev_btnApagar"), novo = velho.cloneNode(true);
+  novo.textContent = "🗑️ Remover evento (30 min para desfazer)";
+  velho.parentNode.replaceChild(novo, velho);
+  novo.addEventListener("click", function () {
+    var ev = window.EV && window.EV.atual();
+    if (ev) paraLixeira("/api/eventos/lixeira", { id: ev.id }, "o evento \"" + ev.titulo + "\"", "O link sai do ar na hora (inclusive para quem já comprou).");
+  });
   // Editar o evento abre o assistente já preenchido.
   document.getElementById("ev_btnEditar").addEventListener("click", function () {
     mostrarTela("criar");
@@ -661,40 +686,83 @@ async function carregarCentral() {
   desenharTiles();
 }
 
-function cartao(icone, titulo, sub, sinal, linha, aoClicar) {
-  var b = el("button", "glass rounded-2xl p-4 text-left hover:border-cyan-400 transition flex flex-col gap-2 min-h-[132px]");
-  b.type = "button";
+function cartao(icone, titulo, sub, sinal, linha, aoClicar, aoRemover) {
+  var b = el("div", "glass rounded-2xl p-4 text-left hover:border-cyan-400 transition flex flex-col gap-2 min-h-[132px] cursor-pointer");
+  b.setAttribute("role", "button");
+  b.tabIndex = 0;
   var topo = el("div", "flex items-start justify-between gap-2");
   var t = el("div", "min-w-0");
   t.appendChild(el("p", "font-bold leading-tight truncate", icone + " " + titulo));
   t.appendChild(el("p", "text-xs text-slate-400 truncate mt-0.5", sub));
   topo.appendChild(t);
-  topo.appendChild(el("span", "text-lg shrink-0", sinal[0]));
+  var lado = el("div", "flex items-center gap-1 shrink-0");
+  lado.appendChild(el("span", "text-lg", sinal[0]));
+  if (aoRemover) {
+    var lixo = el("button", "text-sm opacity-50 hover:opacity-100 px-1", "🗑️");
+    lixo.type = "button";
+    lixo.title = "Remover";
+    lixo.addEventListener("click", function (ev) { ev.stopPropagation(); aoRemover(); });
+    lado.appendChild(lixo);
+  }
+  topo.appendChild(lado);
   b.appendChild(topo);
   b.appendChild(el("p", "text-xs " + (sinal[0] === "🔴" ? "text-red-300" : sinal[0] === "❓" ? "text-amber-300" : "text-emerald-300"), sinal[1]));
   b.appendChild(el("p", "text-xs text-slate-300 mt-auto", linha));
   b.addEventListener("click", aoClicar);
+  b.addEventListener("keydown", function (e) { if (e.key === "Enter") aoClicar(); });
   return b;
+}
+
+// Remoção com duas confirmações. O item vai para a lixeira: some para o cliente na hora e pode ser desfeito por 30 min.
+async function paraLixeira(rota, corpo, nome, aviso) {
+  if (!confirm("Remover " + nome + "?\n" + aviso)) return;
+  if (!confirm("Tem certeza?\n\nVocê terá 30 minutos para desfazer em \"Removidos recentemente\". Depois disso, as fotos são apagadas para sempre.")) return;
+  var r = await api(rota, corpo);
+  if (!r.ok) { alert(r.dados.error || "Não foi possível remover."); return; }
+  mostrarTela("home");
+  await carregarClientes();
+  await carregarAlbuns();
+}
+
+function minutosRestantes(t) {
+  var fim = new Date(String(t).replace(" ", "T") + "Z").getTime() + 30 * 60000;
+  return Math.max(0, Math.ceil((fim - Date.now()) / 60000));
 }
 
 function desenharTiles() {
   var grade = document.getElementById("tiles");
   grade.innerHTML = "";
-  var itens = [];
+  var itens = [], lixo = [];
   dados.albuns.forEach(function (a) {
     var c = central.clientes.find(function (x) { return x.id === a.cliente_id; });
+    if (a.removido_em) {
+      // Álbum que saiu junto com o cliente aparece só na linha do cliente.
+      if (!(c && c.removido_em)) lixo.push({ nome: "🔒 " + a.titulo + " (" + a.cliente + ")", quando: a.removido_em, rota: "/api/portal/restaurar", corpo: { tipo: "album", id: a.id } });
+      return;
+    }
     var sinal = sinalCliente(c, a);
     itens.push({ tipo: "fechado", sinal: sinal, no: cartao("🔒", a.titulo, a.cliente, sinal,
-      a.arquivos + " foto(s) · ❤️ " + (a.favoritas || 0) + (c ? " · 👁️ " + c.visitas : ""), function () { abrirAlbum(a); }) });
+      a.arquivos + " foto(s) · ❤️ " + (a.favoritas || 0) + (c ? " · 👁️ " + c.visitas : ""), function () { abrirAlbum(a); },
+      function () { paraLixeira("/api/portal/lixeira", { tipo: "album", id: a.id }, "o álbum \"" + a.titulo + "\"", "O cliente perde o acesso a este álbum na hora."); }) });
   });
-  // Cliente criado sem álbum: um cartão para criar o álbum dele.
-  central.clientes.filter(function (c) { return !c.albuns; }).forEach(function (c) {
-    itens.push({ tipo: "fechado", sinal: ["❓", "Sem álbum"], no: cartao("🔒", c.nome, c.email, ["❓", "Ainda sem álbum: toque para criar"], "", function () { abrirCriar("fechado", c.id); }) });
+  central.clientes.forEach(function (c) {
+    if (c.removido_em) {
+      lixo.push({ nome: "👤 " + c.nome + " e os álbuns dele", quando: c.removido_em, rota: "/api/portal/restaurar", corpo: { tipo: "cliente", id: c.id } });
+      return;
+    }
+    // Cliente criado sem álbum: um cartão para criar o álbum dele.
+    if (!c.albuns) itens.push({ tipo: "fechado", sinal: ["❓", "Sem álbum"], no: cartao("🔒", c.nome, c.email, ["❓", "Ainda sem álbum: toque para criar"], "", function () { abrirCriar("fechado", c.id); },
+      function () { paraLixeira("/api/portal/lixeira", { tipo: "cliente", id: c.id }, "o cliente \"" + c.nome + "\"", "Ele perde o acesso ao portal na hora."); }) });
   });
   eventosLista.forEach(function (e) {
+    if (e.removido_em) {
+      lixo.push({ nome: "🌐 " + e.titulo, quando: e.removido_em, rota: "/api/eventos/restaurar", corpo: { id: e.id } });
+      return;
+    }
     var sinal = e.pendentes ? ["🔴", e.pendentes + " pedido(s) esperando o PIX"] : !e.fotos ? ["❓", "Ainda sem fotos"] : !e.publicado ? ["❓", "Fora do ar"] : ["✅", "No ar"];
     itens.push({ tipo: "aberto", sinal: sinal, no: cartao("🌐", e.titulo, (e.data ? dataBr(e.data) + " · " : "") + "venda por foto", sinal,
-      e.fotos + " foto(s) · " + e.fotos_vendidas + " vendida(s) · " + reais(e.vendido), function () { if (window.EV) window.EV.abrir(e); }) });
+      e.fotos + " foto(s) · " + e.fotos_vendidas + " vendida(s) · " + reais(e.vendido), function () { if (window.EV) window.EV.abrir(e); },
+      function () { paraLixeira("/api/eventos/lixeira", { id: e.id }, "o evento \"" + e.titulo + "\"", "O link sai do ar na hora (inclusive para quem já comprou)."); }) });
   });
   // Primeiro o que precisa de atenção.
   var ordem = { "🔴": 0, "❓": 1, "✅": 2 };
@@ -708,6 +776,27 @@ function desenharTiles() {
   visiveis.forEach(function (i) { grade.appendChild(i.no); });
   mostrar("tilesVazio", !itens.length);
   document.querySelectorAll(".filtro").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-filtro") === filtroAtual); });
+  // Removidos recentemente, com Desfazer.
+  var lista = document.getElementById("listaLixeira");
+  lista.innerHTML = "";
+  mostrar("lixeira", lixo.length > 0);
+  lixo.forEach(function (x) {
+    var linha = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/60 rounded-xl px-3 py-2 text-sm");
+    var min = minutosRestantes(x.quando);
+    linha.appendChild(el("span", "text-slate-300", x.nome + " · " + (min ? "apaga em " + min + " min" : "sendo apagado...")));
+    if (min) {
+      var b = el("button", "link", "↩️ Desfazer");
+      b.type = "button";
+      b.addEventListener("click", async function () {
+        var r = await api(x.rota, x.corpo);
+        if (!r.ok) { alert(r.dados.error || "Não foi possível desfazer."); return; }
+        await carregarClientes();
+        await carregarAlbuns();
+      });
+      linha.appendChild(b);
+    }
+    lista.appendChild(linha);
+  });
 }
 
 document.querySelectorAll(".filtro").forEach(function (b) {
@@ -825,7 +914,35 @@ function preencherCliente() {
   var c = clienteDoAlbum();
   document.getElementById("abCliente").textContent = c ? c.nome + " · " + c.email : (aberto ? aberto.cliente : "");
   document.getElementById("abClienteNums").textContent = c ? "👁️ " + c.visitas + " acesso(s) · 🕒 " + (c.ultimo_acesso ? "último " + horaBr(c.ultimo_acesso) : "ainda não acessou") + " · ⬇️ " + c.downloads + " download(s) · ❤️ " + c.escolhidas + " escolhida(s)" : "";
+  // Link do cliente, mensagem pronta e atalho para o WhatsApp.
+  var link = window.location.origin + "/p/" + dados.portal.slug;
+  document.getElementById("abLinkCliente").value = link;
+  document.getElementById("abWhatsapp").href = "https://wa.me/?text=" + encodeURIComponent(mensagemAcesso(c));
+  document.getElementById("abTema").textContent = NOMES_TEMA[dados.portal.tema] || "Clássico";
 }
+
+var NOMES_TEMA = { classico: "Clássico", escuro: "Galeria escura", minimalista: "Minimalista", delicado: "Delicado" };
+
+function mensagemAcesso(c) {
+  var nome = c ? c.nome.split(" ")[0] : "";
+  return "Olá" + (nome ? ", " + nome : "") + "! 📸 Suas fotos" + (aberto ? " de \"" + aberto.titulo + "\"" : "") + " já estão no portal " + dados.portal.nome + ":\n" +
+    window.location.origin + "/p/" + dados.portal.slug + "\n" + (c ? "Login: " + c.email + "\n" : "") + "A senha é a que eu te mandei. Qualquer dúvida, é só me chamar!";
+}
+
+document.getElementById("abCopiarLink").addEventListener("click", function () {
+  navigator.clipboard.writeText(document.getElementById("abLinkCliente").value);
+  this.textContent = "Copiado!";
+  var b = this;
+  setTimeout(function () { b.textContent = "Copiar"; }, 2000);
+});
+document.getElementById("abCopiarMsg").addEventListener("click", function () {
+  navigator.clipboard.writeText(mensagemAcesso(clienteDoAlbum()));
+  this.textContent = "Copiada!";
+});
+document.getElementById("abVerVisual").addEventListener("click", function () {
+  mostrarTela("config");
+  document.getElementById("temas").scrollIntoView({ behavior: "smooth", block: "center" });
+});
 
 function clienteDoAlbum() {
   return aberto ? central.clientes.find(function (c) { return c.id === aberto.cliente_id; }) : null;
@@ -1345,26 +1462,14 @@ document.getElementById("btnCopiarFav").addEventListener("click", function () {
   this.textContent = "Copiado!";
 });
 
-document.getElementById("btnApagarAlbum").addEventListener("click", async function () {
-  if (!confirm("Apagar o álbum \"" + aberto.titulo + "\" e TODAS as fotos e vídeos dele?\nIsso não pode ser desfeito.")) return;
-  var botao = this;
-  botao.disabled = true;
-  botao.textContent = "Apagando...";
-  // O servidor apaga em lotes; repete até acabar.
-  while (true) {
-    var r = await api("/api/portal/albuns/remover", { id: aberto.id });
-    if (!r.ok) { alert(r.dados.error || "Não foi possível apagar."); break; }
-    if (!r.dados.restantes) break;
-    botao.textContent = "Apagando... faltam " + r.dados.restantes;
-  }
-  botao.disabled = false;
-  botao.textContent = "Apagar álbum e todas as fotos";
-  mostrarTela("home");
-  aberto = null;
-  carregarAlbuns();
-  carregarClientes();
+document.getElementById("btnApagarAlbum").addEventListener("click", function () {
+  paraLixeira("/api/portal/lixeira", { tipo: "album", id: aberto.id }, "o álbum \"" + aberto.titulo + "\" e todas as fotos dele", "O cliente perde o acesso a este álbum na hora.");
 });
-
+document.getElementById("btnRemoverCliente").addEventListener("click", function () {
+  var c = clienteDoAlbum();
+  if (!c) return;
+  paraLixeira("/api/portal/lixeira", { tipo: "cliente", id: c.id }, "o cliente \"" + c.nome + "\" com TODOS os álbuns e fotos dele", "Ele perde o acesso ao portal na hora.");
+});
 /* ---------- envio de fotos para o álbum ---------- */
 
 function enviarParaB2(url, arquivo, aoProgredir) {

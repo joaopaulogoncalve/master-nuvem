@@ -4,6 +4,7 @@ import { chaveIp, chaveConta, limiteAtingido, registrarTentativa, dentroDoLimite
 import { sentinela, REGRAS as REGRAS_SENTINELA } from "./sentinela.js";
 import { tratarEventosDono, tratarEventoPublico } from "./eventos.js";
 import { tratarBlog, agendaBlog } from "./blog.js";
+import { purgarLixeira } from "./lixeira.js";
 const enc = new TextEncoder();
 const DIAS_SESSAO = 30;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1373,8 +1374,9 @@ function comProtecao(r, api) {
 export default {
   async scheduled(event, env, ctx) {
     // "*/20 * * * *" = sentinela; "0 * * * *" = limpeza (na hora cheia rodam as duas).
+    // A lixeira do Meu estúdio (removidos há mais de 30 min) é esvaziada logo depois da sentinela.
     if (event.cron === "0 * * * *") ctx.waitUntil(limpeza(env));
-    else ctx.waitUntil(sentinela(env));
+    else ctx.waitUntil(sentinela(env).then(function () { return purgarLixeira(env); }));
   },
 
   async fetch(request, env) {

@@ -208,7 +208,7 @@ export async function tratarPortalDono(request, env, url) {
   if (caminho === "/api/portal/clientes" && request.method === "GET") {
     if (!portal) return resp({ clientes: [] }, 200);
     const r = await env.DB.prepare(
-      "SELECT c.id, c.nome, c.email, c.created_at, c.travada_em, (SELECT COUNT(*) FROM albuns a WHERE a.cliente_id = c.id) AS albuns " +
+      "SELECT c.id, c.nome, c.email, c.created_at, c.travada_em, c.removido_em, (SELECT COUNT(*) FROM albuns a WHERE a.cliente_id = c.id) AS albuns " +
       "FROM portal_clientes c WHERE c.portal_id = ? ORDER BY c.nome"
     ).bind(portal.id).all();
     return resp({ clientes: r.results }, 200);
@@ -217,7 +217,7 @@ export async function tratarPortalDono(request, env, url) {
   if (caminho === "/api/portal/albuns" && request.method === "GET") {
     if (!portal) return resp({ albuns: [] }, 200);
     const r = await env.DB.prepare(
-      "SELECT a.id, a.titulo, a.tipo, a.created_at, a.cliente_id, c.nome AS cliente, " + COLUNAS_REGRAS + ", " +
+      "SELECT a.id, a.titulo, a.tipo, a.created_at, a.cliente_id, a.removido_em, c.nome AS cliente, " + COLUNAS_REGRAS + ", " +
       "(SELECT COUNT(*) FROM files f WHERE f.album_id = a.id AND f.status = 'ready' AND f.e_previa = 0) AS arquivos, " +
       "(SELECT COALESCE(SUM(size_bytes), 0) FROM files f WHERE f.album_id = a.id AND f.status = 'ready') AS bytes, " +
       "(SELECT COUNT(*) FROM favoritos v JOIN files f ON f.id = v.file_id WHERE f.album_id = a.id) AS favoritas, " +
@@ -270,8 +270,8 @@ export async function tratarPortalDono(request, env, url) {
       "(SELECT COUNT(*) FROM portal_clientes WHERE portal_id = ?1) AS clientes"
     ).bind(portal.id).first();
     const r = await env.DB.prepare(
-      "SELECT c.id, c.nome, c.email, c.created_at, c.travada_em, " +
-      "(SELECT COUNT(*) FROM albuns a WHERE a.cliente_id = c.id) AS albuns, " +
+      "SELECT c.id, c.nome, c.email, c.created_at, c.travada_em, c.removido_em, " +
+      "(SELECT COUNT(*) FROM albuns a WHERE a.cliente_id = c.id AND a.removido_em IS NULL) AS albuns, " +
       "(SELECT MAX(s.created_at) FROM seguranca_eventos s WHERE s.cliente_id = c.id AND s.tipo IN ('portal_login_ok', 'portal_album')) AS ultimo_acesso, " +
       "(SELECT COUNT(*) FROM seguranca_eventos s WHERE s.cliente_id = c.id AND s.tipo = 'portal_album') AS visitas, " +
       "(SELECT COUNT(*) FROM album_downloads d WHERE d.cliente_id = c.id) AS downloads, " +
@@ -470,6 +470,35 @@ export async function tratarPortalDono(request, env, url) {
     return resp({ ok: true }, 200);
   }
 
+  // Lixeira: some na hora para o cliente; o fotógrafo tem 30 minutos para desfazer (o robô apaga depois, ver lixeira.js).
+  // tipo "album" = só o álbum; tipo "cliente" = o cliente e todos os álbuns dele.
+  if (caminho === "/api/portal/lixeira" || caminho === "/api/portal/restaurar") {
+    const remover = caminho === "/api/portal/lixeira";
+    const id = parseInt(corpo.id, 10) || 0;
+    if (corpo.tipo === "cliente") {
+      const cli = await env.DB.prepare("SELECT id, removido_em FROM portal_clientes WHERE id = ? AND portal_id = ?").bind(id, portal.id).first();
+      if (!cli) return resp({ error: "Cliente não encontrado" }, 404);
+      if (remover) {
+        await env.DB.prepare("UPDATE portal_clientes SET removido_em = datetime('now') WHERE id = ?").bind(cli.id).run();
+        await env.DB.prepare("UPDATE albuns SET removido_em = datetime('now') WHERE cliente_id = ? AND removido_em IS NULL").bind(cli.id).run();
+        await env.DB.prepare("DELETE FROM portal_sessoes WHERE cliente_id = ?").bind(cli.id).run();
+      } else {
+        if (!cli.removido_em) return resp({ ok: true }, 200);
+        // Volta o cliente e os álbuns que foram para a lixeira junto com ele.
+        await env.DB.prepare("UPDATE albuns SET removido_em = NULL WHERE cliente_id = ? AND removido_em >= ?").bind(cli.id, cli.removido_em).run();
+        await env.DB.prepare("UPDATE portal_clientes SET removido_em = NULL WHERE id = ?").bind(cli.id).run();
+      }
+      return resp({ ok: true }, 200);
+    }
+    const album = await env.DB.prepare(
+      "SELECT a.id, c.removido_em AS cliente_removido FROM albuns a JOIN portal_clientes c ON c.id = a.cliente_id WHERE a.id = ? AND a.portal_id = ?"
+    ).bind(id, portal.id).first();
+    if (!album) return resp({ error: "Álbum não encontrado" }, 404);
+    if (!remover && album.cliente_removido) return resp({ error: "O cliente deste álbum também foi removido: desfaça a remoção do cliente." }, 400);
+    await env.DB.prepare("UPDATE albuns SET removido_em = " + (remover ? "datetime('now')" : "NULL") + " WHERE id = ?").bind(album.id).run();
+    return resp({ ok: true }, 200);
+  }
+
   if (caminho === "/api/portal/clientes/novo") {
     const nome = texto(corpo.nome, 80);
     const email = String(corpo.email || "").trim().toLowerCase();
@@ -561,7 +590,7 @@ async function clienteLogado(request, env) {
   return await env.DB.prepare(
     "SELECT c.id, c.nome, c.email, c.portal_id, p.slug, p.nome AS portal_nome, p.cor FROM portal_sessoes s " +
     "JOIN portal_clientes c ON c.id = s.cliente_id JOIN portais p ON p.id = c.portal_id " +
-    "WHERE s.token_hash = ? AND s.expires_at > datetime('now')"
+    "WHERE s.token_hash = ? AND s.expires_at > datetime('now') AND c.removido_em IS NULL"
   ).bind(await sha256Hex(token)).first();
 }
 
@@ -589,7 +618,7 @@ export async function tratarPortalCliente(request, env, url) {
       return resp({ error: "Muitas tentativas. Espere 1 hora ou peça uma nova senha ao estúdio." }, 429);
     }
     const c = await env.DB.prepare(
-      "SELECT c.id, c.password_hash, c.password_salt, c.travada_em FROM portal_clientes c JOIN portais p ON p.id = c.portal_id WHERE p.slug = ? AND c.email = ?"
+      "SELECT c.id, c.password_hash, c.password_salt, c.travada_em FROM portal_clientes c JOIN portais p ON p.id = c.portal_id WHERE p.slug = ? AND c.email = ? AND c.removido_em IS NULL"
     ).bind(slug, email).first();
     const senha = String(corpo.senha || "");
     const hash = await derivarSenha(senha, c ? deHex(c.password_salt) : new Uint8Array(16));
@@ -628,7 +657,7 @@ export async function tratarPortalCliente(request, env, url) {
       "(SELECT COUNT(*) FROM files f WHERE f.album_id = a.id AND f.status = 'ready' AND f.e_previa = 0) AS arquivos, " +
       "(SELECT COUNT(*) FROM favoritos v JOIN files f ON f.id = v.file_id WHERE f.album_id = a.id AND v.cliente_id = a.cliente_id) AS favoritas, " +
       "EXISTS (SELECT 1 FROM cobrancas b JOIN portais p ON p.id = b.portal_id WHERE b.album_id = a.id AND b.status = 'pendente' AND b.bloqueia_album = 1 AND p.cobrar = 1) AS trancado " +
-      "FROM albuns a WHERE a.cliente_id = ? ORDER BY a.id DESC"
+      "FROM albuns a WHERE a.cliente_id = ? AND a.removido_em IS NULL ORDER BY a.id DESC"
     ).bind(c.id).all();
     const cob = await env.DB.prepare(
       "SELECT b.id, b.descricao, b.valor_centavos, b.vencimento, b.link_pagamento, b.status, b.pago_em, b.itens, a.titulo AS album " +
@@ -666,7 +695,7 @@ export async function tratarPortalCliente(request, env, url) {
 
   // Álbum só aparece se for deste cliente.
   async function albumDoCliente(id) {
-    return await env.DB.prepare("SELECT a.id, a.titulo, a.tipo, " + COLUNAS_REGRAS + " FROM albuns a WHERE a.id = ? AND a.cliente_id = ?")
+    return await env.DB.prepare("SELECT a.id, a.titulo, a.tipo, " + COLUNAS_REGRAS + " FROM albuns a WHERE a.id = ? AND a.cliente_id = ? AND a.removido_em IS NULL")
       .bind(parseInt(id, 10) || 0, c.id).first();
   }
 
@@ -676,7 +705,7 @@ export async function tratarPortalCliente(request, env, url) {
   async function arquivoDoCliente(id) {
     return await env.DB.prepare(
       "SELECT f.id, f.object_key, f.name, f.album_id, " + COLUNAS_REGRAS + " FROM files f JOIN albuns a ON a.id = f.album_id " +
-      "WHERE f.id = ? AND a.cliente_id = ? AND f.status = 'ready' AND f.e_previa = 0"
+      "WHERE f.id = ? AND a.cliente_id = ? AND f.status = 'ready' AND f.e_previa = 0 AND a.removido_em IS NULL"
     ).bind(parseInt(id, 10) || 0, c.id).first();
   }
 

@@ -261,5 +261,11 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
      assistente com uma pergunta por tela (álbum: cliente → nome → regras; evento: dados → preço; os campos do formulário do
      evento são movidos para os passos por `montarEventos`). Álbum e evento abrem com abas (Fotos | Regras | Escolhas e edições |
      Mais; Fotos | Pedidos | Mais). Regra de UX: não colocar muita coisa numa tela só; cada função atrás de um clique.
+   - Álbum mostra o link do cliente (copiar, WhatsApp com mensagem pronta sem a senha) e atalho "🎨 Visual". O layout do portal
+     vale também para a página pública do evento (`evento.html` usa `tema` de `/api/e/info`).
+   - **Lixeira (`migrations/0017_lixeira.sql`, `src/lixeira.js`):** remover álbum, cliente (com todos os álbuns) ou evento pede 2
+     confirmações e só marca `removido_em` → some na hora para o cliente/comprador. 30 min para "Desfazer" (`/api/portal/restaurar`,
+     `/api/eventos/restaurar`). `purgarLixeira` roda no Cron de 20 min depois da sentinela e apaga de verdade (até 25 arquivos por
+     rodada). Os antigos `/albuns/remover` e `/eventos/remover` (apagar na hora) continuam no servidor, mas a tela não usa mais.
 5. Pendências menores: Turnstile no login e cadastro; upload acima de 4,5 GB (multipart); preço duplicado em
    `app.js` e `worker.js`; responder e-mails como @masternuvem.com.br; WhatsApp.

@@ -405,6 +405,6 @@ document.getElementById("ev_arquivosEnviar").addEventListener("change", async fu
   carregar();
 });
 
-window.EV = { carregar: carregar, novo: limparForm, abrir: abrir };
+window.EV = { carregar: carregar, novo: limparForm, abrir: abrir, atual: function () { return aberto; } };
 carregar().catch(function () {});
 })();
