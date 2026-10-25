@@ -1,3 +1,4 @@
+import { registrarEvento } from "./limite.js";
 const enc = new TextEncoder();
 const MAX_ARQUIVO = 4500000000;
 const GB = 1000000000;
@@ -168,6 +169,7 @@ export async function tratarArquivos(request, env, url) {
       "SELECT object_key, name FROM files WHERE id = ? AND user_id = ? AND status = 'ready'"
     ).bind(id, u.id).first();
     if (!reg) return resp({ error: "Arquivo não encontrado" }, 404);
+    await registrarEvento(env, request, "download", { user_id: u.id });
     const link = await urlAssinada(env, "GET", reg.object_key, 300, {
       "response-content-disposition": "attachment; filename*=UTF-8''" + codificar(reg.name)
     });

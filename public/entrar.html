@@ -229,7 +229,13 @@ document.getElementById("formEsqueci").addEventListener("submit", enviarEsqueci)
 // Para onde ir depois do login: só caminhos deste site (ex.: voltar para a contratação).
 function destino() {
   var volta = new URLSearchParams(window.location.search).get("volta") || "";
-  if (volta.charAt(0) === "/" && volta.charAt(1) !== "/" && volta.charAt(1) !== "\\") return volta;
+  // O navegador ignora tabs e quebras de linha no endereço ("/\t/golpe.com" vira "//golpe.com"):
+  // por isso confere o endereço já montado, e não só o começo do texto.
+  if (volta.charAt(0) !== "/") return "/painel";
+  try {
+    var alvo = new URL(volta, window.location.origin);
+    if (alvo.origin === window.location.origin) return alvo.pathname + alvo.search + alvo.hash;
+  } catch (e) {}
   return "/painel";
 }
 

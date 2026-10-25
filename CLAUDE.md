@@ -206,5 +206,21 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
      marketplace_fee), Asaas (chave de API do fotógrafo), PagBank (token/Connect), Pagar.me (Stone). Bancos com API Pix por
      certificado (Efí, Inter...) e Cielo: trabalhosos. Ton, Nubank PJ: sem API pública encontrada → só modo manual.
      Chaves de API de fotógrafos precisariam ser guardadas criptografadas. Comissão: falar com o contador antes.
-5. Pendências menores: Turnstile/rate-limit no login e cadastro; upload acima de 4,5 GB (multipart); preço duplicado em
+   **Revisão de segurança + Sentinela — 2026-10-25** (`src/limite.js`, `src/sentinela.js`, `migrations/0011_sentinela.sql`,
+   `public/_headers`; FAQ nova em `migrations/0012_faq_mais.sql`, 29 respostas → 58). **Ainda não publicado nem aplicado em produção.**
+   - Limites (tabela `assistente_limite`, contam por hora): login 20 erros por IP e 10 por conta (inclusive no portal do cliente);
+     2FA 10 erros por conta (além dos 5 por tentativa); cadastro 5 contas por IP. Resposta 429.
+   - Diário `seguranca_eventos` (90 dias; tipos login_ok/login_erro/2fa_erro/senha_redefinida/destravada/download/
+     portal_login_ok/portal_login_erro; IP só como hash do dia), gravado por `registrarEvento`.
+   - Sentinela (Cron `*/20 * * * *`; o `0 * * * *` continua sendo a limpeza — `scheduled` separa pelo `event.cron`):
+     TRANCA (`users.travada_em` / `portal_clientes.travada_em`, derruba sessões, e-mail ao dono e a contato@) quando há 6+ códigos
+     2FA errados em 1 h (senha certa) ou entrada de 5+ conexões diferentes em 1 h. AVISA: 10+ senhas erradas numa conta, 60+ no site
+     em 20 min, 300+ downloads em 20 min, admin novo, cada entrada no admin. Alertas em `sentinela_alertas` (chave única = sem repetir).
+     Conta trancada: login dá 423; destrava com "Esqueci minha senha" (cliente de portal: fotógrafo dá "Nova senha") ou no /admin.
+     Só contam eventos depois da última senha nova/destravamento. Regras no topo de `src/sentinela.js` (`REGRAS`).
+   - Corrigido: redirecionamento aberto em `entrar.html` (`?volta=/%09/site`), cabeçalhos de proteção (X-Frame-Options, HSTS,
+     nosniff, Referrer-Policy) nas páginas (`_headers`) e na API (`comProtecao`, + `Cache-Control: no-store`).
+   - Conhecido, não corrigido: a URL de envio assinada não trava o tamanho (quem pede URL para 1 byte pode subir até 4,5 GB e
+     não concluir; o objeto fica até a limpeza apagar o `pending` com 1 dia). Cupom de preço conta o uso ao clicar, não ao pagar.
+5. Pendências menores: Turnstile no login e cadastro; upload acima de 4,5 GB (multipart); preço duplicado em
    `app.js` e `worker.js`; responder e-mails como @masternuvem.com.br; WhatsApp.

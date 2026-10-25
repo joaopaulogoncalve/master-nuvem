@@ -1,10 +1,18 @@
 import { tratarArquivos, medirBucket, removerObjeto } from "./arquivos.js";
 import { tratarPortalDono, tratarPortalCliente } from "./portal.js";
+import { chaveIp, chaveConta, limiteAtingido, registrarTentativa, dentroDoLimite, registrarEvento } from "./limite.js";
+import { sentinela, REGRAS as REGRAS_SENTINELA } from "./sentinela.js";
 const enc = new TextEncoder();
 const DIAS_SESSAO = 30;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 const MAX_TENTATIVAS_2FA = 5;
+// Limites por hora contra quem tenta adivinhar senhas (contam só as tentativas erradas, exceto o cadastro).
+const MAX_ERROS_LOGIN_IP = 20;
+const MAX_ERROS_LOGIN_CONTA = 10;
+const MAX_ERROS_2FA_CONTA = 10;
+const MAX_CADASTROS_IP = 5;
+const MSG_MUITAS_TENTATIVAS = "Muitas tentativas. Espere 1 hora e tente de novo, ou use \"Esqueci minha senha\".";
 const DIAS_PLANO = 30;
 // Backblaze B2 (pague pelo uso): US$ 6,95 por TB a cada 30 dias, primeiros 10 GB grátis.
 // Conferir em backblaze.com/cloud-storage/pricing se o preço mudar.
@@ -327,7 +335,7 @@ async function tratarAdmin(request, env, url) {
 
   if (caminho === "/api/admin/clientes") {
     const r = await env.DB.prepare(
-      "SELECT u.id, u.email, u.name, u.role, u.created_at, u.totp_enabled, " +
+      "SELECT u.id, u.email, u.name, u.role, u.created_at, u.totp_enabled, u.travada_em, " +
       "p.quota_gb, p.paid_until, p.mp_payment_id, " +
       "(SELECT COALESCE(SUM(size_bytes), 0) FROM files f WHERE f.user_id = u.id AND f.status = 'ready') AS usado_bytes, " +
       "(SELECT COUNT(*) FROM files f WHERE f.user_id = u.id AND f.status = 'ready') AS arquivos, " +
@@ -345,6 +353,7 @@ async function tratarAdmin(request, env, url) {
         role: c.role,
         criado: c.created_at,
         totp: !!c.totp_enabled,
+        travada_em: c.travada_em,
         // Pago = tem id numérico de pagamento do Mercado Pago; o resto (manual ou lançado direto no banco) é manual.
         plano: c.quota_gb ? { quota_gb: c.quota_gb, paid_until: c.paid_until, manual: !/^\d+$/.test(String(c.mp_payment_id || "")) } : null,
         usado_bytes: c.usado_bytes,
@@ -385,6 +394,24 @@ async function tratarAdmin(request, env, url) {
       "FROM perguntas_chat WHERE created_at > datetime('now', '-30 days')"
     ).first();
     return resposta({ faq: faq.results, sem_resposta: sem.results, chamados: chamados.results, total: total }, 200);
+  }
+
+  if (caminho === "/api/admin/sentinela" && request.method === "GET") {
+    const alertas = await env.DB.prepare(
+      "SELECT id, nivel, mensagem, visto, created_at FROM sentinela_alertas ORDER BY id DESC LIMIT 100"
+    ).all();
+    const contas = await env.DB.prepare("SELECT id, email, name, travada_em FROM users WHERE travada_em IS NOT NULL ORDER BY travada_em DESC").all();
+    const clientes = await env.DB.prepare(
+      "SELECT c.id, c.email, c.nome, c.travada_em, p.nome AS portal FROM portal_clientes c JOIN portais p ON p.id = c.portal_id WHERE c.travada_em IS NOT NULL ORDER BY c.travada_em DESC"
+    ).all();
+    const resumo = await env.DB.prepare(
+      "SELECT COALESCE(SUM(CASE WHEN tipo IN ('login_erro', 'portal_login_erro') THEN 1 ELSE 0 END), 0) AS senhas_erradas, " +
+      "COALESCE(SUM(CASE WHEN tipo = '2fa_erro' THEN 1 ELSE 0 END), 0) AS codigos_errados, " +
+      "COALESCE(SUM(CASE WHEN tipo IN ('login_ok', 'portal_login_ok') THEN 1 ELSE 0 END), 0) AS entradas, " +
+      "COALESCE(SUM(CASE WHEN tipo = 'download' THEN 1 ELSE 0 END), 0) AS downloads " +
+      "FROM seguranca_eventos WHERE created_at > datetime('now', '-1 day')"
+    ).first();
+    return resposta({ alertas: alertas.results, contas: contas.results, clientes: clientes.results, resumo_24h: resumo, regras: REGRAS_SENTINELA }, 200);
   }
 
   if (caminho === "/api/admin/cupons" && request.method === "GET") {
@@ -518,8 +545,40 @@ async function tratarAdmin(request, env, url) {
     return resposta({ ok: true }, 200);
   }
 
-  const alvo = await env.DB.prepare("SELECT id FROM users WHERE id = ?").bind(parseInt(corpo.user_id, 10) || 0).first();
+  if (caminho === "/api/admin/sentinela/vistos") {
+    await env.DB.prepare("UPDATE sentinela_alertas SET visto = 1 WHERE visto = 0").run();
+    return resposta({ ok: true }, 200);
+  }
+
+  // Destravar cliente de portal (o fotógrafo também consegue, dando uma senha nova ao cliente).
+  if (caminho === "/api/admin/sentinela/destravar" && corpo.cliente_id) {
+    const r = await env.DB.prepare("UPDATE portal_clientes SET travada_em = NULL WHERE id = ? AND travada_em IS NOT NULL")
+      .bind(parseInt(corpo.cliente_id, 10) || 0).run();
+    if (!r.meta.changes) return resposta({ error: "Cliente não está trancado" }, 404);
+    await registrarEvento(env, request, "destravada", { cliente_id: parseInt(corpo.cliente_id, 10) });
+    return resposta({ ok: true }, 200);
+  }
+
+  const alvo = await env.DB.prepare("SELECT id, email FROM users WHERE id = ?").bind(parseInt(corpo.user_id, 10) || 0).first();
   if (!alvo) return resposta({ error: "Cliente não encontrado" }, 404);
+
+  if (caminho === "/api/admin/sentinela/destravar") {
+    const r = await env.DB.prepare("UPDATE users SET travada_em = NULL WHERE id = ? AND travada_em IS NOT NULL").bind(alvo.id).run();
+    if (!r.meta.changes) return resposta({ error: "Conta não está trancada" }, 404);
+    await registrarEvento(env, request, "destravada", { user_id: alvo.id });
+    console.log("Admin", u.id, "destravou a conta", alvo.id);
+    return resposta({ ok: true }, 200);
+  }
+
+  if (caminho === "/api/admin/sentinela/trancar") {
+    if (alvo.id === u.id) return resposta({ error: "Você não pode trancar a sua própria conta" }, 400);
+    await env.DB.prepare("UPDATE users SET travada_em = datetime('now') WHERE id = ?").bind(alvo.id).run();
+    await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(alvo.id).run();
+    await env.DB.prepare("INSERT OR IGNORE INTO sentinela_alertas (chave, nivel, user_id, mensagem) VALUES (?, 'trancou', ?, ?)")
+      .bind("manual:" + alvo.id + ":" + Date.now(), alvo.id, "Conta " + alvo.email + " trancada à mão pelo administrador").run();
+    console.log("Admin", u.id, "trancou a conta", alvo.id);
+    return resposta({ ok: true }, 200);
+  }
 
   if (caminho === "/api/admin/plano") {
     const gb = parseInt(corpo.gb, 10);
@@ -555,18 +614,6 @@ const PRAZO_CHAMADO = "48 horas";
 const MAX_PERGUNTAS_HORA = 40;
 const MAX_CHAMADOS_HORA = 3;
 
-// Limite por IP (só o hash do IP do dia fica guardado). Devolve false se passou do limite.
-async function dentroDoLimite(env, request, tipo, maximo) {
-  const ip = request.headers.get("CF-Connecting-IP") || "desconhecido";
-  const chave = await sha256Hex(ip + "|" + new Date().toISOString().slice(0, 10));
-  const n = await env.DB.prepare(
-    "SELECT COUNT(*) AS n FROM assistente_limite WHERE chave = ? AND tipo = ? AND created_at > datetime('now', '-1 hour')"
-  ).bind(chave, tipo).first();
-  if (n.n >= maximo) return false;
-  await env.DB.prepare("INSERT INTO assistente_limite (chave, tipo) VALUES (?, ?)").bind(chave, tipo).run();
-  return true;
-}
-
 function limparTexto(v, max) {
   return String(v || "").replace(/[\u0000-\u0009\u000b-\u001f]/g, " ").trim().slice(0, max);
 }
@@ -594,7 +641,7 @@ async function tratarAssistente(request, env, url) {
   if (caminho === "/api/assistente/pergunta") {
     const texto = limparTexto(corpo.texto, 300);
     if (texto.length < 2) return resposta({ ok: true }, 200);
-    if (!(await dentroDoLimite(env, request, "pergunta", MAX_PERGUNTAS_HORA))) return resposta({ ok: true }, 200);
+    if (!(await dentroDoLimite(env, await chaveIp(request), "pergunta", MAX_PERGUNTAS_HORA))) return resposta({ ok: true }, 200);
     const faqId = parseInt(corpo.faq_id, 10) || null;
     const existe = faqId ? await env.DB.prepare("SELECT id FROM faq WHERE id = ?").bind(faqId).first() : null;
     await env.DB.prepare("INSERT INTO perguntas_chat (texto, faq_id) VALUES (?, ?)").bind(texto, existe ? existe.id : null).run();
@@ -609,7 +656,7 @@ async function tratarAssistente(request, env, url) {
     if (nome.length < 2) return resposta({ error: "Digite seu nome" }, 400);
     if (!EMAIL_OK.test(email) || email.length > 120) return resposta({ error: "E-mail inválido" }, 400);
     if (mensagem.length < 5) return resposta({ error: "Conte um pouco mais sobre a sua dúvida" }, 400);
-    if (!(await dentroDoLimite(env, request, "chamado", MAX_CHAMADOS_HORA))) {
+    if (!(await dentroDoLimite(env, await chaveIp(request), "chamado", MAX_CHAMADOS_HORA))) {
       return resposta({ error: "Muitos chamados em pouco tempo. Tente de novo mais tarde ou escreva para " + EMAIL_SUPORTE }, 429);
     }
     const u = await usuarioLogado(request, env);
@@ -721,6 +768,9 @@ async function tratarApi(request, env, url) {
     if (corpo.aceite !== true) {
       return resposta({ error: "Para criar a conta, aceite os Termos de uso e a Política de privacidade." }, 400);
     }
+    if (!(await dentroDoLimite(env, await chaveIp(request), "cadastro", MAX_CADASTROS_IP))) {
+      return resposta({ error: "Muitas contas criadas desta conexão. Tente de novo em 1 hora." }, 429);
+    }
 
     const salt = new Uint8Array(16);
     crypto.getRandomValues(salt);
@@ -754,18 +804,27 @@ async function tratarApi(request, env, url) {
     const email = String(corpo.email || "").trim().toLowerCase();
     const senha = String(corpo.senha || "");
 
-    const u = await env.DB.prepare(
-      "SELECT id, password_hash, password_salt, totp_enabled FROM users WHERE email = ?"
-    ).bind(email).first();
-
-    if (!u) {
-      await derivarSenha(senha, new Uint8Array(16));
-      return resposta({ error: "E-mail ou senha incorretos" }, 401);
+    // Bloqueia por 1 hora depois de muitas senhas erradas (do mesmo IP ou contra a mesma conta).
+    const kIp = await chaveIp(request);
+    const kConta = await chaveConta(email);
+    if (await limiteAtingido(env, kIp, "login", MAX_ERROS_LOGIN_IP) || await limiteAtingido(env, kConta, "login", MAX_ERROS_LOGIN_CONTA)) {
+      return resposta({ error: MSG_MUITAS_TENTATIVAS }, 429);
     }
 
-    const hash = await derivarSenha(senha, deHex(u.password_salt));
-    if (!iguais(hash, u.password_hash)) {
+    const u = await env.DB.prepare(
+      "SELECT id, password_hash, password_salt, totp_enabled, travada_em FROM users WHERE email = ?"
+    ).bind(email).first();
+
+    const hash = await derivarSenha(senha, u ? deHex(u.password_salt) : new Uint8Array(16));
+    if (!u || !iguais(hash, u.password_hash)) {
+      await registrarTentativa(env, kIp, "login");
+      await registrarTentativa(env, kConta, "login");
+      await registrarEvento(env, request, "login_erro", { user_id: u ? u.id : null });
       return resposta({ error: "E-mail ou senha incorretos" }, 401);
+    }
+    // Trancada pela sentinela: só volta criando uma senha nova pelo link do e-mail.
+    if (u.travada_em) {
+      return resposta({ error: "Sua conta foi protegida pela nossa sentinela por atividade suspeita. Para voltar a entrar, clique em \"Esqueci minha senha\" e crie uma senha nova.", travada: true }, 423);
     }
 
     if (u.totp_enabled) {
@@ -773,6 +832,7 @@ async function tratarApi(request, env, url) {
       return resposta({ need2fa: true }, 200, cookieSessao(pend, 600));
     }
 
+    await registrarEvento(env, request, "login_ok", { user_id: u.id });
     const token = await criarSessao(env, u.id, false);
     return resposta({ ok: true }, 200, cookieSessao(token, DIAS_SESSAO * 86400));
   }
@@ -829,8 +889,10 @@ async function tratarApi(request, env, url) {
     const salt = new Uint8Array(16);
     crypto.getRandomValues(salt);
     const hash = await derivarSenha(senha, salt);
-    await env.DB.prepare("UPDATE users SET password_hash = ?, password_salt = ? WHERE id = ?")
+    // Senha nova também destrava a conta, se a sentinela tiver trancado.
+    await env.DB.prepare("UPDATE users SET password_hash = ?, password_salt = ?, travada_em = NULL WHERE id = ?")
       .bind(hash, paraHex(salt), pedido.user_id).run();
+    await registrarEvento(env, request, "senha_redefinida", { user_id: pedido.user_id });
     // Derruba todas as sessões abertas e invalida outros links pendentes.
     await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(pedido.user_id).run();
     await env.DB.prepare("UPDATE password_resets SET used = 1 WHERE user_id = ?").bind(pedido.user_id).run();
@@ -849,13 +911,24 @@ async function tratarApi(request, env, url) {
       await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(pend.token_hash).run();
       return resposta({ error: "Muitas tentativas. Entre novamente." }, 429);
     }
+    // Além das 5 por login, limita os erros por conta: entrar de novo não dá mais chances de adivinhar o código.
+    const k2fa = await chaveConta("2fa|" + pend.user_id);
+    if (await limiteAtingido(env, k2fa, "2fa", MAX_ERROS_2FA_CONTA)) {
+      await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(pend.token_hash).run();
+      return resposta({ error: "Muitos códigos errados. Espere 1 hora e entre novamente." }, 429);
+    }
     await env.DB.prepare("UPDATE sessions SET tentativas = tentativas + 1 WHERE token_hash = ?").bind(pend.token_hash).run();
 
     const corpo = await lerJson(request);
     if (!corpo) return resposta({ error: "JSON inválido" }, 400);
 
     const passo = await verificarTotp(pend.totp_secret || "", corpo.codigo, pend.totp_last || 0);
-    if (passo === null) return resposta({ error: "Código incorreto" }, 401);
+    if (passo === null) {
+      await registrarTentativa(env, k2fa, "2fa");
+      await registrarEvento(env, request, "2fa_erro", { user_id: pend.user_id });
+      return resposta({ error: "Código incorreto" }, 401);
+    }
+    await registrarEvento(env, request, "login_ok", { user_id: pend.user_id });
 
     await env.DB.prepare("UPDATE users SET totp_last = ? WHERE id = ?").bind(passo, pend.user_id).run();
     await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(pend.token_hash).run();
@@ -1185,6 +1258,8 @@ async function limpeza(env) {
   await env.DB.prepare("DELETE FROM portal_sessoes WHERE expires_at < datetime('now')").run();
   await env.DB.prepare("DELETE FROM assistente_limite WHERE created_at < datetime('now', '-1 day')").run();
   await env.DB.prepare("DELETE FROM perguntas_chat WHERE created_at < datetime('now', '-180 days')").run();
+  await env.DB.prepare("DELETE FROM seguranca_eventos WHERE created_at < datetime('now', '-90 days')").run();
+  await env.DB.prepare("DELETE FROM sentinela_alertas WHERE created_at < datetime('now', '-180 days')").run();
   await env.DB.prepare("DELETE FROM password_resets WHERE expires_at < datetime('now', '-1 day')").run();
   await env.DB.prepare("DELETE FROM subscriptions WHERE status = 'pending' AND created_at < datetime('now', '-2 days')").run();
 
@@ -1192,9 +1267,25 @@ async function limpeza(env) {
   return relatorio;
 }
 
+// Cabeçalhos de proteção em todas as respostas: o site não abre dentro de outro site (contra golpe de clique
+// escondido), o navegador não "adivinha" tipo de arquivo, links para fora não levam o endereço completo da página
+// e o navegador só usa HTTPS. As respostas da API não ficam guardadas em cache.
+function comProtecao(r, api) {
+  const h = new Headers(r.headers);
+  h.set("X-Frame-Options", "DENY");
+  h.set("X-Content-Type-Options", "nosniff");
+  h.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  h.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  h.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  if (api && !h.has("Cache-Control")) h.set("Cache-Control", "no-store");
+  return new Response(r.body, { status: r.status, statusText: r.statusText, headers: h });
+}
+
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(limpeza(env));
+    // "*/20 * * * *" = sentinela; "0 * * * *" = limpeza (na hora cheia rodam as duas).
+    if (event.cron === "0 * * * *") ctx.waitUntil(limpeza(env));
+    else ctx.waitUntil(sentinela(env));
   },
 
   async fetch(request, env) {
@@ -1202,18 +1293,18 @@ export default {
 
     if (url.pathname.startsWith("/api/")) {
       try {
-        return await tratarApi(request, env, url);
+        return comProtecao(await tratarApi(request, env, url), true);
       } catch (e) {
         console.error("Erro inesperado:", e.message);
-        return resposta({ error: "Erro interno" }, 500);
+        return comProtecao(resposta({ error: "Erro interno" }, 500), true);
       }
     }
 
     // Portal do cliente final: /p/<endereço-do-estúdio> abre sempre a mesma página.
     if (/^\/p\/[a-z0-9-]+\/?$/.test(url.pathname)) {
-      return env.ASSETS.fetch(new Request(new URL("/portal-cliente", url), request));
+      return comProtecao(await env.ASSETS.fetch(new Request(new URL("/portal-cliente", url), request)), false);
     }
 
-    return env.ASSETS.fetch(request);
+    return comProtecao(await env.ASSETS.fetch(request), false);
   }
 };

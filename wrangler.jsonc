@@ -17,6 +17,7 @@
     { "pattern": "masternuvem.com.br", "custom_domain": true },
     { "pattern": "www.masternuvem.com.br", "custom_domain": true }
   ],
-  "triggers": { "crons": ["0 * * * *"] },
+  // "0 * * * *" = limpeza de hora em hora; "*/20 * * * *" = sentinela (vigia de segurança a cada 20 minutos).
+  "triggers": { "crons": ["0 * * * *", "*/20 * * * *"] },
   "observability": { "enabled": true }
 }

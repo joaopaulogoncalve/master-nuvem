@@ -2,6 +2,10 @@
 // /api/portal/*  → o assinante (fotógrafo) configura o portal, cria clientes e álbuns.
 // /api/p/*       → o cliente final do fotógrafo entra, vê só os álbuns dele, marca favoritas e baixa.
 import { urlArquivo, removerObjeto } from "./arquivos.js";
+import { chaveIp, chaveConta, limiteAtingido, registrarTentativa, registrarEvento } from "./limite.js";
+
+const MAX_ERROS_LOGIN_IP = 20;
+const MAX_ERROS_LOGIN_CONTA = 10;
 
 const enc = new TextEncoder();
 const DIAS_SESSAO_CLIENTE = 30;
@@ -178,7 +182,7 @@ export async function tratarPortalDono(request, env, url) {
   if (caminho === "/api/portal/clientes" && request.method === "GET") {
     if (!portal) return resp({ clientes: [] }, 200);
     const r = await env.DB.prepare(
-      "SELECT c.id, c.nome, c.email, c.created_at, (SELECT COUNT(*) FROM albuns a WHERE a.cliente_id = c.id) AS albuns " +
+      "SELECT c.id, c.nome, c.email, c.created_at, c.travada_em, (SELECT COUNT(*) FROM albuns a WHERE a.cliente_id = c.id) AS albuns " +
       "FROM portal_clientes c WHERE c.portal_id = ? ORDER BY c.nome"
     ).bind(portal.id).all();
     return resp({ clientes: r.results }, 200);
@@ -385,8 +389,10 @@ export async function tratarPortalDono(request, env, url) {
     const senha = String(corpo.senha || "");
     if (senha.length < 8 || senha.length > 100) return resp({ error: "A senha precisa ter de 8 a 100 caracteres" }, 400);
     const h = await novaSenhaHash(senha);
-    await env.DB.prepare("UPDATE portal_clientes SET password_hash = ?, password_salt = ? WHERE id = ?").bind(h.hash, h.salt, cliente.id).run();
+    // Senha nova também destrava o acesso, se a sentinela tiver trancado.
+    await env.DB.prepare("UPDATE portal_clientes SET password_hash = ?, password_salt = ?, travada_em = NULL WHERE id = ?").bind(h.hash, h.salt, cliente.id).run();
     await env.DB.prepare("DELETE FROM portal_sessoes WHERE cliente_id = ?").bind(cliente.id).run();
+    await registrarEvento(env, request, "destravada", { cliente_id: cliente.id });
     return resp({ ok: true }, 200);
   }
 
@@ -459,17 +465,29 @@ export async function tratarPortalCliente(request, env, url) {
     if (!origemOk(request, url)) return resp({ error: "Origem inválida" }, 403);
     const corpo = await lerJson(request);
     if (!corpo) return resp({ error: "JSON inválido" }, 400);
+    const slug = String(corpo.slug || "").toLowerCase();
+    const email = String(corpo.email || "").trim().toLowerCase();
+    // Bloqueia por 1 hora depois de muitas senhas erradas (do mesmo IP ou contra o mesmo cliente).
+    const kIp = await chaveIp(request);
+    const kConta = await chaveConta("portal|" + slug + "|" + email);
+    if (await limiteAtingido(env, kIp, "portal_login", MAX_ERROS_LOGIN_IP) || await limiteAtingido(env, kConta, "portal_login", MAX_ERROS_LOGIN_CONTA)) {
+      return resp({ error: "Muitas tentativas. Espere 1 hora ou peça uma nova senha ao estúdio." }, 429);
+    }
     const c = await env.DB.prepare(
-      "SELECT c.id, c.password_hash, c.password_salt FROM portal_clientes c JOIN portais p ON p.id = c.portal_id WHERE p.slug = ? AND c.email = ?"
-    ).bind(String(corpo.slug || "").toLowerCase(), String(corpo.email || "").trim().toLowerCase()).first();
+      "SELECT c.id, c.password_hash, c.password_salt, c.travada_em FROM portal_clientes c JOIN portais p ON p.id = c.portal_id WHERE p.slug = ? AND c.email = ?"
+    ).bind(slug, email).first();
     const senha = String(corpo.senha || "");
-    if (!c) {
-      await derivarSenha(senha, new Uint8Array(16));
+    const hash = await derivarSenha(senha, c ? deHex(c.password_salt) : new Uint8Array(16));
+    if (!c || !iguais(hash, c.password_hash)) {
+      await registrarTentativa(env, kIp, "portal_login");
+      await registrarTentativa(env, kConta, "portal_login");
+      await registrarEvento(env, request, "portal_login_erro", { cliente_id: c ? c.id : null });
       return resp({ error: "E-mail ou senha incorretos" }, 401);
     }
-    if (!iguais(await derivarSenha(senha, deHex(c.password_salt)), c.password_hash)) {
-      return resp({ error: "E-mail ou senha incorretos" }, 401);
+    if (c.travada_em) {
+      return resp({ error: "Acesso protegido por segurança. Peça ao estúdio uma nova senha." }, 423);
     }
+    await registrarEvento(env, request, "portal_login_ok", { cliente_id: c.id });
     const b = new Uint8Array(32);
     crypto.getRandomValues(b);
     const token = paraHex(b);
@@ -539,6 +557,7 @@ export async function tratarPortalCliente(request, env, url) {
     ).bind(parseInt(url.searchParams.get("id"), 10) || 0, c.id).first();
     if (!f) return resp({ error: "Arquivo não encontrado" }, 404);
     if (await albumTrancado(env, f.album_id)) return resp({ error: "Este álbum será liberado assim que o pagamento for confirmado pelo estúdio." }, 402);
+    await registrarEvento(env, request, "download", { cliente_id: c.id });
     return resp({ url: await urlArquivo(env, f.object_key, f.name, true, 300) }, 200);
   }
 

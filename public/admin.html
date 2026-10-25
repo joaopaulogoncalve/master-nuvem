@@ -37,6 +37,21 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
   <p id="carregando" class="text-slate-400">Carregando...</p>
 
   <div id="conteudo" class="hidden space-y-6">
+    <div class="glass rounded-3xl p-6 space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-lg font-bold">🛡️ Sentinela <span class="text-sm font-normal text-slate-400">vigia de segurança a cada 20 minutos</span></h2>
+        <button type="button" id="btnVistos" class="text-sm font-semibold text-cyan-300 hover:text-white">Marcar alertas como vistos</button>
+      </div>
+      <div id="senResumo" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm"></div>
+      <div id="senTrancadas" class="space-y-2"></div>
+      <details id="senDetalhes">
+        <summary class="cursor-pointer font-semibold">Alertas (<span id="senQtd">0</span>) <span id="senNovos" class="text-amber-300"></span></summary>
+        <div id="senAlertas" class="space-y-1 mt-2"></div>
+      </details>
+      <p class="text-xs text-slate-500">A sentinela tranca a conta quando: alguém acerta a senha mas erra o código de 2 etapas várias vezes, ou a mesma conta entra de muitas conexões diferentes em 1 hora.
+        A pessoa recebe e-mail e volta criando uma senha nova. Também avisa por e-mail: muitas senhas erradas, muitos downloads de uma vez, conta de administrador nova e cada entrada no admin.</p>
+    </div>
+
     <div class="glass rounded-3xl p-6">
       <div class="flex items-center justify-between gap-3 mb-4">
         <h2 class="text-lg font-bold">Backblaze B2 <span class="text-sm font-normal text-slate-400">armazenamento e custo</span></h2>
@@ -180,6 +195,7 @@ function cartao(c) {
   topo.appendChild(el("p", "font-bold text-lg", c.nome || "(sem nome)"));
   if (c.role === "admin") topo.appendChild(selo("Administrador", "text-violet-200 bg-violet-500/20"));
   if (c.totp) topo.appendChild(selo("2FA", "text-emerald-200 bg-emerald-500/20"));
+  if (c.travada_em) topo.appendChild(selo("🔒 Trancada pela sentinela", "text-red-200 bg-red-500/20"));
   caixa.appendChild(topo);
   caixa.appendChild(el("p", "text-sm text-slate-400 break-all", c.email));
   caixa.appendChild(el("p", "text-xs text-slate-500", "Cliente desde " + formatarData(c.criado)));
@@ -257,6 +273,24 @@ function cartao(c) {
       carregar();
     });
     acoes.appendChild(btnRemover);
+  }
+  if (c.role !== "admin") {
+    var btnTrancar = el("button", "font-semibold text-sm px-4 py-2.5 rounded-xl border " +
+      (c.travada_em ? "text-emerald-300 border-emerald-400/40 hover:bg-emerald-500/10" : "text-slate-300 border-slate-500/40 hover:bg-slate-500/10"),
+      c.travada_em ? "🔓 Destravar" : "🔒 Trancar conta");
+    btnTrancar.type = "button";
+    btnTrancar.addEventListener("click", async function () {
+      var msg = c.travada_em ? "Destravar a conta de " + c.email + "?" :
+        "Trancar a conta de " + c.email + "?\nEla é desconectada na hora e só volta criando uma senha nova (ou quando você destravar).";
+      if (!confirm(msg)) return;
+      btnTrancar.disabled = true;
+      var r = await postar(c.travada_em ? "/api/admin/sentinela/destravar" : "/api/admin/sentinela/trancar", { user_id: c.id });
+      btnTrancar.disabled = false;
+      if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível."; return; }
+      carregar();
+      carregarSentinela();
+    });
+    acoes.appendChild(btnTrancar);
   }
   acoes.appendChild(erro);
   caixa.appendChild(acoes);
@@ -374,6 +408,71 @@ async function carregarCupons() {
     lista.appendChild(linha);
   });
 }
+
+/* ---------- sentinela ---------- */
+
+function dataHora(txt) {
+  // O banco grava em UTC; mostra no horário de Brasília (UTC−3).
+  if (!txt) return "-";
+  var d = new Date(txt.replace(" ", "T") + "Z");
+  return d.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+async function carregarSentinela() {
+  var resp = await fetch("/api/admin/sentinela");
+  if (!resp.ok) return;
+  var d = await resp.json();
+  var r = d.resumo_24h || {};
+  var res = document.getElementById("senResumo");
+  res.innerHTML = "";
+  [["Entradas (24 h)", r.entradas, ""], ["Senhas erradas (24 h)", r.senhas_erradas, r.senhas_erradas > 20 ? "text-amber-300" : ""],
+   ["Códigos 2FA errados (24 h)", r.codigos_errados, r.codigos_errados > 0 ? "text-amber-300" : ""], ["Downloads (24 h)", r.downloads, ""]].forEach(function (x) {
+    var c = el("div", "bg-slate-900/50 rounded-xl px-3 py-2");
+    c.appendChild(el("p", "text-xs text-slate-400", x[0]));
+    c.appendChild(el("p", "text-xl font-bold " + x[2], String(x[1] || 0)));
+    res.appendChild(c);
+  });
+
+  var tr = document.getElementById("senTrancadas");
+  tr.innerHTML = "";
+  var trancadas = d.contas.map(function (c) { return { tipo: "user_id", id: c.id, txt: c.email + " · conta do site", quando: c.travada_em }; })
+    .concat(d.clientes.map(function (c) { return { tipo: "cliente_id", id: c.id, txt: c.email + " · cliente do portal " + c.portal, quando: c.travada_em }; }));
+  if (!trancadas.length) tr.appendChild(el("p", "text-sm text-emerald-300", "✅ Nenhuma conta trancada."));
+  trancadas.forEach(function (t) {
+    var linha = el("div", "flex flex-wrap items-center justify-between gap-2 bg-red-500/10 border border-red-400/30 rounded-xl px-4 py-2 text-sm");
+    linha.appendChild(el("span", "break-all", "🔒 " + t.txt + " · desde " + dataHora(t.quando)));
+    var b = el("button", "font-semibold text-emerald-300", "Destravar");
+    b.type = "button";
+    b.addEventListener("click", async function () {
+      if (!confirm("Destravar " + t.txt + "?")) return;
+      var corpo = {};
+      corpo[t.tipo] = t.id;
+      await postar("/api/admin/sentinela/destravar", corpo);
+      carregarSentinela();
+      carregar();
+    });
+    linha.appendChild(b);
+    tr.appendChild(linha);
+  });
+
+  var la = document.getElementById("senAlertas");
+  la.innerHTML = "";
+  var novos = d.alertas.filter(function (a) { return !a.visto; }).length;
+  document.getElementById("senQtd").textContent = d.alertas.length;
+  document.getElementById("senNovos").textContent = novos ? "· " + novos + " novo(s)" : "";
+  if (novos) document.getElementById("senDetalhes").open = true;
+  if (!d.alertas.length) la.appendChild(el("p", "text-sm text-slate-400", "Nenhum alerta. Tudo tranquilo."));
+  d.alertas.forEach(function (a) {
+    var cor = a.nivel === "trancou" ? "text-red-300" : "text-amber-200";
+    la.appendChild(el("p", "text-sm break-words " + cor + (a.visto ? " opacity-60" : " font-semibold"),
+      dataHora(a.created_at) + " · " + (a.nivel === "trancou" ? "🔒 " : "⚠️ ") + a.mensagem));
+  });
+}
+
+document.getElementById("btnVistos").addEventListener("click", async function () {
+  await postar("/api/admin/sentinela/vistos");
+  carregarSentinela();
+});
 
 /* ---------- assistente ---------- */
 
@@ -521,6 +620,7 @@ document.getElementById("btnB2").addEventListener("click", carregarB2);
 carregarB2();
 carregarCupons();
 carregarAssistente();
+carregarSentinela();
 document.getElementById("sair").addEventListener("click", function () {
   postar("/api/logout").then(function () { window.location.href = "/entrar"; });
 });

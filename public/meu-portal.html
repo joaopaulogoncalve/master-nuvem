@@ -595,6 +595,7 @@ async function carregarClientes() {
     var info = el("div");
     info.appendChild(el("p", "font-semibold", c.nome));
     info.appendChild(el("p", "text-xs text-slate-400 break-all", c.email + " · " + c.albuns + " álbum(ns)"));
+    if (c.travada_em) info.appendChild(el("p", "text-xs text-red-300 font-semibold", "🔒 Acesso trancado pela sentinela (atividade suspeita). Clique em \"Nova senha\" para liberar."));
     linha.appendChild(info);
     var acoes = el("div", "flex gap-4");
     var bSenha = el("button", "link", "Nova senha");
