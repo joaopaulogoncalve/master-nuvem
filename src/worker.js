@@ -1,4 +1,5 @@
-import { tratarArquivos, medirBucket, removerObjeto } from "./arquivos.js";
+import { tratarArquivos, medirBucket, removerObjeto, urlArquivo } from "./arquivos.js";
+import { fazerCopia } from "./copia.js";
 import { tratarPortalDono, tratarPortalCliente } from "./portal.js";
 import { chaveIp, chaveConta, limiteAtingido, registrarTentativa, dentroDoLimite, registrarEvento } from "./limite.js";
 import { sentinela, REGRAS as REGRAS_SENTINELA } from "./sentinela.js";
@@ -445,6 +446,22 @@ async function tratarAdmin(request, env, url) {
     return resposta({ cupons: r.results }, 200);
   }
 
+  // Cópias de segurança do banco: lista, fazer agora e baixar (link de 5 min).
+  if (caminho === "/api/admin/copias" && request.method === "GET") {
+    const r = await env.DB.prepare("SELECT id, chave, bytes, tabelas, linhas, ok, erro, created_at FROM copias ORDER BY id DESC LIMIT 10").all();
+    return resposta({ copias: r.results }, 200);
+  }
+  if (caminho === "/api/admin/copias/baixar" && request.method === "GET") {
+    const c = await env.DB.prepare("SELECT chave FROM copias WHERE id = ? AND ok = 1").bind(parseInt(url.searchParams.get("id"), 10) || 0).first();
+    if (!c) return resposta({ error: "Cópia não encontrada" }, 404);
+    return resposta({ url: await urlArquivo(env, c.chave, c.chave.split("/").pop(), true, 300) }, 200);
+  }
+  if (caminho === "/api/admin/copias/agora" && request.method === "POST") {
+    if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
+    const r = await fazerCopia(env);
+    return resposta(r, r.ok ? 200 : 502);
+  }
+
   if (caminho === "/api/admin/backblaze") {
     let medida;
     try {
@@ -469,9 +486,11 @@ async function tratarAdmin(request, env, url) {
       if (v > 1 && v < 20) { dolar = v; dolarAoVivo = true; }
     } catch (e) {}
 
-    const cobrado = Math.max(0, medida.bytes - B2_GRATIS_BYTES);
+    // O Backblaze cobra também as cópias de segurança do banco (são poucos KB/MB).
+    const cobrado = Math.max(0, medida.bytes + (medida.copias_bytes || 0) - B2_GRATIS_BYTES);
     const custoUsd = cobrado / 1e12 * B2_US_POR_TB;
     return resposta({
+      copias_bytes: medida.copias_bytes || 0,
       bucket_bytes: medida.bytes,
       bucket_objetos: medida.objetos,
       bucket_completo: medida.completo,
@@ -1430,7 +1449,11 @@ export default {
   async scheduled(event, env, ctx) {
     // "*/20 * * * *" = sentinela; "0 * * * *" = limpeza (na hora cheia rodam as duas).
     // A lixeira do Meu estúdio (removidos há mais de 30 min) é esvaziada logo depois da sentinela.
-    if (event.cron === "0 * * * *") ctx.waitUntil(limpeza(env));
+    // A cópia de segurança do banco roda uma vez por dia, na limpeza das 06:00 UTC (03:00 em Brasília).
+    if (event.cron === "0 * * * *") ctx.waitUntil(limpeza(env).then(function (relatorio) {
+      if (new Date(event.scheduledTime).getUTCHours() !== 6) return relatorio;
+      return fazerCopia(env).then(function () { return relatorio; });
+    }));
     else ctx.waitUntil(sentinela(env).then(function () { return purgarLixeira(env); }).then(function () { return checarLinksBancos(env, ferramentasBancos()); }));
   },
 

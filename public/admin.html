@@ -90,6 +90,15 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <div id="listaBlog" class="space-y-1"></div>
     </div>
 
+    <div id="secCopias" class="adSec hidden glass rounded-3xl p-6 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-lg font-bold">🛟 Cópias de segurança <span class="text-sm font-normal text-slate-400">do banco de dados, todo dia às 3h</span></h2>
+        <button type="button" id="btnCopiaAgora" class="cta font-bold px-4 py-2 rounded-xl text-sm">Fazer cópia agora</button>
+      </div>
+      <p class="text-xs text-slate-500">Guardadas no Backblaze (pasta backups/), 31 dias em rodízio. Têm clientes, planos, álbuns, contratos e configurações (não têm os arquivos/fotos, que já ficam no Backblaze). Para restaurar, peça ao Claude: ele usa scripts/restaurar-copia.mjs.</p>
+      <div id="listaCopias" class="space-y-1"></div>
+    </div>
+
     <div id="secB2" class="adSec hidden glass rounded-3xl p-6">
       <div class="flex items-center justify-between gap-3 mb-4">
         <h2 class="text-lg font-bold">💾 Backblaze B2 <span class="text-sm font-normal text-slate-400">armazenamento e custo</span></h2>
@@ -779,11 +788,49 @@ document.getElementById("btnCupomSalvar").addEventListener("click", async functi
   carregarCupons();
 });
 
+/* ---------- cópias de segurança ---------- */
+
+var ultimaCopia = null;
+async function carregarCopias() {
+  var resp = await fetch("/api/admin/copias");
+  if (!resp.ok) return;
+  var d = await resp.json();
+  ultimaCopia = d.copias[0] || null;
+  var lista = document.getElementById("listaCopias");
+  lista.innerHTML = "";
+  if (!d.copias.length) lista.appendChild(el("p", "text-sm text-slate-400", "Nenhuma cópia ainda. A primeira sai hoje às 3h, ou clique em \"Fazer cópia agora\"."));
+  d.copias.forEach(function (c) {
+    var l = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/40 rounded-lg px-3 py-2 text-sm");
+    l.appendChild(el("span", c.ok ? "" : "text-red-300", (c.ok ? "✅ " : "❌ ") + dataHora(c.created_at) + (c.ok ? " · " + c.tabelas + " tabelas · " + c.linhas + " linhas · " + Math.max(1, Math.round(c.bytes / 1024)) + " KB" : " · " + (c.erro || "falhou"))));
+    if (c.ok) {
+      var b = el("button", "text-cyan-300 font-semibold", "Baixar");
+      b.type = "button";
+      b.addEventListener("click", async function () {
+        var r = await fetch("/api/admin/copias/baixar?id=" + c.id);
+        var x = await r.json();
+        if (x.url) window.location.href = x.url; else avisar(x.error || "Não foi possível baixar.");
+      });
+      l.appendChild(b);
+    }
+    lista.appendChild(l);
+  });
+}
+document.getElementById("btnCopiaAgora").addEventListener("click", async function () {
+  var b = this;
+  b.disabled = true;
+  b.textContent = "Copiando...";
+  var r = await postar("/api/admin/copias/agora");
+  b.disabled = false;
+  b.textContent = "Fazer cópia agora";
+  avisar(r.ok ? "Cópia feita: " + r.dados.tabelas + " tabelas, " + r.dados.linhas + " linhas." : "A cópia falhou: " + (r.dados.erro || r.dados.error || "erro"), r.ok ? "Pronto ✅" : "Ops");
+  carregarCopias();
+});
+
 /* ---------- tela inicial: quadradinhos com resumo e ponto vermelho ---------- */
 
 var SECOES = [
   ["Clientes", "👥 Clientes"], ["Assistente", "☁️ Assistente"], ["Sentinela", "🛡️ Sentinela"],
-  ["Bancos", "🏦 Bancos"], ["Blog", "📝 Blog"], ["B2", "💾 Backblaze"], ["Cupons", "🎟️ Cupons"]
+  ["Bancos", "🏦 Bancos"], ["Blog", "📝 Blog"], ["B2", "💾 Backblaze"], ["Copias", "🛟 Cópias"], ["Cupons", "🎟️ Cupons"]
 ];
 var resumoTile = {};
 
@@ -816,7 +863,8 @@ function atualizarTiles() {
     Bancos: [pedidos ? pedidos + " pedido(s) de banco" : (quebrados ? quebrados + " link(s) quebrado(s)" : document.getElementById("bcLista").children.length + " bancos · links ok"), pedidos + quebrados],
     Blog: [noAr + " no ar · " + agendados + " agendado(s)", 0],
     B2: ["Lucro: " + document.getElementById("b2Lucro").textContent + "/mês", document.getElementById("b2Aviso").classList.contains("hidden") ? 0 : 1],
-    Cupons: [document.getElementById("listaCupons").children.length + " cupom(ns)", 0]
+    Cupons: [document.getElementById("listaCupons").children.length + " cupom(ns)", 0],
+    Copias: [ultimaCopia ? (ultimaCopia.ok ? "Última: " + dataHora(ultimaCopia.created_at) : "A última cópia falhou!") : "Nenhuma cópia ainda", ultimaCopia && (!ultimaCopia.ok || Date.now() - new Date(String(ultimaCopia.created_at).replace(" ", "T") + "Z").getTime() > 2 * 86400000) ? 1 : (ultimaCopia ? 0 : 1)]
   };
   var home = document.getElementById("adHome");
   home.innerHTML = "";
@@ -855,7 +903,7 @@ function limitarLista(id, n) {
 
 // Depois de cada carregamento: encurta as listas e atualiza os quadradinhos.
 [["carregar", []], ["carregarB2", []], ["carregarCupons", [["listaCupons", 4]]], ["carregarAssistente", [["listaSemResposta", 5]]],
- ["carregarSentinela", [["senAlertas", 8]]], ["carregarBlog", [["listaBlog", 6]]], ["carregarBancos", [["bcLista", 6]]]].forEach(function (x) {
+ ["carregarSentinela", [["senAlertas", 8]]], ["carregarBlog", [["listaBlog", 6]]], ["carregarBancos", [["bcLista", 6]]], ["carregarCopias", []]].forEach(function (x) {
   var original = window[x[0]];
   window[x[0]] = async function () {
     var r = await original.apply(this, arguments);
@@ -881,6 +929,7 @@ carregarAssistente();
 carregarSentinela();
 carregarBlog();
 carregarBancos();
+carregarCopias();
 document.getElementById("sair").addEventListener("click", function () {
   postar("/api/logout").then(function () { window.location.href = "/entrar"; });
 });
