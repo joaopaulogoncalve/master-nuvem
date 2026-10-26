@@ -5,6 +5,7 @@ import { sentinela, REGRAS as REGRAS_SENTINELA } from "./sentinela.js";
 import { tratarEventosDono, tratarEventoPublico } from "./eventos.js";
 import { tratarBlog, agendaBlog } from "./blog.js";
 import { purgarLixeira } from "./lixeira.js";
+import { tratarBancos, tratarAdminBancos, checarLinksBancos } from "./bancos.js";
 const enc = new TextEncoder();
 const DIAS_SESSAO = 30;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -338,11 +339,17 @@ async function aplicarPagamento(env, pg) {
 
 /* ---------- painel admin ---------- */
 
+function ferramentasBancos() {
+  return { resposta: resposta, lerJson: lerJson, origemOk: origemOk, enviarEmail: enviarEmail, emailAviso: emailAviso,
+    escaparHtml: escaparHtml, SITE: SITE, EMAIL_SUPORTE: EMAIL_SUPORTE, PRAZO: PRAZO_CHAMADO };
+}
+
 async function tratarAdmin(request, env, url) {
   const caminho = url.pathname;
   const u = await usuarioLogado(request, env);
   if (!u) return resposta({ error: "Não autenticado" }, 401);
   if (u.role !== "admin") return resposta({ error: "Acesso restrito" }, 403);
+  if (caminho === "/api/admin/bancos" || caminho.startsWith("/api/admin/bancos/")) return await tratarAdminBancos(request, env, url, ferramentasBancos());
 
   if (caminho === "/api/admin/clientes") {
     const r = await env.DB.prepare(
@@ -1237,6 +1244,10 @@ async function tratarApi(request, env, url) {
     return await tratarAssistente(request, env, url);
   }
 
+  if (caminho === "/api/bancos" || caminho.startsWith("/api/bancos/")) {
+    return await tratarBancos(request, env, url, ferramentasBancos());
+  }
+
   if (caminho.startsWith("/api/p/")) {
     return await tratarPortalCliente(request, env, url);
   }
@@ -1411,7 +1422,7 @@ export default {
     // "*/20 * * * *" = sentinela; "0 * * * *" = limpeza (na hora cheia rodam as duas).
     // A lixeira do Meu estúdio (removidos há mais de 30 min) é esvaziada logo depois da sentinela.
     if (event.cron === "0 * * * *") ctx.waitUntil(limpeza(env));
-    else ctx.waitUntil(sentinela(env).then(function () { return purgarLixeira(env); }));
+    else ctx.waitUntil(sentinela(env).then(function () { return purgarLixeira(env); }).then(function () { return checarLinksBancos(env, ferramentasBancos()); }));
   },
 
   async fetch(request, env) {

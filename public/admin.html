@@ -54,6 +54,26 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
     </div>
 
     <div class="glass rounded-3xl p-6 space-y-3">
+      <h2 class="text-lg font-bold">🏦 Bancos <span class="text-sm font-normal text-slate-400">links oficiais do "Como recebo" e da Nuvenzinha</span></h2>
+      <div id="bcPedidos" class="space-y-2"></div>
+      <div id="bcForm" class="bg-slate-900/50 rounded-2xl p-4 space-y-2 text-sm">
+        <p id="bcTitulo" class="font-semibold">Adicionar banco</p>
+        <p id="bcAviso" class="hidden text-xs text-amber-300"></p>
+        <div class="grid md:grid-cols-2 gap-2">
+          <input id="bcNome" class="campo" maxlength="60" placeholder="Nome (ex.: Banrisul)">
+          <input id="bcPalavras" class="campo" maxlength="300" placeholder="Palavras para a Nuvenzinha achar (ex.: banrisul,banco do rio grande)">
+          <input id="bcPix" class="campo" maxlength="300" placeholder="Link oficial: cadastrar chave PIX (https://...)">
+          <input id="bcPag" class="campo" maxlength="300" placeholder="Link oficial: criar link de pagamento (opcional)">
+        </div>
+        <label class="flex items-center gap-2"><input id="bcApi" type="checkbox"> Tem API de pagamentos (confirmação automática possível no futuro)</label>
+        <p class="text-xs text-slate-500">Use só links do site oficial do banco (confira o endereço). Peça ao Claude para achar o link certo, se precisar.</p>
+        <p id="bcErro" class="text-red-400 min-h-[1.25rem]"></p>
+        <div class="flex gap-3"><button type="button" id="bcSalvar" class="cta font-bold px-4 py-2 rounded-xl">Salvar</button><button type="button" id="bcCancelar" class="hidden text-slate-400 hover:text-white">Cancelar</button></div>
+      </div>
+      <div id="bcLista" class="space-y-1"></div>
+    </div>
+
+    <div class="glass rounded-3xl p-6 space-y-3">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="text-lg font-bold">📝 Blog <span class="text-sm font-normal text-slate-400">agenda de publicação</span></h2>
         <a href="/blog" target="_blank" class="text-sm font-semibold text-cyan-300 hover:text-white">Abrir o blog →</a>
@@ -508,6 +528,100 @@ document.getElementById("btnVistos").addEventListener("click", async function ()
   carregarSentinela();
 });
 
+/* ---------- bancos ---------- */
+
+var bcEditando = 0, bcPedido = 0;
+function bcLimpar() {
+  bcEditando = 0; bcPedido = 0;
+  ["bcNome", "bcPalavras", "bcPix", "bcPag"].forEach(function (id) { document.getElementById(id).value = ""; });
+  document.getElementById("bcApi").checked = false;
+  document.getElementById("bcTitulo").textContent = "Adicionar banco";
+  document.getElementById("bcAviso").classList.add("hidden");
+  document.getElementById("bcCancelar").classList.add("hidden");
+  document.getElementById("bcErro").textContent = "";
+}
+function bcEditar(b, pedido) {
+  bcLimpar();
+  if (b) {
+    bcEditando = b.id;
+    document.getElementById("bcNome").value = b.nome;
+    document.getElementById("bcPalavras").value = b.palavras || "";
+    document.getElementById("bcPix").value = b.link_pix || "";
+    document.getElementById("bcPag").value = b.link_pagamento || "";
+    document.getElementById("bcApi").checked = !!b.tem_api;
+    document.getElementById("bcTitulo").textContent = "Editando " + b.nome;
+  }
+  if (pedido) {
+    bcPedido = pedido.id;
+    document.getElementById("bcNome").value = pedido.banco;
+    document.getElementById("bcTitulo").textContent = "Aprovar pedido: " + pedido.banco;
+    var av = document.getElementById("bcAviso");
+    av.textContent = "Ao salvar, " + pedido.email + " recebe os links por e-mail na hora.";
+    av.classList.remove("hidden");
+  }
+  document.getElementById("bcCancelar").classList.remove("hidden");
+  document.getElementById("bcForm").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+async function carregarBancos() {
+  var resp = await fetch("/api/admin/bancos");
+  if (!resp.ok) return;
+  var d = await resp.json();
+  var ped = document.getElementById("bcPedidos");
+  ped.innerHTML = "";
+  d.pedidos.forEach(function (p) {
+    var l = el("div", "flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm border border-amber-400/50");
+    l.appendChild(el("span", "", "🔴 Pedido nº " + p.id + ": " + p.banco + " · " + p.email + " · " + formatarData(p.created_at)));
+    var acoes = el("span", "flex gap-3");
+    var ap = el("button", "text-emerald-300 font-semibold", "Aprovar (colar links)");
+    ap.type = "button";
+    ap.addEventListener("click", function () { bcEditar(null, p); });
+    var ds = el("button", "text-slate-400", "Descartar");
+    ds.type = "button";
+    ds.addEventListener("click", async function () {
+      if (!(await confirmar("Descartar o pedido?", "A pessoa não recebe resposta automática.", "Descartar"))) return;
+      await postar("/api/admin/bancos/pedido-descartar", { id: p.id });
+      carregarBancos();
+    });
+    acoes.appendChild(ap); acoes.appendChild(ds);
+    l.appendChild(acoes);
+    ped.appendChild(l);
+  });
+  var lista = document.getElementById("bcLista");
+  lista.innerHTML = "";
+  d.bancos.forEach(function (b) {
+    var quebrado = !b.link_pix_ok || !b.link_pagamento_ok;
+    var l = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/40 rounded-lg px-3 py-2 text-sm");
+    l.appendChild(el("span", "", (quebrado ? "❌ " : "✅ ") + b.nome + (b.tem_api ? " · 🤖 API" : " · ✋ manual") + (quebrado ? " · link quebrado, troque!" : "") + (b.checado_em ? " · conferido " + formatarData(b.checado_em) : "")));
+    var acoes = el("span", "flex gap-3");
+    var ed = el("button", "text-cyan-300 font-semibold", "Editar");
+    ed.type = "button";
+    ed.addEventListener("click", function () { bcEditar(b); });
+    var rm = el("button", "text-red-300", "Remover");
+    rm.type = "button";
+    rm.addEventListener("click", async function () {
+      if (!(await confirmar("Remover " + b.nome + "?", "Sai do \"Como recebo\" e da Nuvenzinha.", "Remover"))) return;
+      await postar("/api/admin/bancos/remover", { id: b.id });
+      carregarBancos();
+    });
+    acoes.appendChild(ed); acoes.appendChild(rm);
+    l.appendChild(acoes);
+    lista.appendChild(l);
+  });
+}
+document.getElementById("bcCancelar").addEventListener("click", bcLimpar);
+document.getElementById("bcSalvar").addEventListener("click", async function () {
+  var r = await postar("/api/admin/bancos/salvar", {
+    id: bcEditando, pedido_id: bcPedido,
+    nome: document.getElementById("bcNome").value, palavras: document.getElementById("bcPalavras").value,
+    link_pix: document.getElementById("bcPix").value, link_pagamento: document.getElementById("bcPag").value,
+    tem_api: document.getElementById("bcApi").checked
+  });
+  if (!r.ok) { document.getElementById("bcErro").textContent = r.dados.error || "Não foi possível salvar."; return; }
+  if (r.dados.avisado) avisar("Salvo! " + r.dados.avisado + " recebeu os links por e-mail.", "Pedido aprovado ✅");
+  bcLimpar();
+  carregarBancos();
+});
+
 /* ---------- assistente ---------- */
 
 var faqEditando = 0;
@@ -656,6 +770,7 @@ carregarCupons();
 carregarAssistente();
 carregarSentinela();
 carregarBlog();
+carregarBancos();
 document.getElementById("sair").addEventListener("click", function () {
   postar("/api/logout").then(function () { window.location.href = "/entrar"; });
 });

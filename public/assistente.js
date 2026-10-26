@@ -5,6 +5,7 @@
   window.__assistenteNuvem = true;
 
   var faq = [];
+  var bancos = [];
   var prazo = "48 horas";
   var emailSuporte = "contato@masternuvem.com.br";
   var carregado = false;
@@ -174,8 +175,100 @@
     ]);
   }
 
+  /* ---------- bancos: links oficiais para chave PIX e link de pagamento ---------- */
+
+  var ASSUNTO_BANCO = /\b(pix|chave|link de pagamento|link pagamento|maquininha|maquina|cartao|receber|recebo|cobrar|banco|conta digital)\b/;
+  function acharBanco(texto) {
+    var t = " " + semAcento(texto).replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ") + " ";
+    if (!ASSUNTO_BANCO.test(t)) return null;
+    var melhor = null, tam = 0;
+    bancos.forEach(function (b) {
+      (b.palavras + "," + b.nome).split(",").forEach(function (p) {
+        p = " " + semAcento(p).trim() + " ";
+        if (p.length > 3 && t.indexOf(p) > -1 && p.length > tam) { melhor = b; tam = p.length; }
+      });
+    });
+    return melhor || "assunto";
+  }
+
+  function linkExterno(destino, texto, href) {
+    var a = el("a", { href: href, target: "_blank", rel: "noopener noreferrer" }, texto + " ↗");
+    destino.appendChild(a);
+    destino.appendChild(document.createTextNode("\n"));
+  }
+
+  function responderBanco(b) {
+    var m = falaBot("Achei! No " + b.nome + ":\n");
+    if (b.link_pix) linkExterno(m, "Como cadastrar a chave PIX", b.link_pix);
+    if (b.link_pagamento) linkExterno(m, "Como criar link de pagamento", b.link_pagamento);
+    m.appendChild(document.createTextNode(b.tem_api ?
+      "\nConfirmação do pagamento: por enquanto você confere no app e clica em \"Marcar como pago\" (o " + b.nome + " permite confirmação automática no futuro)." :
+      "\nConfirmação do pagamento: é manual. O dinheiro cai direto na sua conta; confira no app e clique em \"Marcar como pago\" no Meu estúdio."));
+    m.appendChild(document.createTextNode("\nDepois cole a chave e o link em "));
+    m.appendChild(el("a", { href: "/meu-portal?aba=receber" }, "Como recebo"));
+    m.appendChild(document.createTextNode("."));
+    rolar();
+    chips([
+      { texto: "👍 Resolveu", acao: function () { falaBot("Que bom! Qualquer coisa, é só chamar. ☁️"); } },
+      { texto: "Outro banco", acao: escolherBanco }
+    ]);
+  }
+
+  function escolherBanco() {
+    falaBot("Qual é o seu banco ou maquininha?");
+    chips(bancos.map(function (b) {
+      return { texto: b.nome, acao: function () { falaEu(b.nome); setTimeout(function () { responderBanco(b); }, 300); } };
+    }).concat([{ texto: "Não está na lista", forte: true, acao: pedirBanco }]));
+  }
+
+  // Banco que a Nuvenzinha não conhece: vira pedido; o João aprova o link oficial e a pessoa recebe por e-mail.
+  function pedirBanco() {
+    var caixa = el("div", { class: "nv-msg nv-bot" });
+    caixa.appendChild(document.createTextNode("Ainda não conheço esse 😅 Me diga qual é que eu procuro o link oficial e te mando por e-mail em até " + prazo + ":"));
+    var banco = el("input", { class: "nv-campo", maxlength: "60", placeholder: "Nome do banco ou maquininha" });
+    var nome = el("input", { class: "nv-campo", maxlength: "80", placeholder: "Seu nome", autocomplete: "name" });
+    var email = el("input", { class: "nv-campo", type: "email", maxlength: "120", placeholder: "Seu e-mail", autocomplete: "email" });
+    if (usuario) { nome.value = usuario.nome || ""; email.value = usuario.email || ""; }
+    var erro = el("div", { class: "nv-erro" });
+    var enviar = el("button", { class: "nv-btn", type: "button" }, "Pedir os links");
+    [banco, nome, email, erro, enviar].forEach(function (x) { caixa.appendChild(x); });
+    msgs.appendChild(caixa);
+    rolar();
+    banco.focus();
+    enviar.addEventListener("click", function () {
+      erro.textContent = "";
+      enviar.disabled = true;
+      fetch("/api/bancos/pedido", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ banco: banco.value, nome: nome.value, email: email.value })
+      }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); }).then(function (r) {
+        enviar.disabled = false;
+        if (!r.ok) { erro.textContent = r.d.error || "Não foi possível enviar."; return; }
+        caixa.remove();
+        falaBot("Pedido nº " + r.d.protocolo + " anotado ✅\nAssim que a equipe conferir o link oficial do " + banco.value.trim() + ", eu te mando no e-mail " + email.value.trim() + " (em até " + r.d.prazo + ").");
+      }).catch(function () {
+        enviar.disabled = false;
+        erro.textContent = "Erro de conexão. Tente de novo.";
+      });
+    });
+  }
+
   function perguntar(texto) {
+    var banco = acharBanco(texto);
+    if (banco && banco !== "assunto") {
+      falaEu(texto);
+      registrar(texto, null);
+      setTimeout(function () { responderBanco(banco); }, 450);
+      return;
+    }
     var achou = buscar(texto);
+    // Fala de banco/PIX sem dizer qual e sem resposta pronta: pergunta qual é o banco.
+    if (banco === "assunto" && /\b(banco|maquininha|maquina|conta no|conta na)\b/.test(semAcento(texto))) {
+      falaEu(texto);
+      registrar(texto, null);
+      setTimeout(escolherBanco, 450);
+      return;
+    }
     if (achou.length) {
       responder(achou[0].f, texto, false);
       if (achou.length > 1) {
@@ -234,11 +327,12 @@
     if (carregado) return Promise.resolve();
     carregado = true;
     fetch("/api/me").then(function (r) { return r.ok ? r.json() : null; }).then(function (u) { usuario = u; }).catch(function () {});
-    return fetch("/api/assistente/faq").then(function (r) { return r.json(); }).then(function (d) {
+    var pBancos = fetch("/api/bancos").then(function (r) { return r.json(); }).then(function (d) { bancos = d.bancos || []; }).catch(function () {});
+    return Promise.all([pBancos, fetch("/api/assistente/faq").then(function (r) { return r.json(); }).then(function (d) {
       faq = d.faq || [];
       prazo = d.prazo || prazo;
       emailSuporte = d.email || emailSuporte;
-    }).catch(function () { faq = []; });
+    }).catch(function () { faq = []; })]);
   }
 
   function abrir() {

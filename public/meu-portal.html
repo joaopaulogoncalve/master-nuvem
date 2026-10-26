@@ -56,8 +56,14 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       </div>
       <div class="flex gap-2">
         <button type="button" id="irCobrancas" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">💰 Cobranças</button>
-        <button type="button" id="irConfig" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">⚙️ Configurações</button>
+        <button type="button" id="irConfig" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">🎨 Minha página</button>
+        <button type="button" id="irReceber" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">💳 Como recebo</button>
       </div>
+    </div>
+
+    <div id="checklist" class="hidden glass rounded-2xl p-4" style="border-color:#f59e0b88">
+      <p class="font-bold text-amber-200">✨ Complete seu cadastro: <span id="ckConta"></span></p>
+      <div id="ckItens" class="flex flex-wrap gap-2 mt-3"></div>
     </div>
 
     <div class="grid grid-cols-3 gap-3">
@@ -182,7 +188,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
   <!-- 1. Configuração -->
   <section id="secConfig" class="hidden glass rounded-3xl p-6">
     <div id="cfgDetalhes">
-    <div class="flex items-center justify-between gap-3"><h2 class="text-lg font-bold">⚙️ Configurações do estúdio</h2><button type="button" id="cfgVoltar" class="link">← Meus links</button></div>
+    <div class="flex items-center justify-between gap-3"><div><h2 class="text-lg font-bold">🎨 Minha página</h2><p class="text-sm text-slate-400">É assim que os seus clientes veem você: nome, logomarca, cores e layout.</p><p id="cfgPasso" class="hidden text-xs font-semibold text-amber-300 mt-1"></p></div><button type="button" id="cfgVoltar" class="link">← Meus links</button></div>
     <div class="grid md:grid-cols-3 gap-4 mt-4">
       <label class="text-sm text-slate-300 md:col-span-1">Nome do estúdio
         <input id="cfgNome" class="campo mt-1" maxlength="60" placeholder="Estúdio Aurora" autocomplete="organization">
@@ -192,6 +198,22 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       </label>
       <label class="text-sm text-slate-300">Cor da sua marca
         <input id="cfgCor" type="color" value="#be185d" class="mt-1 w-full h-11 rounded-xl bg-transparent border border-blue-900 cursor-pointer">
+      </label>
+    </div>
+    <div id="blocoMarca" class="hidden mt-5 space-y-4">
+      <div>
+        <p class="text-sm text-slate-300">🏷️ Sua logomarca (aparece no cantinho das páginas dos clientes e dos eventos)</p>
+        <div class="flex items-center gap-4 mt-2">
+          <div class="w-20 h-20 rounded-2xl bg-slate-900/70 border border-blue-900 flex items-center justify-center overflow-hidden"><img id="cfgLogoImg" class="hidden max-w-full max-h-full" alt=""><span id="cfgLogoVazio" class="text-xs text-slate-500">sem logo</span></div>
+          <div class="space-y-2">
+            <input id="cfgLogoArq" type="file" accept="image/png,image/jpeg,image/webp" class="hidden">
+            <button type="button" id="cfgLogoBtn" class="cta font-bold px-4 py-2 rounded-xl text-sm">Enviar logo</button>
+            <button type="button" id="cfgLogoTirar" class="hidden block perigo text-xs">Tirar a logo</button>
+          </div>
+        </div>
+      </div>
+      <label class="text-sm text-slate-300 block">✍️ Sobre você (opcional: aparece para os clientes)
+        <textarea id="cfgBio" class="campo mt-1 h-20" maxlength="600" placeholder="Fotógrafo de casamentos em Goiânia há 10 anos..."></textarea>
       </label>
     </div>
     <p class="text-sm text-slate-300 mt-5 mb-2">🎨 Layout: vale para os álbuns dos clientes e para as páginas dos eventos. Escolha e clique em Salvar.</p>
@@ -240,16 +262,30 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
     <p id="cfgErro" class="text-sm text-red-400 mt-3 min-h-[1.25rem]"></p>
     <div class="flex flex-wrap items-center gap-4">
       <button type="button" id="btnSalvar" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Salvar</button>
+      <span id="cfgOk" class="hidden text-sm text-emerald-300">Salvo!</span>
       <p id="cfgLink" class="hidden text-sm text-slate-300">Link para os seus clientes: <a id="cfgUrl" target="_blank" class="link break-all"></a> <button type="button" id="btnCopiar" class="link ml-2">Copiar</button></p>
     </div>
-    <div id="blocoPix" class="hidden mt-5 pt-5 border-t border-blue-900/60">
-      <label class="text-sm text-slate-300">💳 Como você recebe: sua chave PIX (aparece nas cobranças dos álbuns e nos pedidos de fotos de eventos)
+    <button type="button" id="cfgIrReceber" class="hidden mt-5 w-full font-bold text-white px-5 py-3 rounded-xl" style="background:linear-gradient(90deg,#059669,#10b981)">Próximo: 💳 Como você recebe →</button>
+
+    </div>
+  </section>
+
+  <!-- Como recebo: PIX, link de pagamento, nota fiscal e passo a passo por banco/app -->
+  <section id="secReceber" class="hidden glass rounded-3xl p-6 space-y-5">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-bold">💳 Como recebo</h2>
+        <p class="text-sm text-slate-400">Os seus clientes pagam <strong class="text-emerald-300">direto para você</strong>. A Master Nuvem não cobra comissão nem taxa: só o armazenamento.</p>
+        <p id="recPasso" class="hidden text-xs font-semibold text-amber-300 mt-1"></p>
+      </div>
+      <button type="button" id="recVoltar" class="link whitespace-nowrap">← Meus links</button>
+    </div>
+    <p id="recSemPortal" class="hidden text-amber-300 text-sm">Primeiro crie a sua página em <button type="button" id="recIrPagina" class="link">🎨 Minha página</button>. Depois volte aqui.</p>
+    <div id="blocoPix" class="hidden space-y-1">
+      <label class="text-sm text-slate-300">🔑 Sua chave PIX (aparece nas cobranças dos álbuns e nos pedidos de fotos de eventos)
         <textarea id="instrucoes" class="campo mt-1 h-20" maxlength="500" placeholder="PIX (CNPJ): 12.345.678/0001-90 – Estúdio Aurora&#10;Banco: ..."></textarea>
       </label>
-      <button type="button" id="btnInstrucoes" class="link mt-1">Salvar forma de recebimento</button>
-      <span id="instrOk" class="hidden text-sm text-emerald-300 ml-2">Salvo!</span>
-      <p class="text-xs text-slate-500 mt-1">O dinheiro vai direto para você. A Master Nuvem não cobra comissão.</p>
-      <label class="text-sm text-slate-300 block mt-4">🔗 Seu link de pagamento (opcional: Mercado Pago, InfinitePay...). Aparece como botão "Pagar" ao lado do PIX
+            <label class="text-sm text-slate-300 block mt-4">🔗 Seu link de pagamento (opcional: Mercado Pago, InfinitePay...). Aparece como botão "Pagar" ao lado do PIX
         <input id="cfgLinkPag" class="campo mt-1" maxlength="300" placeholder="https://...">
       </label>
       <label class="text-sm text-slate-300 block mt-4">🧾 Você emite nota fiscal para os seus clientes?
@@ -259,26 +295,17 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         </select>
         <span class="block text-xs text-slate-500 mt-1">Se sim, o pedido mostra o CPF/CNPJ do cliente e você emite a nota no portal da sua prefeitura.</span>
       </label>
+      <div class="flex flex-wrap items-center gap-3 pt-4">
+        <button type="button" id="btnInstrucoes" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Salvar</button>
+        <span id="instrOk" class="hidden text-sm text-emerald-300">Salvo!</span>
+      </div>
     </div>
 
-    <div id="blocoMarca" class="hidden mt-5 pt-5 border-t border-blue-900/60 space-y-4">
-      <div>
-        <p class="text-sm text-slate-300">🏷️ Sua logomarca (aparece no cantinho das páginas dos clientes e dos eventos)</p>
-        <div class="flex items-center gap-4 mt-2">
-          <div class="w-20 h-20 rounded-2xl bg-slate-900/70 border border-blue-900 flex items-center justify-center overflow-hidden"><img id="cfgLogoImg" class="hidden max-w-full max-h-full" alt=""><span id="cfgLogoVazio" class="text-xs text-slate-500">sem logo</span></div>
-          <div class="space-y-2">
-            <input id="cfgLogoArq" type="file" accept="image/png,image/jpeg,image/webp" class="hidden">
-            <button type="button" id="cfgLogoBtn" class="cta font-bold px-4 py-2 rounded-xl text-sm">Enviar logo</button>
-            <button type="button" id="cfgLogoTirar" class="hidden block perigo text-xs">Tirar a logo</button>
-          </div>
-        </div>
-      </div>
-      <label class="text-sm text-slate-300 block">✍️ Sobre você (opcional: aparece para os clientes)
-        <textarea id="cfgBio" class="campo mt-1 h-20" maxlength="600" placeholder="Fotógrafo de casamentos em Goiânia há 10 anos..."></textarea>
-      </label>
-      <button type="button" id="btnMarca" class="link">Salvar logo, texto, nota e link</button>
-      <span id="marcaOk" class="hidden text-sm text-emerald-300 ml-2">Salvo!</span>
-    </div>
+    <div id="guiaBancos" class="pt-5 border-t border-blue-900/60">
+      <label class="font-bold block" for="qualBanco">🏦 Qual é o seu banco?</label>
+      <p class="text-sm text-slate-400 mt-1">Mostramos onde achar a chave PIX e o link de pagamento, e como o pagamento é confirmado.</p>
+      <select id="qualBanco" class="campo mt-2" style="max-width:360px"><option value="">Escolha...</option></select>
+      <div id="guiaPassos" class="mt-3"></div>
     </div>
   </section>
 
@@ -625,6 +652,88 @@ function gerarSenha() {
 
 /* ---------- carregar ---------- */
 
+/* ---------- "Complete seu cadastro" ---------- */
+
+function atualizarChecklist() {
+  var p = dados.portal;
+  var itens = [
+    ["1. Criar a página", !!p, "config"],
+    ["2. Logo e layout", !!(p && (p.logo_url || p.logo_file_id || p.bio)), "config"],
+    ["3. Como recebo", !!(p && (p.instrucoes_pagamento || p.link_pagamento)), "receber"]
+  ];
+  var feitos = itens.filter(function (i) { return i[1]; }).length;
+  mostrar("checklist", !!p && feitos < itens.length);
+  document.getElementById("ckConta").textContent = feitos + " de " + itens.length;
+  var caixa = document.getElementById("ckItens");
+  caixa.innerHTML = "";
+  itens.forEach(function (i) {
+    var b = el("button", "text-sm font-semibold px-3 py-2 rounded-xl border " + (i[1] ? "border-emerald-500/50 text-emerald-300" : "border-amber-400/60 text-amber-200 hover:bg-amber-500/10"), (i[1] ? "✅ " : "⬜ ") + i[0]);
+    b.type = "button";
+    b.addEventListener("click", function () { mostrarTela(i[2]); });
+    caixa.appendChild(b);
+  });
+}
+
+/* ---------- "Qual é o seu banco?": links das ajudas oficiais (lista aprovada no /admin) ---------- */
+
+var bancosLista = [];
+function botaoLink(texto, href) {
+  var a = el("a", "inline-block text-sm font-semibold px-3 py-2 rounded-lg border border-blue-800 hover:border-cyan-400", texto + " ↗");
+  a.href = href; a.target = "_blank"; a.rel = "noopener noreferrer";
+  return a;
+}
+function mostrarBanco() {
+  var caixa = document.getElementById("guiaPassos");
+  caixa.innerHTML = "";
+  var v = document.getElementById("qualBanco").value;
+  if (!v) return;
+  if (v === "outro") {
+    var f = el("div", "bg-slate-900/50 rounded-xl p-4 space-y-2");
+    f.appendChild(el("p", "text-sm", "Qual é o banco ou a maquininha? A gente procura o link oficial e te manda por e-mail (em até 48 horas)."));
+    var campo = el("input", "campo");
+    campo.maxLength = 60; campo.placeholder = "Ex.: Banrisul, Cora, SumUp...";
+    var erro = el("p", "text-sm text-red-400");
+    var b = el("button", "cta font-bold px-4 py-2 rounded-xl text-sm", "Pedir os links");
+    b.type = "button";
+    b.addEventListener("click", async function () {
+      erro.textContent = "";
+      var me = await api("/api/me");
+      var r = await api("/api/bancos/pedido", { banco: campo.value, nome: me.ok ? me.dados.nome : "", email: me.ok ? me.dados.email : "" });
+      if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível pedir."; return; }
+      f.innerHTML = "";
+      f.appendChild(el("p", "text-sm text-emerald-300", "✅ Pedido nº " + r.dados.protocolo + " enviado! Vamos mandar os links para " + (me.ok ? me.dados.email : "o seu e-mail") + " em até " + r.dados.prazo + "."));
+    });
+    [campo, erro, b].forEach(function (x) { f.appendChild(x); });
+    caixa.appendChild(f);
+    return;
+  }
+  var bco = bancosLista.find(function (x) { return String(x.id) === v; });
+  if (!bco) return;
+  var card = el("div", "bg-slate-900/50 rounded-xl p-4 space-y-3");
+  var links = el("div", "flex flex-wrap gap-2");
+  if (bco.link_pix) links.appendChild(botaoLink("🔑 Cadastrar a chave PIX", bco.link_pix));
+  if (bco.link_pagamento) links.appendChild(botaoLink("🔗 Criar link de pagamento", bco.link_pagamento));
+  card.appendChild(links);
+  if (!bco.link_pagamento) card.appendChild(el("p", "text-xs text-slate-400", "Este banco não tem link de pagamento com cartão: o cliente paga pelo PIX. Para aceitar cartão, use um app como Mercado Pago, InfinitePay ou PagBank."));
+  if (!bco.link_pix) card.appendChild(el("p", "text-xs text-slate-400", "A chave PIX fica no app do banco onde o dinheiro cai (procure \"Área Pix\" → \"Minhas chaves\")."));
+  // Como o pagamento é confirmado: com PIX direto no banco, quem confere é o fotógrafo.
+  var conf = el("div", "rounded-xl p-3 text-sm " + (bco.tem_api ? "border border-cyan-500/40" : "border border-amber-500/40"));
+  conf.appendChild(el("p", "font-semibold " + (bco.tem_api ? "text-cyan-200" : "text-amber-200"), bco.tem_api ? "🤖 Confirmação automática: possível no futuro" : "✋ Confirmação manual (feita por você)"));
+  conf.appendChild(el("p", "text-slate-300 mt-1", bco.tem_api ?
+    "O " + bco.nome + " tem um sistema que permite confirmar pagamentos sozinho, e isso está nos nossos planos. Por enquanto: confira no app e clique em \"Marcar como pago\" no Meu estúdio." :
+    "O dinheiro cai direto na sua conta e a Master Nuvem não consegue ver se o cliente pagou. Confira no app do " + bco.nome + " e clique em \"Marcar como pago\": só então o álbum ou as fotos são liberados."));
+  card.appendChild(conf);
+  card.appendChild(el("p", "text-xs text-slate-500", "Os links abrem a ajuda oficial do " + bco.nome + "."));
+  caixa.appendChild(card);
+}
+document.getElementById("qualBanco").addEventListener("change", mostrarBanco);
+fetch("/api/bancos").then(function (r) { return r.json(); }).then(function (d) {
+  bancosLista = d.bancos || [];
+  var sel = document.getElementById("qualBanco");
+  bancosLista.forEach(function (b) { sel.appendChild(new Option(b.nome, b.id)); });
+  sel.appendChild(new Option("Outro (não está na lista)", "outro"));
+}).catch(function () {});
+
 async function carregar() {
   var r = await api("/api/portal");
   dados.portal = r.dados.portal;
@@ -646,7 +755,14 @@ async function carregar() {
   var temaAtual = document.querySelector("input[name=tema][value=" + ((dados.portal && dados.portal.tema) || "classico") + "]");
   if (temaAtual) temaAtual.checked = true;
   mostrar("blocoPix", !!dados.portal);
+  mostrar("recSemPortal", !dados.portal);
   mostrar("blocoMarca", !!dados.portal);
+  mostrar("cfgIrReceber", !!dados.portal);
+  if (!dados.portal) {
+    document.getElementById("cfgPasso").textContent = "Passo 1 de 3: dê um nome ao seu estúdio, escolha o endereço do link e a cor. Depois clique em Salvar.";
+    mostrar("cfgPasso", true);
+  }
+  atualizarChecklist();
   mostrar("cfgVoltar", !!dados.portal);
   if (dados.portal) {
     document.getElementById("cfgLinkPag").value = dados.portal.link_pagamento || "";
@@ -655,7 +771,8 @@ async function carregar() {
     mostrarLogo(dados.portal.logo_url);
   }
   // Sem portal ainda: o primeiro passo é configurar o estúdio. Depois, a tela inicial com os links.
-  if (dados.portal) mostrarTela(document.getElementById("secConfig").classList.contains("hidden") || telaInicial ? "home" : "config");
+  if (dados.portal && telaInicial && abaPedida === "receber") mostrarTela("receber");
+  else if (dados.portal) mostrarTela(document.getElementById("secConfig").classList.contains("hidden") || telaInicial ? "home" : "config");
   else if (r.dados.plano) mostrarTela("config");
   telaInicial = false;
   if (dados.portal) document.getElementById("instrucoes").value = dados.portal.instrucoes_pagamento || "";
@@ -717,6 +834,8 @@ document.getElementById("cfgLogoArq").addEventListener("change", async function 
     var r = await api("/api/portal/marca", { logo_file_id: id });
     if (!r.ok) throw new Error(r.dados.error);
     mostrarLogo(URL.createObjectURL(blob));
+    dados.portal.logo_file_id = id;
+    atualizarChecklist();
   } catch (e) { avisar(e.message || "Não foi possível enviar a logo."); }
   botao.disabled = false;
   botao.textContent = "Enviar logo";
@@ -726,20 +845,10 @@ document.getElementById("cfgLogoTirar").addEventListener("click", async function
   await api("/api/portal/marca", { logo_file_id: null });
   mostrarLogo(null);
 });
-document.getElementById("btnMarca").addEventListener("click", async function () {
-  var r = await api("/api/portal/marca", {
-    bio: document.getElementById("cfgBio").value,
-    emite_nota: document.getElementById("cfgNota").value === "1",
-    link_pagamento: document.getElementById("cfgLinkPag").value
-  });
-  if (!r.ok) { avisar(r.dados.error || "Não foi possível salvar."); return; }
-  mostrar("marcaOk", true);
-  setTimeout(function () { mostrar("marcaOk", false); }, 2500);
-});
 
 /* ---------- telas: uma coisa de cada vez ---------- */
 
-var TELAS = { home: "vHome", criar: "vCriar", config: "secConfig", cobrancas: "secCobrancas", album: "secAberto", evento: "vEvento" };
+var TELAS = { home: "vHome", criar: "vCriar", config: "secConfig", receber: "secReceber", cobrancas: "secCobrancas", album: "secAberto", evento: "vEvento" };
 var central = { clientes: [] };   // carregarCentral() fica em window e é chamada também pela venda de eventos
 var eventosLista = [];
 var filtroAtual = "";
@@ -756,6 +865,18 @@ function abaAlbum(qual) {
 document.querySelectorAll(".abaAlb").forEach(function (b) { b.addEventListener("click", function () { abaAlbum(b.getAttribute("data-aba")); }); });
 
 document.getElementById("irConfig").addEventListener("click", function () { mostrarTela("config"); });
+document.getElementById("irReceber").addEventListener("click", function () { mostrarTela("receber"); });
+document.getElementById("recVoltar").addEventListener("click", function () { mostrarTela(dados.portal ? "home" : "config"); });
+document.getElementById("recIrPagina").addEventListener("click", function () { mostrarTela("config"); });
+document.getElementById("cfgIrReceber").addEventListener("click", function () {
+  // No primeiro cadastro, continua a contagem de passos.
+  if (!document.getElementById("cfgPasso").classList.contains("hidden")) {
+    mostrar("cfgPasso", false);
+    document.getElementById("recPasso").textContent = "Passo 3 de 3: coloque a sua chave PIX (e o link de pagamento, se tiver) e clique em Salvar.";
+    mostrar("recPasso", true);
+  }
+  mostrarTela("receber");
+});
 document.getElementById("irCobrancas").addEventListener("click", function () { mostrarTela("cobrancas"); });
 document.getElementById("cfgVoltar").addEventListener("click", function () { mostrarTela(dados.portal ? "home" : "config"); });
 document.getElementById("cobVoltar").addEventListener("click", function () { mostrarTela("home"); });
@@ -1529,7 +1650,16 @@ document.getElementById("cobAlbum").addEventListener("change", function () {
 document.getElementById("btnInstrucoes").addEventListener("click", async function () {
   var r = await api("/api/portal/pagamento", { instrucoes: document.getElementById("instrucoes").value });
   if (!r.ok) { avisar(r.dados.error || "Não foi possível salvar."); return; }
+  var m = await api("/api/portal/marca", { emite_nota: document.getElementById("cfgNota").value === "1", link_pagamento: document.getElementById("cfgLinkPag").value });
+  if (!m.ok) { avisar(m.dados.error || "Não foi possível salvar o link."); return; }
   dados.portal.instrucoes_pagamento = document.getElementById("instrucoes").value.trim();
+  dados.portal.link_pagamento = document.getElementById("cfgLinkPag").value.trim() || null;
+  atualizarChecklist();
+  if (!document.getElementById("recPasso").classList.contains("hidden")) {
+    mostrar("recPasso", false);
+    avisar("Cadastro completo! Agora é só criar o primeiro álbum ou evento em \"➕ Criar novo\".", "Tudo pronto 🎉");
+    mostrarTela("home");
+  }
   mostrar("instrOk", true);
   setTimeout(function () { mostrar("instrOk", false); }, 2000);
 });
@@ -1594,7 +1724,23 @@ document.getElementById("btnSalvar").addEventListener("click", async function ()
     tema: (document.querySelector("input[name=tema]:checked") || {}).value
   });
   if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
-  carregar();
+  var primeiraVez = !dados.portal;
+  if (!primeiraVez) {
+    var m = await api("/api/portal/marca", { bio: document.getElementById("cfgBio").value });
+    if (!m.ok) { erro.textContent = m.dados.error || "Não foi possível salvar o texto."; return; }
+    dados.portal.bio = document.getElementById("cfgBio").value.trim() || null;
+  }
+  mostrar("cfgOk", true);
+  setTimeout(function () { mostrar("cfgOk", false); }, 2500);
+  await carregar();
+  if (primeiraVez) {
+    // Primeiro cadastro: continua na Minha página para a logo e o layout.
+    mostrarTela("config");
+    var p = document.getElementById("cfgPasso");
+    p.textContent = "Passo 2 de 3: agora coloque a sua logomarca, escreva sobre você e escolha o layout. Depois clique em Salvar e em \"Próximo\".";
+    mostrar("cfgPasso", true);
+    document.getElementById("blocoMarca").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 });
 
 document.getElementById("btnCopiar").addEventListener("click", function () {
@@ -1919,17 +2065,8 @@ if (abaPedida === "abertos") filtroAtual = "aberto";
 carregar().then(function () {
   // Vindo do painel ("Cobre dos seus clientes sem taxa"): abre direto em "Como você recebe".
   if (abaPedida !== "receber") return;
-  mostrarTela("config");
-  if (!dados.portal) {
-    avisar("Primeiro dê um nome e um endereço ao seu estúdio e clique em Salvar. Logo abaixo aparece o lugar do seu PIX e do seu link de pagamento.", "Quase lá");
-    return;
-  }
-  var bloco = document.getElementById("blocoPix");
-  bloco.scrollIntoView({ behavior: "smooth", block: "center" });
-  bloco.style.outline = "2px solid #10b981";
-  bloco.style.outlineOffset = "8px";
-  bloco.style.borderRadius = "12px";
-  document.getElementById("instrucoes").focus({ preventScroll: true });
+  mostrarTela("receber");
+  if (dados.portal) document.getElementById("instrucoes").focus({ preventScroll: true });
 }).catch(function () {});
 </script>
 <script src="/avisos.js"></script>
