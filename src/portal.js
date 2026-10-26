@@ -136,8 +136,32 @@ function regrasAlbum(a) {
     pode_baixar: a.pode_baixar !== 0,
     pode_escolher: a.pode_escolher !== 0,
     limite_escolha: a.limite_escolha || null,
-    pode_editar: !!a.pode_editar
+    pode_editar: !!a.pode_editar,
+    // Quantas fotos diferentes pode baixar (limite combinado + fotos a mais já pagas). null = todas.
+    max_fotos: a.max_fotos || null,
+    fotos_extras: a.fotos_extras || 0,
+    limite_fotos: a.max_fotos ? a.max_fotos + (a.fotos_extras || 0) : null,
+    preco_extra_centavos: a.max_fotos && a.preco_extra_centavos ? a.preco_extra_centavos : null,
+    faixas_extra: lerFaixasExtra(a.faixas_extra)
   };
+}
+
+function lerFaixasExtra(json) {
+  try {
+    const f = JSON.parse(json || "[]");
+    return Array.isArray(f) ? f : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// Valor das fotos a mais: preço da foto, com o desconto da maior faixa atingida (igual à venda de eventos).
+export function totalFotosExtras(precoCentavos, faixas, qtd) {
+  let unit = precoCentavos;
+  for (const f of faixas) {
+    if (qtd >= f.a_partir && f.preco_centavos < unit) unit = f.preco_centavos;
+  }
+  return { unit: unit, total: unit * qtd };
 }
 
 function albumVencido(a) {
@@ -159,7 +183,7 @@ async function arquivoDeUso(env, userId, id, uso) {
   return f ? f.id : undefined;
 }
 
-const COLUNAS_REGRAS ="a.acesso_ate, a.max_downloads, a.pode_baixar, a.pode_escolher, a.limite_escolha, a.pode_editar";
+const COLUNAS_REGRAS ="a.acesso_ate, a.max_downloads, a.pode_baixar, a.pode_escolher, a.limite_escolha, a.pode_editar, a.max_fotos, a.fotos_extras, a.preco_extra_centavos, a.faixas_extra";
 
 // Monta uma página de arquivos de um álbum, com link de prévia (só imagens), favorita, downloads e pedido de edição do cliente.
 // A prévia é a versão leve (files.previa_id) quando existe; fotos antigas, sem prévia, usam o próprio original.
@@ -439,10 +463,17 @@ export async function tratarPortalDono(request, env, url) {
   if (caminho === "/api/portal/cobrancas/status") {
     const status = String(corpo.status || "");
     if (["pago", "pendente", "cancelado"].indexOf(status) < 0) return resp({ error: "Situação inválida" }, 400);
-    const r = await env.DB.prepare(
-      "UPDATE cobrancas SET status = ?, pago_em = CASE WHEN ? = 'pago' THEN datetime('now') ELSE NULL END WHERE id = ? AND portal_id = ?"
-    ).bind(status, status, parseInt(corpo.id, 10) || 0, portal.id).run();
-    if (!r.meta.changes) return resp({ error: "Cobrança não encontrada" }, 404);
+    const antes = await env.DB.prepare("SELECT id, status, album_id, fotos_extra FROM cobrancas WHERE id = ? AND portal_id = ?")
+      .bind(parseInt(corpo.id, 10) || 0, portal.id).first();
+    if (!antes) return resp({ error: "Cobrança não encontrada" }, 404);
+    await env.DB.prepare(
+      "UPDATE cobrancas SET status = ?, pago_em = CASE WHEN ? = 'pago' THEN datetime('now') ELSE NULL END WHERE id = ?"
+    ).bind(status, status, antes.id).run();
+    // Fotos a mais: pago → soma ao limite do álbum; deixou de ser pago → tira de novo.
+    if (antes.fotos_extra && antes.album_id && (antes.status === "pago") !== (status === "pago")) {
+      const n = status === "pago" ? antes.fotos_extra : -antes.fotos_extra;
+      await env.DB.prepare("UPDATE albuns SET fotos_extras = MAX(0, fotos_extras + ?) WHERE id = ?").bind(n, antes.album_id).run();
+    }
     return resp({ ok: true }, 200);
   }
 
@@ -454,6 +485,28 @@ export async function tratarPortalDono(request, env, url) {
     if (maxD !== null && (!maxD || maxD < 1 || maxD > 100)) return resp({ error: "Downloads por foto: de 1 a 100 (ou vazio para sem limite)" }, 400);
     const lim = corpo.limite_escolha === "" || corpo.limite_escolha === null || corpo.limite_escolha === undefined ? null : parseInt(corpo.limite_escolha, 10);
     if (lim !== null && (!lim || lim < 1 || lim > 10000)) return resp({ error: "Limite de fotos escolhidas inválido (ou vazio para sem limite)" }, 400);
+    // Quantas fotos pode baixar + venda de fotos a mais (só são mudados quando vêm no pedido).
+    if (corpo.max_fotos !== undefined) {
+      const maxF = corpo.max_fotos === "" || corpo.max_fotos === null ? null : parseInt(corpo.max_fotos, 10);
+      if (maxF !== null && (!maxF || maxF < 1 || maxF > 100000)) return resp({ error: "Quantidade de fotos para baixar: de 1 em diante (ou vazio para todas)" }, 400);
+      let preco = null;
+      const faixas = [];
+      if (maxF && String(corpo.preco_extra || "").trim()) {
+        preco = paraCentavos(corpo.preco_extra);
+        if (preco === null) return resp({ error: "Preço da foto a mais inválido (de R$ 1,00 em diante)" }, 400);
+        for (const f of Array.isArray(corpo.faixas_extra) ? corpo.faixas_extra.slice(0, 5) : []) {
+          if (!String(f.preco || "").trim()) continue;   // linha sem preço = desconto não usado
+          const qtd = parseInt(f.a_partir, 10);
+          const valor = paraCentavos(f.preco);
+          if (!qtd || qtd < 2 || qtd > 10000) return resp({ error: "Desconto: a quantidade precisa ser de 2 fotos ou mais" }, 400);
+          if (valor === null || valor >= preco) return resp({ error: "Desconto: o preço com desconto precisa ser menor que o preço de 1 foto a mais" }, 400);
+          faixas.push({ a_partir: qtd, preco_centavos: valor });
+        }
+        faixas.sort(function (a, b) { return a.a_partir - b.a_partir; });
+      }
+      await env.DB.prepare("UPDATE albuns SET max_fotos = ?, preco_extra_centavos = ?, faixas_extra = ? WHERE id = ?")
+        .bind(maxF, preco, faixas.length ? JSON.stringify(faixas) : null, album.id).run();
+    }
     await env.DB.prepare(
       "UPDATE albuns SET max_downloads = ?, pode_baixar = ?, pode_escolher = ?, limite_escolha = ?, pode_editar = ? WHERE id = ?"
     ).bind(maxD, corpo.pode_baixar === false ? 0 : 1, corpo.pode_escolher === false ? 0 : 1, lim, corpo.pode_editar ? 1 : 0, album.id).run();
@@ -726,7 +779,7 @@ export async function tratarPortalCliente(request, env, url) {
       "FROM albuns a WHERE a.cliente_id = ? AND a.removido_em IS NULL ORDER BY a.id DESC"
     ).bind(c.id).all();
     const cob = await env.DB.prepare(
-      "SELECT b.id, b.descricao, b.valor_centavos, b.vencimento, b.link_pagamento, b.status, b.pago_em, b.itens, a.titulo AS album " +
+      "SELECT b.id, b.descricao, b.valor_centavos, b.vencimento, b.link_pagamento, b.status, b.pago_em, b.itens, b.fotos_extra, a.titulo AS album " +
       "FROM cobrancas b LEFT JOIN albuns a ON a.id = b.album_id WHERE b.cliente_id = ? AND b.status != 'cancelado' ORDER BY b.status DESC, b.id DESC"
     ).bind(c.id).all();
     const instr = await env.DB.prepare("SELECT instrucoes_pagamento, cobrar, tema FROM portais WHERE id = ?").bind(c.portal_id).first();
@@ -751,12 +804,12 @@ export async function tratarPortalCliente(request, env, url) {
       portal: { slug: c.slug, nome: c.portal_nome, cor: c.cor, tema: c.cliente_tema || c.portal_tema || "classico", logo: await urlDoArquivo(env, c.logo_file_id), bio: c.bio || null, instrucoes_pagamento: instr ? instr.instrucoes_pagamento : null },
       albuns: albuns,
       // Acesso livre (cobrar = 0): o cliente não vê cobranças.
-      cobrancas: instr && instr.cobrar ? cob.results.map(function (b) {
+      cobrancas: cob.results.filter(function (b) { return (instr && instr.cobrar) || b.fotos_extra; }).map(function (b) {
         let itens = [];
         try { itens = b.itens ? JSON.parse(b.itens) : []; } catch (e) {}
         b.itens = itens;
         return b;
-      }) : []
+      })
     }, 200);
   }
 
@@ -792,7 +845,42 @@ export async function tratarPortalCliente(request, env, url) {
     dados.regras = regrasAlbum(album);
     dados.escolhidas = escolhidas.n;
     dados.trancado = trancado;
+    dados.fotos_baixadas = await fotosBaixadas(album.id);
+    const pend = await env.DB.prepare("SELECT fotos_extra, valor_centavos FROM cobrancas WHERE album_id = ? AND cliente_id = ? AND status = 'pendente' AND fotos_extra IS NOT NULL ORDER BY id DESC LIMIT 1")
+      .bind(album.id, c.id).first();
+    dados.extra_pendente = pend || null;
     return resp(dados, 200);
+  }
+
+  // Quantas fotos diferentes o cliente já baixou deste álbum.
+  async function fotosBaixadas(albumId) {
+    const n = await env.DB.prepare("SELECT COUNT(DISTINCT file_id) AS n FROM album_downloads WHERE album_id = ? AND cliente_id = ?").bind(albumId, c.id).first();
+    return n.n;
+  }
+
+  // Pedido de fotos a mais: vira uma cobrança na central do fotógrafo (o dinheiro vai direto para ele).
+  if (caminho === "/api/p/fotos-extras" && request.method === "POST") {
+    if (!origemOk(request, url)) return resp({ error: "Origem inválida" }, 403);
+    const corpo = await lerJson(request);
+    if (!corpo) return resp({ error: "JSON inválido" }, 400);
+    const album = await albumDoCliente(corpo.album_id);
+    if (!album) return resp({ error: "Álbum não encontrado" }, 404);
+    if (albumVencido(album)) return resp({ error: MSG_VENCIDO }, 403);
+    const regras = regrasAlbum(album);
+    if (!regras.preco_extra_centavos) return resp({ error: "Neste álbum o estúdio não vende fotos a mais. Fale com ele." }, 400);
+    const qtd = parseInt(corpo.qtd, 10);
+    if (!qtd || qtd < 1 || qtd > 1000) return resp({ error: "Escolha de 1 a 1000 fotos" }, 400);
+    const p = await env.DB.prepare("SELECT id, instrucoes_pagamento, link_pagamento FROM portais WHERE id = ?").bind(c.portal_id).first();
+    if (!p.instrucoes_pagamento && !p.link_pagamento) return resp({ error: "O estúdio ainda não informou como receber. Fale com ele." }, 400);
+    const conta = totalFotosExtras(regras.preco_extra_centavos, regras.faixas_extra, qtd);
+    // Só um pedido em aberto por álbum: pedir de novo troca o anterior.
+    await env.DB.prepare("UPDATE cobrancas SET status = 'cancelado' WHERE album_id = ? AND cliente_id = ? AND status = 'pendente' AND fotos_extra IS NOT NULL")
+      .bind(album.id, c.id).run();
+    const itens = [{ nome: "Foto a mais", unidade: "foto", qtd: qtd, valor_centavos: conta.unit }];
+    await env.DB.prepare(
+      "INSERT INTO cobrancas (portal_id, cliente_id, album_id, descricao, valor_centavos, link_pagamento, bloqueia_album, itens, fotos_extra) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)"
+    ).bind(p.id, c.id, album.id, (qtd + (qtd === 1 ? " foto a mais" : " fotos a mais")).slice(0, 120), conta.total, p.link_pagamento || null, JSON.stringify(itens), qtd).run();
+    return resp({ ok: true, valor_centavos: conta.total, unit: conta.unit }, 200);
   }
 
   if (caminho === "/api/p/baixar" && request.method === "GET") {
@@ -804,6 +892,17 @@ export async function tratarPortalCliente(request, env, url) {
     if (f.max_downloads) {
       const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM album_downloads WHERE cliente_id = ? AND file_id = ?").bind(c.id, f.id).first();
       if (n.n >= f.max_downloads) return resp({ error: "Você já baixou esta foto " + n.n + " vez(es), o limite combinado com o estúdio." }, 429);
+    }
+    // Limite de fotos diferentes: baixar de novo uma foto já baixada não conta.
+    const regrasF = regrasAlbum(f);
+    if (regrasF.limite_fotos) {
+      const ja = await env.DB.prepare("SELECT 1 AS t FROM album_downloads WHERE cliente_id = ? AND file_id = ? LIMIT 1").bind(c.id, f.id).first();
+      if (!ja && (await fotosBaixadas(f.album_id)) >= regrasF.limite_fotos) {
+        return resp({
+          error: "Você já baixou " + regrasF.limite_fotos + " foto(s), o combinado com o estúdio." + (regrasF.preco_extra_centavos ? " Você pode pedir fotos a mais." : ""),
+          limite_fotos: true, pode_comprar: !!regrasF.preco_extra_centavos
+        }, 402);
+      }
     }
     await env.DB.prepare("INSERT INTO album_downloads (album_id, file_id, cliente_id) VALUES (?, ?, ?)").bind(f.album_id, f.id, c.id).run();
     await registrarEvento(env, request, "download", { cliente_id: c.id });

@@ -147,8 +147,9 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="wzEscolher" type="checkbox" checked> ❤️ Escolher fotos, até
           <input id="wzLimite" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"></label>
         <label class="flex items-center gap-2 bg-slate-900/50 rounded-xl p-3"><input id="wzEditar" type="checkbox"> ✏️ Pedir edição de fotos</label>
-        <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="wzBaixar" type="checkbox" checked> ⬇️ Baixar os originais, até
+        <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="wzBaixar" type="checkbox" checked> ⬇️ Pode baixar as fotos originais · cada foto até
           <input id="wzMaxDown" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> vez(es)</label>
+        <div id="wzBlocoFotos"></div>
         <p class="text-xs text-slate-500">Dá para mudar depois, no álbum.</p>
         <p id="wzErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
         <button type="button" id="btnCriarFechado" class="cta w-full font-bold px-6 py-3 rounded-xl">Criar álbum ✓</button>
@@ -414,8 +415,9 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="rgEscolher" type="checkbox"> ❤️ Escolher fotos, até
         <input id="rgLimite" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"></label>
       <label class="flex items-center gap-2 bg-slate-900/50 rounded-xl p-3"><input id="rgEditar" type="checkbox"> ✏️ Pedir edição de fotos</label>
-      <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="rgBaixar" type="checkbox"> ⬇️ Baixar os originais, até
+      <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="rgBaixar" type="checkbox"> ⬇️ Pode baixar as fotos originais · cada foto até
         <input id="rgMaxDown" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> vez(es)</label>
+        <div id="rgBlocoFotos"></div>
       <p class="text-xs text-slate-500">Exemplo: 7 dias para escolher até 60, sem baixar. Depois de editar, libere o download por mais 15 dias.</p>
       <p id="rgErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
       <button type="button" id="btnRegras" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Salvar regras</button>
@@ -715,12 +717,12 @@ document.getElementById("cfgLogoArq").addEventListener("change", async function 
     var r = await api("/api/portal/marca", { logo_file_id: id });
     if (!r.ok) throw new Error(r.dados.error);
     mostrarLogo(URL.createObjectURL(blob));
-  } catch (e) { alert(e.message || "Não foi possível enviar a logo."); }
+  } catch (e) { avisar(e.message || "Não foi possível enviar a logo."); }
   botao.disabled = false;
   botao.textContent = "Enviar logo";
 });
 document.getElementById("cfgLogoTirar").addEventListener("click", async function () {
-  if (!confirm("Tirar a logo das suas páginas?")) return;
+  if (!(await confirmar("Tirar a logo?", "A logo sai das suas páginas e do portal dos clientes.", "Sim, tirar"))) return;
   await api("/api/portal/marca", { logo_file_id: null });
   mostrarLogo(null);
 });
@@ -730,7 +732,7 @@ document.getElementById("btnMarca").addEventListener("click", async function () 
     emite_nota: document.getElementById("cfgNota").value === "1",
     link_pagamento: document.getElementById("cfgLinkPag").value
   });
-  if (!r.ok) { alert(r.dados.error || "Não foi possível salvar."); return; }
+  if (!r.ok) { avisar(r.dados.error || "Não foi possível salvar."); return; }
   mostrar("marcaOk", true);
   setTimeout(function () { mostrar("marcaOk", false); }, 2500);
 });
@@ -869,34 +871,11 @@ function cartao(icone, titulo, sub, sinal, linha, aoClicar, aoRemover) {
 }
 
 // Remoção com duas confirmações. O item vai para a lixeira: some para o cliente na hora e pode ser desfeito por 30 min.
-// Confirmação dentro da página (o Firefox bloqueia as janelas confirm() depois de algumas seguidas e responde "não" sozinho).
-function confirmar(titulo, texto, botaoSim) {
-  return new Promise(function (ok) {
-    var fundo = el("div", "fixed inset-0 bg-slate-950/80 flex items-center justify-center p-4");
-    fundo.style.zIndex = "2147483600";
-    var caixa = el("div", "glass rounded-3xl p-6 max-w-md w-full space-y-4");
-    caixa.appendChild(el("p", "text-lg font-bold", titulo));
-    caixa.appendChild(el("p", "text-sm text-slate-300 whitespace-pre-line", texto));
-    var botoes = el("div", "flex gap-3 justify-end");
-    var nao = el("button", "px-5 py-2.5 rounded-xl border border-slate-600 font-semibold", "Não");
-    var sim = el("button", "px-5 py-2.5 rounded-xl font-bold text-white", botaoSim || "Sim");
-    sim.style.background = "#dc2626";
-    [nao, sim].forEach(function (b) { b.type = "button"; botoes.appendChild(b); });
-    caixa.appendChild(botoes);
-    fundo.appendChild(caixa);
-    document.body.appendChild(fundo);
-    function fim(r) { fundo.remove(); ok(r); }
-    nao.addEventListener("click", function () { fim(false); });
-    sim.addEventListener("click", function () { fim(true); });
-    fundo.addEventListener("click", function (e) { if (e.target === fundo) fim(false); });
-  });
-}
-
 async function paraLixeira(rota, corpo, nome, aviso) {
   if (!(await confirmar("Remover " + nome + "?", aviso, "Sim, remover"))) return;
   if (!(await confirmar("Tem certeza?", "Você terá 30 minutos para desfazer em \"Removidos recentemente\". Depois disso, as fotos são apagadas para sempre.", "Tenho certeza"))) return;
   var r = await api(rota, corpo);
-  if (!r.ok) { alert(r.dados.error || "Não foi possível remover."); return; }
+  if (!r.ok) { avisar(r.dados.error || "Não foi possível remover."); return; }
   mostrarTela("home");
   await carregarClientes();
   await carregarAlbuns();
@@ -967,7 +946,7 @@ function desenharTiles() {
       b.type = "button";
       b.addEventListener("click", async function () {
         var r = await api(x.rota, x.corpo);
-        if (!r.ok) { alert(r.dados.error || "Não foi possível desfazer."); return; }
+        if (!r.ok) { avisar(r.dados.error || "Não foi possível desfazer."); return; }
         await carregarClientes();
         await carregarAlbuns();
       });
@@ -1028,26 +1007,26 @@ document.querySelectorAll("input[name=wzCli]").forEach(function (x) { x.addEvent
 document.getElementById("wzF1ok").addEventListener("click", function () {
   var novo = document.querySelector("input[name=wzCli]:checked").value === "novo";
   if (novo) {
-    if (document.getElementById("cliNome").value.trim().length < 2) { alert("Digite o nome do cliente"); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById("cliEmail").value.trim())) { alert("Digite um e-mail válido: é o login do cliente"); return; }
-    if (document.getElementById("cliSenha").value.length < 8) { alert("A senha precisa ter pelo menos 8 caracteres (use o botão Gerar)"); return; }
-  } else if (!document.getElementById("albCliente").value) { alert("Escolha o cliente"); return; }
+    if (document.getElementById("cliNome").value.trim().length < 2) { avisar("Digite o nome do cliente"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById("cliEmail").value.trim())) { avisar("Digite um e-mail válido: é o login do cliente"); return; }
+    if (document.getElementById("cliSenha").value.length < 8) { avisar("A senha precisa ter pelo menos 8 caracteres (use o botão Gerar)"); return; }
+  } else if (!document.getElementById("albCliente").value) { avisar("Escolha o cliente"); return; }
   passoAssistente("F2");
 });
 document.getElementById("wzF2ok").addEventListener("click", function () {
-  if (document.getElementById("albTitulo").value.trim().length < 2) { alert("Digite o nome do álbum"); return; }
+  if (document.getElementById("albTitulo").value.trim().length < 2) { avisar("Digite o nome do álbum"); return; }
   passoAssistente("F3");
 });
 document.getElementById("wzA1ok").addEventListener("click", function () {
-  if (document.getElementById("ev_evTitulo").value.trim().length < 3) { alert("Dê um nome ao evento"); return; }
+  if (document.getElementById("ev_evTitulo").value.trim().length < 3) { avisar("Dê um nome ao evento"); return; }
   // Sem PIX ninguém consegue comprar: pergunta antes do preço.
   passoAssistente(dados.portal.instrucoes_pagamento ? "A2" : "PX");
 });
 document.getElementById("wzPXok").addEventListener("click", async function () {
   var pix = document.getElementById("wzPix").value.trim();
-  if (pix.length < 5) { alert("Digite a sua chave PIX"); return; }
+  if (pix.length < 5) { avisar("Digite a sua chave PIX"); return; }
   var r = await api("/api/portal/pagamento", { instrucoes: pix });
-  if (!r.ok) { alert(r.dados.error || "Não foi possível salvar."); return; }
+  if (!r.ok) { avisar(r.dados.error || "Não foi possível salvar."); return; }
   dados.portal.instrucoes_pagamento = pix;
   document.getElementById("instrucoes").value = pix;
   passoAssistente("A2");
@@ -1061,7 +1040,7 @@ window.depoisDeSalvarEvento = async function (id) {
   try {
     var capa = await enviarEspecial(await reduzirImagem(arq, 1800, "image/jpeg"), "capa.jpg", "capa");
     await api("/api/eventos/capa", { id: id, capa_file_id: capa });
-  } catch (e) { alert("O evento foi salvo, mas a foto de capa não foi enviada: " + e.message); }
+  } catch (e) { avisar("O evento foi salvo, mas a foto de capa não foi enviada: " + e.message); }
 };
 
 document.getElementById("btnCriarFechado").addEventListener("click", async function () {
@@ -1084,25 +1063,34 @@ document.getElementById("btnCriarFechado").addEventListener("click", async funct
     } else if (!clienteId) { erro.textContent = "Escolha o cliente"; return; }
     var a = await api("/api/portal/albuns/novo", { cliente_id: clienteId, tipo: document.getElementById("albTipo").value, titulo: document.getElementById("albTitulo").value });
     if (!a.ok) { erro.textContent = a.dados.error || "Não foi possível criar o álbum."; return; }
-    await api("/api/portal/albuns/regras", {
+    var rg = await api("/api/portal/albuns/regras", {
       id: a.dados.id,
       prazo_dias: document.getElementById("wzPrazo").value,
       pode_escolher: document.getElementById("wzEscolher").checked,
       limite_escolha: document.getElementById("wzLimite").value,
       pode_editar: document.getElementById("wzEditar").checked,
       pode_baixar: document.getElementById("wzBaixar").checked,
-      max_downloads: document.getElementById("wzMaxDown").value
+      max_downloads: document.getElementById("wzMaxDown").value,
+    max_fotos: lerBlocoFotos("wz").max_fotos,
+    preco_extra: lerBlocoFotos("wz").preco_extra,
+    faixas_extra: lerBlocoFotos("wz").faixas_extra
     });
+    if (!rg.ok) avisar("O álbum foi criado, mas as regras não foram salvas: " + (rg.dados.error || "erro") + "\nAbra o álbum e ajuste em Regras.");
     // Recado e foto de capa do álbum (opcionais).
     var visual = { id: a.dados.id, descricao: document.getElementById("albDescricao").value };
     var arqCapa = document.getElementById("albCapa").files[0];
     if (arqCapa) {
       try { visual.capa_file_id = await enviarEspecial(await reduzirImagem(arqCapa, 1800, "image/jpeg"), "capa.jpg", "capa"); }
-      catch (e) { alert("O álbum foi criado, mas a foto de capa não foi enviada: " + e.message); }
+      catch (e) { avisar("O álbum foi criado, mas a foto de capa não foi enviada: " + e.message); }
     }
     await api("/api/portal/albuns/visual", visual);
-    if (novo) alert("Pronto! Envie para " + nome + ":\n\nLink: " + window.location.origin + "/p/" + dados.portal.slug + "\nE-mail: " + email + "\nSenha: " + senha + "\n\nAgora envie as fotos do álbum.");
-    ["cliNome", "cliEmail", "cliSenha", "albTitulo", "wzLimite", "wzMaxDown", "albDescricao", "albCapa", "cliTema"].forEach(function (id) { document.getElementById(id).value = ""; });
+    if (novo) {
+      var linkCli = window.location.origin + "/p/" + dados.portal.slug;
+      await avisoCopiar("Pronto! 🎉", "Envie estes dados para " + nome + ". Depois é só mandar as fotos do álbum.", [["Link", linkCli], ["E-mail", email], ["Senha", senha]],
+        "Olá, " + nome.split(" ")[0] + "! Suas fotos vão ficar aqui: " + linkCli + "\nE-mail: " + email + "\nSenha: " + senha);
+    }
+    ["cliNome", "cliEmail", "cliSenha", "albTitulo", "wzLimite", "wzMaxDown", "wzMaxFotos", "wzPrecoExtra", "wzFxPreco0", "wzFxPreco1", "albDescricao", "albCapa", "cliTema"].forEach(function (id) { document.getElementById(id).value = ""; });
+    document.getElementById("wzBlocoFotos").atualizar();
     document.querySelector("input[name=wzCli][value=novo]").checked = true;
     trocarTipoCliente();
     await carregarAlbuns();
@@ -1134,6 +1122,65 @@ function preencherCliente() {
 }
 
 var NOMES_TEMA = { classico: "Clássico", escuro: "Galeria escura", minimalista: "Minimalista", delicado: "Delicado", casamento: "Casamento", quinze: "15 anos", infantil: "Infantil", festa: "Festa / aniversário" };
+var LISTA_TEMAS = Object.keys(NOMES_TEMA);
+
+// Prévia do layout em tela cheia, com dados de exemplo. ◀ ▶ passam pelos layouts; "Usar este" chama aoEscolher(tema).
+function verPrevia(tema, aoEscolher) {
+  var i = Math.max(0, LISTA_TEMAS.indexOf(tema || (dados.portal && dados.portal.tema) || "classico"));
+  var fundo = el("div", "fixed inset-0 flex flex-col");
+  fundo.style.cssText = "z-index:2147483500;background:#020617";
+  var barra = el("div", "flex flex-wrap items-center gap-2 p-3 text-white");
+  var ant = el("button", "px-3 py-2 rounded-xl border border-slate-600 font-bold", "◀");
+  var nome = el("p", "font-bold text-lg flex-1 text-center min-w-[8rem]");
+  var prox = el("button", "px-3 py-2 rounded-xl border border-slate-600 font-bold", "▶");
+  var usar = el("button", "px-4 py-2 rounded-xl font-bold text-white", "✔ Usar este layout");
+  usar.style.background = "#0284c7";
+  var fechar = el("button", "px-3 py-2 rounded-xl border border-slate-600 font-bold", "✕");
+  [ant, nome, prox, usar, fechar].forEach(function (b) { if (b.tagName === "BUTTON") b.type = "button"; barra.appendChild(b); });
+  if (!aoEscolher) usar.classList.add("hidden");
+  var quadro = el("iframe", "flex-1 w-full bg-white");
+  quadro.style.border = "0";
+  fundo.appendChild(barra);
+  fundo.appendChild(quadro);
+  document.body.appendChild(fundo);
+  function mostrarTema() {
+    var t = LISTA_TEMAS[i];
+    nome.textContent = "👁️ " + NOMES_TEMA[t] + " (" + (i + 1) + " de " + LISTA_TEMAS.length + ")";
+    var p = dados.portal || {};
+    quadro.src = "/p/previa?previa=" + t + "&nome=" + encodeURIComponent(p.nome || "Seu Estúdio") + "&cor=" + encodeURIComponent(p.cor || "") + (p.logo_url ? "&logo=" + encodeURIComponent(p.logo_url) : "");
+  }
+  ant.addEventListener("click", function () { i = (i + LISTA_TEMAS.length - 1) % LISTA_TEMAS.length; mostrarTema(); });
+  prox.addEventListener("click", function () { i = (i + 1) % LISTA_TEMAS.length; mostrarTema(); });
+  fechar.addEventListener("click", function () { fundo.remove(); });
+  usar.addEventListener("click", function () { fundo.remove(); aoEscolher(LISTA_TEMAS[i]); });
+  mostrarTema();
+}
+
+// Botão "👁️ Ver como fica" ao lado de cada lista de layout.
+["cliTema", "evTema", "vsTema"].forEach(function (id) {
+  var lista = document.getElementById(id);
+  if (!lista) return;
+  var b = el("button", "link text-sm mt-1", "👁️ Ver como fica");
+  b.type = "button";
+  b.addEventListener("click", function () {
+    verPrevia(lista.value, function (t) { lista.value = t; lista.dispatchEvent(new Event("change")); });
+  });
+  lista.parentNode.insertAdjacentElement("afterend", b);
+});
+(function () {
+  var cartoes = document.getElementById("temas");
+  var b = el("button", "link text-sm mt-2", "👁️ Ver os layouts em tela cheia");
+  b.type = "button";
+  b.addEventListener("click", function () {
+    var marcado = document.querySelector("input[name=tema]:checked");
+    verPrevia(marcado && marcado.value, function (t) {
+      var r = document.querySelector("input[name=tema][value=" + t + "]");
+      if (r) { r.checked = true; r.dispatchEvent(new Event("change", { bubbles: true })); }
+      avisar("Layout " + NOMES_TEMA[t] + " escolhido. Clique em Salvar para valer.", "Quase lá");
+    });
+  });
+  cartoes.insertAdjacentElement("afterend", b);
+})();
 
 // Aba Visual do álbum: layout do cliente, recado e foto de capa.
 var capaNova;   // undefined = não mexeu; null = voltar para a 1ª foto; Blob = capa nova escolhida
@@ -1170,7 +1217,7 @@ document.getElementById("btnVisual").addEventListener("click", async function ()
     mostrar("vsOk", true);
     setTimeout(function () { mostrar("vsOk", false); }, 2500);
     carregarAlbuns();
-  } catch (e) { alert(e.message || "Não foi possível salvar."); }
+  } catch (e) { avisar(e.message || "Não foi possível salvar."); }
   botao.disabled = false;
 });
 
@@ -1207,10 +1254,11 @@ document.getElementById("abCopiarAcesso").addEventListener("click", function () 
 document.getElementById("abNovaSenha").addEventListener("click", async function () {
   var c = clienteDoAlbum();
   if (!c) return;
-  var nova = prompt("Nova senha para " + c.nome + " (mínimo 8 caracteres):", gerarSenha());
+  var nova = await pedirTexto("Nova senha para " + c.nome, "Mínimo 8 caracteres. Já deixamos uma sugestão pronta.", gerarSenha());
   if (!nova) return;
   var r2 = await api("/api/portal/clientes/senha", { cliente_id: c.id, senha: nova });
-  alert(r2.ok ? "Senha trocada. Envie a nova senha para o cliente: " + nova : (r2.dados.error || "Não foi possível."));
+  if (r2.ok) avisoCopiar("Senha trocada", "Envie a nova senha para " + c.nome + ".", [["Nova senha", nova]], "Olá, " + c.nome.split(" ")[0] + "! Sua nova senha do portal é: " + nova);
+  else avisar(r2.dados.error || "Não foi possível.");
   carregarCentral();
 });
 
@@ -1248,7 +1296,7 @@ document.querySelectorAll("input[name=modoCobrar]").forEach(function (x) {
   x.addEventListener("change", async function () {
     var cobrar = this.value === "1";
     var r = await api("/api/portal/pagamento", { cobrar: cobrar });
-    if (!r.ok) { alert(r.dados.error || "Não foi possível salvar."); return; }
+    if (!r.ok) { avisar(r.dados.error || "Não foi possível salvar."); return; }
     dados.portal.cobrar = cobrar ? 1 : 0;
     aplicarModo(cobrar);
     mostrar("modoOk", true);
@@ -1302,7 +1350,7 @@ function desenharTabela() {
     var rm = el("button", "perigo", "Remover");
     rm.type = "button";
     rm.addEventListener("click", async function () {
-      if (!confirm("Remover \"" + p.nome + "\" da tabela? (cobranças já criadas não mudam)")) return;
+      if (!(await confirmar("Remover \"" + p.nome + "\"?", "Sai da sua tabela de preços. Cobranças já criadas não mudam.", "Sim, remover"))) return;
       await api("/api/portal/precos/remover", { id: p.id });
       carregarCobrancas();
     });
@@ -1344,7 +1392,7 @@ function preencherOpcoesItem(sel) {
 }
 
 function novaLinhaItem() {
-  if (!dados.precos.length) { alert("Primeiro adicione serviços na sua tabela de preços."); return; }
+  if (!dados.precos.length) { avisar("Primeiro adicione serviços na sua tabela de preços."); return; }
   var linha = el("div", "flex flex-wrap items-center gap-2");
   var sel = el("select", "campo flex-1");
   sel.style.minWidth = "200px";
@@ -1446,7 +1494,7 @@ async function carregarCobrancas() {
     }
     async function mudar(status) {
       var r2 = await api("/api/portal/cobrancas/status", { id: b.id, status: status });
-      if (!r2.ok) { alert(r2.dados.error || "Não foi possível."); return; }
+      if (!r2.ok) { avisar(r2.dados.error || "Não foi possível."); return; }
       await carregarCobrancas();
       carregarAlbuns();
     }
@@ -1460,12 +1508,12 @@ async function carregarCobrancas() {
         navigator.clipboard.writeText(msg);
         this.textContent = "Copiada!";
       });
-      botao("✔ Marcar como pago", "link", function () {
-        if (confirm("Confirmar que " + b.cliente + " pagou " + reais(b.valor_centavos) + "?" + (b.bloqueia_album ? "\nO álbum será liberado." : ""))) mudar("pago");
+      botao("✔ Marcar como pago", "link", async function () {
+        if (await confirmar("Confirmar o pagamento?", b.cliente + " pagou " + reais(b.valor_centavos) + "?" + (b.bloqueia_album ? "\nO álbum será liberado." : ""), "Sim, foi pago", false)) mudar("pago");
       });
-      botao("Cancelar", "perigo", function () { if (confirm("Cancelar esta cobrança?")) mudar("cancelado"); });
+      botao("Cancelar", "perigo", async function () { if (await confirmar("Cancelar esta cobrança?", "O cliente deixa de ver esta cobrança como pendente.", "Sim, cancelar")) mudar("cancelado"); });
     } else if (b.status === "pago") {
-      botao("Desfazer pagamento", "perigo", function () { if (confirm("Voltar esta cobrança para pendente?")) mudar("pendente"); });
+      botao("Desfazer pagamento", "perigo", async function () { if (await confirmar("Voltar para pendente?", "A cobrança volta a ficar em aberto.", "Sim, voltar")) mudar("pendente"); });
     }
     linha.appendChild(acoes);
     lista.appendChild(linha);
@@ -1480,7 +1528,7 @@ document.getElementById("cobAlbum").addEventListener("change", function () {
 
 document.getElementById("btnInstrucoes").addEventListener("click", async function () {
   var r = await api("/api/portal/pagamento", { instrucoes: document.getElementById("instrucoes").value });
-  if (!r.ok) { alert(r.dados.error || "Não foi possível salvar."); return; }
+  if (!r.ok) { avisar(r.dados.error || "Não foi possível salvar."); return; }
   dados.portal.instrucoes_pagamento = document.getElementById("instrucoes").value.trim();
   mostrar("instrOk", true);
   setTimeout(function () { mostrar("instrOk", false); }, 2000);
@@ -1572,12 +1620,64 @@ function textoRegras(r) {
   if (r.vencido) p.push("⏳ acesso encerrado");
   else if (r.acesso_ate) p.push("⏳ até " + dataHoraBr(r.acesso_ate));
   if (!r.pode_baixar) p.push("sem download");
-  else if (r.max_downloads) p.push("⬇️ " + r.max_downloads + "x por foto");
+  else {
+    if (r.limite_fotos) p.push("📸 " + r.limite_fotos + " foto(s)" + (r.preco_extra_centavos ? " + vende extras" : ""));
+    if (r.max_downloads) p.push("⬇️ " + r.max_downloads + "x por foto");
+  }
   if (!r.pode_escolher) p.push("sem escolha");
   else if (r.limite_escolha) p.push("❤️ até " + r.limite_escolha);
   if (r.pode_editar) p.push("✏️ edição");
   return p.join(" · ");
 }
+
+// Bloco "quantas fotos pode baixar" + "fotos a mais" (preço e desconto). Usado no assistente (wz) e na aba Regras (rg).
+function montarBlocoFotos(p) {
+  var caixa = document.getElementById(p + "BlocoFotos");
+  caixa.className = "bg-slate-900/50 rounded-xl p-3 space-y-2";
+  caixa.innerHTML =
+    '<label class="flex items-center gap-2 flex-wrap">📸 Até quantas fotos pode baixar? <input id="' + p + 'MaxFotos" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="todas"> foto(s)</label>' +
+    '<div id="' + p + 'Extras" class="hidden space-y-2 pl-1">' +
+      '<label class="flex items-center gap-2 flex-wrap">💰 Se quiser mais, cada foto a mais custa R$ <input id="' + p + 'PrecoExtra" class="campo" inputmode="decimal" style="max-width:100px;padding:6px 8px" placeholder="não vendo"></label>' +
+      '<div id="' + p + 'Faixas" class="hidden space-y-2 text-xs">' +
+        '<p class="text-slate-400">Desconto por quantidade (opcional):</p>' +
+        [0, 1].map(function (i) {
+          return '<label class="flex items-center gap-2 flex-wrap">a partir de <input id="' + p + 'FxQtd' + i + '" type="number" min="2" class="campo" style="max-width:70px;padding:4px 6px" value="' + (i ? 20 : 10) + '"> fotos, R$ <input id="' + p + 'FxPreco' + i + '" class="campo" inputmode="decimal" style="max-width:90px;padding:4px 6px" placeholder="sem desconto"> cada</label>';
+        }).join("") +
+      '</div>' +
+    '</div>' +
+    '<p class="text-xs text-slate-400">Vazio = pode baixar todas. Com limite, quando o cliente chegar nele, ele pede as fotos a mais e recebe a cobrança com o seu PIX ou link. Quando você marcar como pago, elas são liberadas.</p>';
+  function atualizar() {
+    var baixar = document.getElementById(p + "Baixar").checked;
+    caixa.classList.toggle("hidden", !baixar);
+    var temLimite = !!document.getElementById(p + "MaxFotos").value;
+    document.getElementById(p + "Extras").classList.toggle("hidden", !temLimite);
+    document.getElementById(p + "Faixas").classList.toggle("hidden", !temLimite || !document.getElementById(p + "PrecoExtra").value.trim());
+  }
+  [p + "Baixar", p + "MaxFotos", p + "PrecoExtra"].forEach(function (id) { document.getElementById(id).addEventListener("input", atualizar); document.getElementById(id).addEventListener("change", atualizar); });
+  caixa.atualizar = atualizar;
+  atualizar();
+}
+function lerBlocoFotos(p) {
+  var v = function (id) { return document.getElementById(p + id).value.trim(); };
+  return {
+    max_fotos: v("MaxFotos"),
+    preco_extra: v("PrecoExtra"),
+    faixas_extra: [0, 1].map(function (i) { return { a_partir: v("FxQtd" + i), preco: v("FxPreco" + i) }; })
+  };
+}
+function preencherBlocoFotos(p, r) {
+  var reaisCampo = function (c) { return c ? (c / 100).toFixed(2).replace(".", ",") : ""; };
+  document.getElementById(p + "MaxFotos").value = (r && r.max_fotos) || "";
+  document.getElementById(p + "PrecoExtra").value = reaisCampo(r && r.preco_extra_centavos);
+  var fx = (r && r.faixas_extra) || [];
+  [0, 1].forEach(function (i) {
+    document.getElementById(p + "FxQtd" + i).value = fx[i] ? fx[i].a_partir : (i ? 20 : 10);
+    document.getElementById(p + "FxPreco" + i).value = fx[i] ? reaisCampo(fx[i].preco_centavos) : "";
+  });
+  document.getElementById(p + "BlocoFotos").atualizar();
+}
+montarBlocoFotos("wz");
+montarBlocoFotos("rg");
 
 function preencherRegras(r) {
   document.getElementById("rgPrazo").value = "";
@@ -1588,6 +1688,10 @@ function preencherRegras(r) {
   document.getElementById("rgEditar").checked = r.pode_editar;
   document.getElementById("rgBaixar").checked = r.pode_baixar;
   document.getElementById("rgMaxDown").value = r.max_downloads || "";
+  preencherBlocoFotos("rg", r);
+  var extra = document.getElementById("rgExtrasInfo");
+  if (!extra) { extra = el("p", "text-xs text-emerald-300"); extra.id = "rgExtrasInfo"; document.getElementById("rgBlocoFotos").appendChild(extra); }
+  extra.textContent = r.fotos_extras ? "✔ O cliente já pagou " + r.fotos_extras + " foto(s) a mais: o limite agora é " + r.limite_fotos + "." : "";
   document.getElementById("resumoRegras").textContent = textoRegras(r) || "Tudo liberado, sem prazo";
 }
 
@@ -1626,7 +1730,10 @@ document.getElementById("btnRegras").addEventListener("click", async function ()
     limite_escolha: document.getElementById("rgLimite").value,
     pode_editar: document.getElementById("rgEditar").checked,
     pode_baixar: document.getElementById("rgBaixar").checked,
-    max_downloads: document.getElementById("rgMaxDown").value
+    max_downloads: document.getElementById("rgMaxDown").value,
+    max_fotos: lerBlocoFotos("rg").max_fotos,
+    preco_extra: lerBlocoFotos("rg").preco_extra,
+    faixas_extra: lerBlocoFotos("rg").faixas_extra
   });
   if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
   mostrar("rgOk", true);
@@ -1793,7 +1900,7 @@ document.getElementById("arquivosEnviar").addEventListener("change", async funct
       }
     } catch (e) {
       falhas++;
-      if (/Espaço insuficiente|plano/.test(e.message)) { alert(e.message); break; }
+      if (/Espaço insuficiente|plano/.test(e.message)) { avisar(e.message); break; }
     }
     feito += f.size;
     barra.style.width = Math.round(feito / total * 100) + "%";
@@ -1807,9 +1914,25 @@ document.getElementById("arquivosEnviar").addEventListener("change", async funct
 
 var telaInicial = true;
 montarEventos();
-if (new URLSearchParams(window.location.search).get("aba") === "abertos") filtroAtual = "aberto";
-carregar().catch(function () {});
+var abaPedida = new URLSearchParams(window.location.search).get("aba");
+if (abaPedida === "abertos") filtroAtual = "aberto";
+carregar().then(function () {
+  // Vindo do painel ("Cobre dos seus clientes sem taxa"): abre direto em "Como você recebe".
+  if (abaPedida !== "receber") return;
+  mostrarTela("config");
+  if (!dados.portal) {
+    avisar("Primeiro dê um nome e um endereço ao seu estúdio e clique em Salvar. Logo abaixo aparece o lugar do seu PIX e do seu link de pagamento.", "Quase lá");
+    return;
+  }
+  var bloco = document.getElementById("blocoPix");
+  bloco.scrollIntoView({ behavior: "smooth", block: "center" });
+  bloco.style.outline = "2px solid #10b981";
+  bloco.style.outlineOffset = "8px";
+  bloco.style.borderRadius = "12px";
+  document.getElementById("instrucoes").focus({ preventScroll: true });
+}).catch(function () {});
 </script>
+<script src="/avisos.js"></script>
 <script src="/eventos-painel.js"></script>
 <script src="/assistente.js" defer></script>
 </body>

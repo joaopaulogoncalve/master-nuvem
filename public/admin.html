@@ -8,6 +8,7 @@
 <link rel="icon" type="image/png" href="/marca/icone-64.png">
 <link rel="apple-touch-icon" href="/marca/icone-180.png">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="/avisos.js"></script>
 <style>
 body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
 .glass{background:linear-gradient(160deg,#0c1a3dcc,#07102acc);border:1px solid #1e40af88;box-shadow:0 0 50px #38bdf822;backdrop-filter:blur(10px)}
@@ -258,7 +259,7 @@ function cartao(c) {
   btnDar.addEventListener("click", async function () {
     var gb = parseInt(campoGb.value, 10);
     var dias = parseInt(campoDias.value, 10);
-    if (!confirm("Dar " + formatarEspaco(gb) + " por " + dias + " dias para " + c.email + "?\nO plano atual dele (se houver) será substituído.")) return;
+    if (!await confirmar("Confirmar", "Dar " + formatarEspaco(gb) + " por " + dias + " dias para " + c.email + "?\nO plano atual dele (se houver) será substituído.")) return;
     btnDar.disabled = true;
     var r = await postar("/api/admin/plano", { user_id: c.id, gb: gb, dias: dias });
     btnDar.disabled = false;
@@ -274,7 +275,7 @@ function cartao(c) {
     var btnRemover = el("button", "font-semibold text-sm text-red-300 border border-red-400/40 px-4 py-2.5 rounded-xl hover:bg-red-500/10", "Remover plano");
     btnRemover.type = "button";
     btnRemover.addEventListener("click", async function () {
-      if (!confirm("Remover o plano de " + c.email + "?\nEle não vai mais conseguir enviar arquivos (os arquivos atuais continuam guardados).")) return;
+      if (!await confirmar("Confirmar", "Remover o plano de " + c.email + "?\nEle não vai mais conseguir enviar arquivos (os arquivos atuais continuam guardados).")) return;
       btnRemover.disabled = true;
       var r = await postar("/api/admin/plano/remover", { user_id: c.id });
       btnRemover.disabled = false;
@@ -291,7 +292,7 @@ function cartao(c) {
     btnTrancar.addEventListener("click", async function () {
       var msg = c.travada_em ? "Destravar a conta de " + c.email + "?" :
         "Trancar a conta de " + c.email + "?\nEla é desconectada na hora e só volta criando uma senha nova (ou quando você destravar).";
-      if (!confirm(msg)) return;
+      if (!await confirmar("Confirmar", msg)) return;
       btnTrancar.disabled = true;
       var r = await postar(c.travada_em ? "/api/admin/sentinela/destravar" : "/api/admin/sentinela/trancar", { user_id: c.id });
       btnTrancar.disabled = false;
@@ -453,7 +454,7 @@ async function carregarSentinela() {
     var b = el("button", "font-semibold text-emerald-300", "Destravar");
     b.type = "button";
     b.addEventListener("click", async function () {
-      if (!confirm("Destravar " + t.txt + "?")) return;
+      if (!await confirmar("Confirmar", "Destravar " + t.txt + "?")) return;
       var corpo = {};
       corpo[t.tipo] = t.id;
       await postar("/api/admin/sentinela/destravar", corpo);
@@ -603,7 +604,7 @@ async function carregarAssistente() {
     var rm = el("button", "text-red-300", "Apagar");
     rm.type = "button";
     rm.addEventListener("click", async function () {
-      if (!confirm("Apagar a resposta \"" + f.pergunta + "\"?")) return;
+      if (!await confirmar("Confirmar", "Apagar a resposta \"" + f.pergunta + "\"?")) return;
       await postar("/api/admin/faq/remover", { id: f.id });
       carregarAssistente();
     });

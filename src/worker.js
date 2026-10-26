@@ -1397,7 +1397,7 @@ async function limpeza(env) {
 // e o navegador só usa HTTPS. As respostas da API não ficam guardadas em cache.
 function comProtecao(r, api) {
   const h = new Headers(r.headers);
-  h.set("X-Frame-Options", "DENY");
+  h.set("X-Frame-Options", "SAMEORIGIN");   // a prévia do layout abre a página do cliente dentro do Meu estúdio
   h.set("X-Content-Type-Options", "nosniff");
   h.set("Referrer-Policy", "strict-origin-when-cross-origin");
   h.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");

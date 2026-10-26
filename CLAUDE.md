@@ -29,6 +29,8 @@ Navegador ◄──► Backblaze B2 (S3)   → upload/download DIRETO por URL as
   `masternuvem.com.br` e `www.` ligados ao Worker como Custom Domains pela API em 2026-10-21 (não estão no `wrangler.jsonc`).
 - E-mail: **contato@masternuvem.com.br** → `masternuvem.contato@gmail.com` (Cloudflare Email Routing, só recebe; testado em 2026-10-23).
   Novos endereços: regra em Email → Email Routing (ou API). Responder como @masternuvem.com.br ainda não está configurado.
+- Google Search Console: propriedade de domínio `masternuvem.com.br` verificada pela Cloudflare (registro TXT `google-site-verification`, não apagar)
+  e `https://masternuvem.com.br/sitemap.xml` enviado em 2026-10-26 (conta Google do João).
 - Deploy: `npx wrangler deploy` (ou integração Git da Cloudflare com o repositório `master-nuvem` no GitHub).
 
 ## 3. Segredos / variáveis (só nomes; valores ficam na Cloudflare → Settings → Variables and Secrets)
@@ -131,7 +133,7 @@ checkout, ciclo de 30 dias com avisos, 2FA do admin ativado, limpeza por Cron). 
     Limites por rodada: 10 e-mails e 30 exclusões (plano grátis = 50 subrequests).
     Se mudar regra de cobrança/retenção no código, atualizar os textos também.
 
-**Ideias futuras:** bot de WhatsApp para suporte/venda; "Fase 2" com HD/NAS próprio para baratear; planos pré-definidos além do slider; e-mails transacionais.
+**Ideias futuras:** **Portal do contador** (pedido do João em 2026-10-25, anotado, não feito): arquivos compartilhados entre o contador e os clientes dele (ex.: supermercados), cada cliente com a sua pasta (notas, guias, extratos por mês), e no futuro uma API para os sistemas contábeis enviarem/buscarem documentos sozinhos; bot de WhatsApp para suporte/venda; "Fase 2" com HD/NAS próprio para baratear; planos pré-definidos além do slider; e-mails transacionais.
 
 ## 8. Como trabalhar neste projeto (regras para o Claude da pasta local)
 1. Responda **em português**, passo a passo, com blocos de código simples; o João não é programador de carreira.
@@ -279,5 +281,10 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
      `/api/eventos/restaurar`). `purgarLixeira` roda no Cron de 20 min depois da sentinela e apaga de verdade (até 25 arquivos por
      rodada). Os antigos `/albuns/remover` e `/eventos/remover` (apagar na hora) continuam no servidor, mas a tela não usa mais.
    **Aumentar espaço — 2026-10-25** (`migrations/0019_aumentar_espaco.sql`, no ar): `subscriptions.aumento_ate`; `/api/checkout` com `modo: "aumentar"` cobra (preço novo − preço atual) × dias que faltam ÷ 30, mínimo R$ 2,00 (`precoAumento`), e o webhook mantém o vencimento. `GET /api/plano/aumento?gb=` mostra o valor no painel. Teste grátis por cupom não aumenta.
+   **Publicado em 2026-10-26** (migração 0020 aplicada em produção):
+   - **Avisos dentro da página** (`public/avisos.js`: `avisar`, `await confirmar(titulo, texto, botaoSim, perigo)`, `await pedirTexto`, `avisoCopiar`): substituem TODAS as janelas do navegador (alert/confirm/prompt) no Meu estúdio, eventos, portal do cliente, evento, arquivos, painel e admin. Não usar mais alert/confirm/prompt. Ao criar cliente, a tela "Pronto!" tem Copiar e WhatsApp.
+   - **Prévia dos layouts:** `/p/previa?previa=<tema>&nome=&cor=` abre o `portal-cliente.html` com dados de exemplo (sem servidor). No Meu estúdio, "👁️ Ver como fica" ao lado de cada lista de layout e "Ver os layouts em tela cheia" nas configurações (◀ ▶ + "Usar este layout"). `X-Frame-Options` passou de DENY para SAMEORIGIN para a prévia abrir dentro do site.
+   - **Cartão "💸 Cobre dos seus clientes sem pagar taxa"** no `/painel` (abaixo do plano): mostra se o PIX/link já está configurado e leva para `/meu-portal?aba=receber`, que abre Configurações direto em "Como você recebe" (`#blocoPix`, destacado). Argumento de venda: a Master Nuvem não cobra comissão, só o armazenamento.
+   - **Limite de fotos para baixar + fotos a mais (0020):** `albuns.max_fotos` (fotos diferentes; baixar de novo a mesma não conta), `preco_extra_centavos`, `faixas_extra` (desconto, igual aos eventos), `fotos_extras` (já pagas). Chegou no limite → 402 `limite_fotos`; o cliente pede em `POST /api/p/fotos-extras {album_id,qtd}` → vira cobrança (`cobrancas.fotos_extra`, 1 em aberto por álbum, aparece para o cliente mesmo no acesso livre). Fotógrafo marca como pago → soma em `fotos_extras`; desfazer tira.
 5. Pendências menores: Turnstile no login e cadastro; upload acima de 4,5 GB (multipart); preço duplicado em
    `app.js` e `worker.js`; responder e-mails como @masternuvem.com.br; WhatsApp.

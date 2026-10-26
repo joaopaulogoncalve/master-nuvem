@@ -130,7 +130,7 @@ document.getElementById("ev_btnSalvarEv").addEventListener("click", async functi
 
 document.getElementById("ev_btnPix").addEventListener("click", async function () {
   var r = await api("/api/portal/pagamento", { instrucoes: document.getElementById("ev_pixTexto").value });
-  if (!r.ok) { alert(r.dados.error || "Não foi possível salvar."); return; }
+  if (!r.ok) { avisar(r.dados.error || "Não foi possível salvar."); return; }
   mostrar("ev_pixOk", true);
   setTimeout(function () { mostrar("ev_pixOk", false); }, 2500);
   carregar();
@@ -221,9 +221,9 @@ async function carregarFotos() {
     var rm = el("button", "perigo text-xs", "Apagar");
     rm.type = "button";
     rm.addEventListener("click", async function () {
-      if (!confirm("Apagar esta foto (" + f.nome + ")?")) return;
+      if (!(await confirmar("Apagar esta foto?", f.nome, "Sim, apagar"))) return;
       var x = await api("/api/eventos/foto/remover", { id: f.id });
-      if (x.ok) c.remove(); else alert(x.dados.error || "Não foi possível apagar.");
+      if (x.ok) c.remove(); else avisar(x.dados.error || "Não foi possível apagar.");
     });
     rodape.appendChild(rm);
     c.appendChild(rodape);
@@ -251,10 +251,10 @@ async function carregarPedidos() {
       var b = el("button", classe, txt);
       b.type = "button";
       b.addEventListener("click", async function () {
-        if (status === "pago" && !confirm("Confirma que o PIX de " + reais(p.valor_centavos) + " de " + p.nome + " caiu na sua conta?\nAs fotos originais serão liberadas para a pessoa.")) return;
+        if (status === "pago" && !(await confirmar("O PIX caiu?", "Confirma que o PIX de " + reais(p.valor_centavos) + " de " + p.nome + " caiu na sua conta?\nAs fotos originais serão liberadas para a pessoa.", "Sim, caiu", false))) return;
         b.disabled = true;
         var x = await api("/api/eventos/pedidos/status", { id: p.id, status: status });
-        if (!x.ok) alert(x.dados.error || "Não foi possível.");
+        if (!x.ok) avisar(x.dados.error || "Não foi possível.");
         carregarPedidos();
         carregar();
       });
@@ -284,12 +284,12 @@ document.getElementById("ev_abCopiar").addEventListener("click", function () {
 });
 
 document.getElementById("ev_btnApagar").addEventListener("click", async function () {
-  if (!confirm("Apagar o evento \"" + aberto.titulo + "\" com TODAS as fotos e pedidos?\nIsso não pode ser desfeito e o link para de funcionar.")) return;
+  if (!(await confirmar("Apagar o evento?", "\"" + aberto.titulo + "\" com TODAS as fotos e pedidos.\nIsso não pode ser desfeito e o link para de funcionar.", "Sim, apagar"))) return;
   var botao = this;
   botao.disabled = true;
   while (true) {
     var r = await api("/api/eventos/remover", { id: aberto.id });
-    if (!r.ok) { alert(r.dados.error || "Não foi possível apagar."); break; }
+    if (!r.ok) { avisar(r.dados.error || "Não foi possível apagar."); break; }
     if (!r.dados.restantes) break;
     botao.textContent = "Apagando... faltam " + r.dados.restantes + " arquivo(s)";
   }
@@ -399,7 +399,7 @@ document.getElementById("ev_arquivosEnviar").addEventListener("change", async fu
       if (!ligou.ok) throw new Error(ligou.dados.error || "Não foi possível salvar a foto");
     } catch (e) {
       falhas++;
-      if (/Espaço insuficiente|plano/.test(e.message)) { alert(e.message); break; }
+      if (/Espaço insuficiente|plano/.test(e.message)) { avisar(e.message); break; }
     }
     feito += f.size;
     barra.style.width = Math.round(feito / total * 100) + "%";

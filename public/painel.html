@@ -7,6 +7,7 @@
 <link rel="icon" type="image/png" href="/marca/icone-64.png">
 <link rel="apple-touch-icon" href="/marca/icone-180.png">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="/avisos.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
@@ -168,6 +169,19 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
       <p class="text-xs text-slate-500 mt-4">PIX aqui mesmo, na Master Nuvem; cartão pela página segura do Mercado Pago. O plano ativa sozinho assim que o pagamento é aprovado.</p>
     </div>
   </div>
+
+  <!-- 3. Receber dos clientes (fotógrafos, contadores...) sem taxa -->
+  <div class="glass rounded-3xl p-6 sm:p-8" style="border-color:#10b98166">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="max-w-xl">
+        <p class="text-xl font-bold text-emerald-200">💸 Cobre dos seus clientes sem pagar taxa</p>
+        <p class="text-sm text-slate-300 mt-2">Coloque o seu PIX e, se quiser, o seu link de pagamento (Mercado Pago, InfinitePay...). Os seus clientes pagam <strong>direto para você</strong>.</p>
+        <p class="text-sm text-slate-400 mt-1">A Master Nuvem não cobra comissão nem taxa sobre o que você recebe. Só cobramos o armazenamento.</p>
+        <p id="recebeStatus" class="text-sm mt-3 text-slate-400"></p>
+      </div>
+      <a href="/meu-portal?aba=receber" id="btnRecebe" class="inline-block font-bold text-white px-6 py-3 rounded-xl" style="background:linear-gradient(90deg,#059669,#10b981)">Configurar como recebo</a>
+    </div>
+  </div>
 </main>
 
 <!-- Tela do PIX (QR code gerado pelo Mercado Pago, mostrado aqui com a nossa marca) -->
@@ -240,7 +254,7 @@ function estadoSeguranca(ativo) {
 async function iniciarSetup() {
   var r = await postar("/api/2fa/setup");
   if (!r.ok) {
-    alert(r.dados.error || "Não foi possível iniciar.");
+    avisar(r.dados.error || "Não foi possível iniciar.");
     return;
   }
   mostrar("blocoSetup", true);
@@ -531,6 +545,18 @@ document.getElementById("sair").addEventListener("click", function () {
     window.location.href = "/entrar";
   });
 });
+
+// Cartão "Cobre sem taxa": mostra se a forma de recebimento já está configurada.
+fetch("/api/portal").then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+  var p = d && d.portal, st = document.getElementById("recebeStatus");
+  if (p && (p.instrucoes_pagamento || p.link_pagamento)) {
+    st.textContent = "✅ Configurado: " + (p.instrucoes_pagamento ? "PIX" : "") + (p.instrucoes_pagamento && p.link_pagamento ? " + " : "") + (p.link_pagamento ? "link de pagamento" : "");
+    st.className = "text-sm mt-3 text-emerald-300";
+    document.getElementById("btnRecebe").textContent = "Ver ou trocar";
+  } else {
+    st.textContent = "Ainda não configurado. Leva 1 minuto.";
+  }
+}).catch(function () {});
 </script>
 <script src="/app.js"></script>
 <script src="/assistente.js" defer></script>

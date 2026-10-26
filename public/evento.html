@@ -6,6 +6,7 @@
 <title>Fotos do evento</title>
 <link rel="icon" type="image/png" href="/marca/icone-64.png">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="/avisos.js"></script>
 <style>
 :root{--cor:#0ea5e9}
 body{background:#f8fafc}
@@ -421,7 +422,7 @@ async function linkOriginal(id) {
 }
 
 async function baixar(id) {
-  try { window.location.href = await linkOriginal(id); } catch (e) { alert(e.message); }
+  try { window.location.href = await linkOriginal(id); } catch (e) { avisar(e.message); }
 }
 
 document.getElementById("btnBaixarTodas").addEventListener("click", async function () {

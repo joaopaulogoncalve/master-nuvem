@@ -7,6 +7,7 @@
 <link rel="icon" type="image/png" href="/marca/icone-64.png">
 <link rel="apple-touch-icon" href="/marca/icone-180.png">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="/avisos.js"></script>
 <style>
 body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
 .glass{background:linear-gradient(160deg,#0c1a3dcc,#07102acc);border:1px solid #1e40af88;box-shadow:0 0 50px #38bdf822;backdrop-filter:blur(10px)}
@@ -151,14 +152,14 @@ async function baixarArquivo(id) {
   if (r.ok && r.dados.url) {
     window.location.href = r.dados.url;
   } else {
-    alert(r.dados.error || "Não foi possível baixar agora.");
+    avisar(r.dados.error || "Não foi possível baixar agora.");
   }
 }
 
 async function apagarArquivo(id, nome) {
-  if (!confirm("Apagar \"" + nome + "\"? Essa ação não pode ser desfeita pelo site.")) return;
+  if (!await confirmar("Confirmar", "Apagar \"" + nome + "\"? Essa ação não pode ser desfeita pelo site.")) return;
   var r = await api("/api/files/delete", { id: id });
-  if (!r.ok) alert(r.dados.error || "Não foi possível apagar agora.");
+  if (!r.ok) avisar(r.dados.error || "Não foi possível apagar agora.");
   carregar();
 }
 

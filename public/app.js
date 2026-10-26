@@ -72,7 +72,7 @@ async function processarPagamento(metodo) {
     }
   } catch (erro) {
     console.error("Erro no pagamento:", erro);
-    alert(erro.message && erro.message.indexOf("PIX") > -1 ? erro.message : "Não foi possível iniciar o pagamento. Tente novamente em instantes.");
+    avisar(erro.message && erro.message.indexOf("PIX") > -1 ? erro.message : "Não foi possível iniciar o pagamento. Tente novamente em instantes.");
   }
   btn.textContent = textoAntes;
   btn.disabled = false;
