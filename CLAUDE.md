@@ -36,8 +36,8 @@ Navegador ◄──► Backblaze B2 (S3)   → upload/download DIRETO por URL as
 ## 3. Segredos / variáveis (só nomes; valores ficam na Cloudflare → Settings → Variables and Secrets)
 | Nome | Para quê |
 |---|---|
-| `MP_ACCESS_TOKEN` | Token do Mercado Pago (checkout e consulta de pagamentos no webhook). **O atual é temporário — trocar pelo definitivo.** |
-| `RESEND_API_KEY` | Envio de e-mail (Resend, remetente `nao-responda@masternuvem.com.br`). Gravar com `scripts\segredo.ps1 -Nome RESEND_API_KEY` |
+| `MP_ACCESS_TOKEN` | Token do Mercado Pago (checkout e consulta de pagamentos no webhook). Token **definitivo** (de produção) gravado; PIX real testado em 2026-10-25. |
+| `RESEND_API_KEY` | **2026-10-26: a chave antiga estava inválida (Resend 401 Malformed access token) e nenhum e-mail saía; chave nova `site-master-nuvem` gravada e testada (Delivered).** Para conferir erros de e-mail: `npx wrangler tail master-nuvem`. Envio de e-mail (Resend, remetente `nao-responda@masternuvem.com.br`). Gravar com `scripts\segredo.ps1 -Nome RESEND_API_KEY` |
 | `MP_WEBHOOK_SECRET` | Opcional. Se existir, o webhook exige a assinatura `x-signature` do MP. Só criar depois de confirmar que os avisos chegam assinados (senão nenhum plano ativa). A segurança principal é consultar o pagamento na API. |
 | `B2_KEY_ID` | ID da chave de aplicação do Backblaze (`site-master-nuvem`, só o bucket, Read and Write). A Master Key **não** funciona na API S3. Trocar: `scripts\b2-chave-site.ps1 -KeyId 005...` |
 | `B2_APP_KEY` | Chave secreta do Backblaze |
@@ -124,7 +124,7 @@ checkout, ciclo de 30 dias com avisos, 2FA do admin ativado, limpeza por Cron). 
 10. Limpeza: registros `pending` antigos só são apagados na próxima tentativa de upload do próprio usuário (e o objeto órfão no B2 não é removido) — criar tarefa agendada (Cron Trigger).
 11. `/termos` e `/privacidade` (LGPD) criadas em 2026-10-23: plano de 30 dias sem renovação automática, arquivos guardados
     **15 dias** após o vencimento e depois podem ser apagados, reembolso só nos 7 dias do CDC, foro Goiânia-GO.
-    Cadastro exige aceite (`users.terms_accepted_at`, `migrations/0003`). Falta: WhatsApp.
+    Cadastro exige aceite (`users.terms_accepted_at`, `migrations/0003`). WhatsApp: (62) 98284-6067.
 12. **Limpeza automática** (`scheduled` no worker, Cron `0 * * * *`, função `limpeza`): e-mails "vence em 3 dias", "venceu"
     e "último aviso" (3 dias antes de apagar), registrados em `avisos` (`migrations/0004`) para não repetir; apaga arquivos de
     quem está sem plano há 15+ dias (nunca admin; "fim" = maior `paid_until` entre active/replaced/cancelled — cancelar grava
@@ -139,7 +139,8 @@ checkout, ciclo de 30 dias com avisos, 2FA do admin ativado, limpeza por Cron). 
 1. Responda **em português**, passo a passo, com blocos de código simples; o João não é programador de carreira.
 2. Rode primeiro `git status` e leia este arquivo. Não pesquise o que já está aqui.
 3. Mudanças pequenas e testáveis; explique o que mudou em 2–3 linhas.
-4. Testar local: `npx wrangler dev` (precisa de `.dev.vars`). Banco local: `--local`; produção: `--remote` (**confirmar antes de mexer em produção**).
+4. **Testes automáticos:** `node tests/rodar.mjs` (22 grupos, banco SQLite em memória + Mercado Pago/B2/Resend simulados; nada toca a produção). Rodar antes de todo deploy. Teste novo: copiar um `tests/teste-*.mjs` parecido.
+   Testar local: `npx wrangler dev` (precisa de `.dev.vars`). Banco local: `--local`; produção: `--remote` (**confirmar antes de mexer em produção**).
 5. Nunca imprimir, commitar ou pedir para colar segredos no chat. Novo segredo → `npx wrangler secret put NOME`.
 6. Não quebrar o que funciona (login, cota, URLs assinadas). Qualquer mudança em preço/cobrança: mostrar a conta antes.
 7. Estilo do código: funções em português, `var`/`function` simples, sem dependências novas sem necessidade.
@@ -149,8 +150,7 @@ checkout, ciclo de 30 dias com avisos, 2FA do admin ativado, limpeza por Cron). 
 Já feito: migrations, pagamento automático (webhook), CORS/chave/ciclo de vida do B2, 2FA do admin, painel admin,
 recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), botão Entrar. Tudo no PR #1.
 
-1. **Trocar `MP_ACCESS_TOKEN` pelo definitivo** (`scripts\segredo.ps1 -Nome MP_ACCESS_TOKEN`) e testar compra real de R$ 9,90 no PIX:
-   pagar → plano ativo sozinho → enviar arquivo → baixar → apagar. Último passo para vender.
+1. ~~Trocar o token do Mercado Pago~~ Feito: token definitivo gravado e PIX real testado (2026-10-25).
 2. ~~Contador/CNAE~~ Resolvido (2026-10-25): o João tem CNAE de e-commerce e o contador confirmou que o serviço se enquadra. Não tocar mais nesse assunto.
 3. **Depois dos primeiros clientes pagantes:** ligar o apagamento de verdade (`APAGAR_ARQUIVOS = "sim"` como variável do Worker),
    só depois de ver um ciclo completo de avisos (vence → venceu → último aviso) funcionando em modo teste.
@@ -291,5 +291,7 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
    - **Bancos (0021, `src/bancos.js`):** tabela `bancos` (17 iniciais, com Cielo: links das ajudas oficiais para chave PIX e link de pagamento, `tem_api` = confirmação automática possível no futuro; hoje TODA confirmação é manual pelo fotógrafo) e `bancos_pedidos`. "Como recebo" pergunta "Qual é o seu banco?" e mostra só aquele (+ aviso ✋ manual / 🤖 possível no futuro). Nuvenzinha (`assistente.js`) reconhece o banco na pergunta e responde com os links; banco desconhecido vira pedido (`POST /api/bancos/pedido`, 3/h por IP) → e-mail para contato@ → João aprova no /admin seção Bancos colando o link oficial → quem pediu recebe e-mail na hora e o banco entra para todos. A lista NUNCA muda sozinha (link falso de banco = golpe). Cron de 20 min confere 3 bancos por rodada (1x por dia cada); link quebrado → e-mail para contato@. 401/403/429 contam como OK (sites que bloqueiam robôs: BB, Itaú, Santander, InfinitePay).
    - **Ideia aprovada para fazer depois: Portfólio público do fotógrafo** (página de vendas dele, aberta no Google): capa, sobre, galerias de portfólio escolhidas das fotos dele, contatos (WhatsApp/Instagram), botão "Pedir orçamento", rodapé "Feito com Master Nuvem" (marketing), entra no sitemap. Diferencial: Google Drive/Dropbox só vendem GB.
    **/admin limpo (publicado em 2026-10-26):** tela inicial com quadradinhos (Clientes, Assistente, Sentinela, Bancos, Blog, Backblaze, Cupons), resumo de 1 linha e 🔴 quando precisa do João (chamado aberto, conta trancada/alerta novo, pedido de banco/link quebrado, aviso do B2); o título da aba mostra "(N)". Uma seção por vez (`abrirSecao`), listas com "Ver todos" (`limitarLista`) e formulários atrás de "➕". Os `carregarX` são embrulhados para atualizar os quadradinhos depois de cada carga.
+   **Profissional (publicado em 2026-10-26):** página `/sobre` (Quem somos, dados do MEI) no sitemap; rodapé igual em início, termos, privacidade, sobre e blog (links + CNPJ + Mercado Pago/Backblaze/Cloudflare). WhatsApp de atendimento **(62) 98284-6067** (wa.me/5562982846067) no rodapé, no Quem somos e na Nuvenzinha (chip "💬 WhatsApp"). Falta: responder como contato@ (Gmail "Enviar e-mail como" pelo SMTP do Resend, feito pelo João).
+   **Contratos com assinatura online (publicado em 2026-10-26, migração 0022 aplicada):** `src/contratos.js`, `src/contratos-modelos.js` (5 modelos: casamento/15 anos/festa, ensaio, vídeo, contador, em branco; campos `{{...}}` em `CAMPOS`), `public/contrato.html` (`/c/<token de 48 hex>`). Meu estúdio → "📝 Contratos": escolhe modelo + cliente + álbum e o texto já vem preenchido (cliente, estúdio, fotos incluídas e preço da foto a mais vindos das regras do álbum; CPF/CNPJ e cidade do fotógrafo lembrados no navegador); edita; envia (e-mail + WhatsApp). Cliente: lê, nome + CPF/CNPJ (dígitos conferidos), "li e concordo", código de 6 números no e-mail (15 min, 5 tentativas, 6 códigos por contrato, 10/h por IP) → assinado. Comprovante: data, IP, navegador, e-mail, SHA-256 do texto; e-mail para os dois. Modelos próprios ("⭐ Meus modelos"). Termos e Privacidade atualizados (modelos sem garantia jurídica; Master Nuvem não é parte). Teste: `tests/teste-contratos.mjs`.
 5. Pendências menores: Turnstile no login e cadastro; upload acima de 4,5 GB (multipart); preço duplicado em
    `app.js` e `worker.js`; responder e-mails como @masternuvem.com.br; WhatsApp.

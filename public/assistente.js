@@ -8,6 +8,8 @@
   var bancos = [];
   var prazo = "48 horas";
   var emailSuporte = "contato@masternuvem.com.br";
+  var WHATSAPP = "https://wa.me/5562982846067?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Master%20Nuvem.";
+  function abrirWhats() { window.open(WHATSAPP, "_blank", "noopener"); falaBot("Abri o WhatsApp da Master Nuvem numa nova aba: (62) 98284-6067 💬"); }
   var carregado = false;
   var aberto = false;
   var usuario = null;
@@ -149,7 +151,7 @@
   function sugestoesIniciais() {
     chips(faq.slice(0, 6).map(function (f) {
       return { texto: f.pergunta, acao: function () { responder(f, f.pergunta, true); } };
-    }).concat([{ texto: "Falar com uma pessoa", acao: function () { abrirChamado(""); } }]));
+    }).concat([{ texto: "💬 WhatsApp", acao: abrirWhats }, { texto: "Falar com uma pessoa", acao: function () { abrirChamado(""); } }]));
   }
 
   function responder(f, textoPergunta, clicou) {
@@ -286,6 +288,7 @@
       falaBot("Hmm, essa eu ainda não sei responder 😅 Mas anotei a sua pergunta para aprender!\nQuer que uma pessoa da equipe te responda? A gente responde por e-mail em até " + prazo + ".");
       chips([
         { texto: "Abrir chamado", forte: true, acao: function () { abrirChamado(texto); } },
+        { texto: "💬 WhatsApp", acao: abrirWhats },
         { texto: "Ver dúvidas comuns", acao: sugestoesIniciais }
       ]);
     }, 450);

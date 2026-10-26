@@ -3,6 +3,7 @@ import { tratarPortalDono, tratarPortalCliente } from "./portal.js";
 import { chaveIp, chaveConta, limiteAtingido, registrarTentativa, dentroDoLimite, registrarEvento } from "./limite.js";
 import { sentinela, REGRAS as REGRAS_SENTINELA } from "./sentinela.js";
 import { tratarEventosDono, tratarEventoPublico } from "./eventos.js";
+import { tratarContratosDono, tratarContratoPublico } from "./contratos.js";
 import { tratarBlog, agendaBlog } from "./blog.js";
 import { purgarLixeira } from "./lixeira.js";
 import { tratarBancos, tratarAdminBancos, checarLinksBancos } from "./bancos.js";
@@ -1260,6 +1261,14 @@ async function tratarApi(request, env, url) {
     return await tratarEventoPublico(request, env, url);
   }
 
+  if (caminho === "/api/contratos" || caminho.startsWith("/api/contratos/")) {
+    return await tratarContratosDono(request, env, url);
+  }
+
+  if (caminho.startsWith("/api/c/")) {
+    return await tratarContratoPublico(request, env, url);
+  }
+
   if (caminho.startsWith("/api/files")) {
     return await tratarArquivos(request, env, url);
   }
@@ -1446,6 +1455,10 @@ export default {
     const blog = tratarBlog(url);
     if (blog) return comProtecao(blog, false);
 
+    // Contrato para assinar: /c/<token> abre sempre a mesma página.
+    if (/^\/c\/[0-9a-f]{48}\/?$/.test(url.pathname)) {
+      return comProtecao(await env.ASSETS.fetch(new Request(new URL("/contrato", url), request)), false);
+    }
     // Galeria de evento: /e/<endereço-do-evento> abre sempre a mesma página.
     if (/^\/e\/[a-z0-9-]+\/?$/.test(url.pathname)) {
       return comProtecao(await env.ASSETS.fetch(new Request(new URL("/evento", url), request)), false);

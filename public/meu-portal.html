@@ -54,7 +54,8 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         <h1 class="text-2xl md:text-3xl font-bold">Meu <span class="grad">estúdio</span></h1>
         <p id="homeSub" class="text-slate-400 text-sm mt-1"></p>
       </div>
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
+        <button type="button" id="irContratos" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">📝 Contratos</button>
         <button type="button" id="irCobrancas" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">💰 Cobranças</button>
         <button type="button" id="irConfig" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">🎨 Minha página</button>
         <button type="button" id="irReceber" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">💳 Como recebo</button>
@@ -307,6 +308,64 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <select id="qualBanco" class="campo mt-2" style="max-width:360px"><option value="">Escolha...</option></select>
       <div id="guiaPassos" class="mt-3"></div>
     </div>
+  </section>
+
+  <!-- Contratos: modelo pronto, preenchido sozinho, assinatura online -->
+  <section id="secContratos" class="hidden glass rounded-3xl p-6 space-y-5">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-bold">📝 Contratos</h2>
+        <p class="text-sm text-slate-400">Escolha um modelo e o cliente: o contrato já vem preenchido. Revise, envie, e o cliente assina online com um código no e-mail.</p>
+      </div>
+      <button type="button" id="ctVoltar" class="link whitespace-nowrap">← Meus links</button>
+    </div>
+    <div class="flex flex-wrap gap-3">
+      <button type="button" id="ctNovo" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">➕ Novo contrato</button>
+      <button type="button" id="ctModelosBtn" class="text-sm font-semibold text-cyan-300 hover:text-white">✏️ Meus modelos</button>
+    </div>
+
+    <div id="ctForm" class="hidden bg-slate-900/50 rounded-2xl p-4 space-y-4 text-sm">
+      <div class="grid md:grid-cols-3 gap-3">
+        <label class="block">1. Modelo<select id="ctModelo" class="campo mt-1"></select></label>
+        <label class="block">2. Para qual cliente?<select id="ctCliente" class="campo mt-1"></select></label>
+        <label class="block">3. Álbum (opcional)<select id="ctAlbum" class="campo mt-1"><option value="">Nenhum</option></select></label>
+      </div>
+      <div id="ctOutro" class="hidden grid md:grid-cols-2 gap-3">
+        <input id="ctOutroNome" class="campo" maxlength="100" placeholder="Nome de quem vai assinar">
+        <input id="ctOutroEmail" class="campo" type="email" maxlength="120" placeholder="E-mail de quem vai assinar">
+      </div>
+      <details open>
+        <summary class="cursor-pointer font-semibold">4. Dados do contrato <span class="text-xs text-slate-400 font-normal">(já preenchidos com o que temos; complete o resto)</span></summary>
+        <div id="ctCampos" class="grid md:grid-cols-3 gap-3 mt-3"></div>
+      </details>
+      <div>
+        <p class="font-semibold">5. Confira o texto <span class="text-xs text-slate-400 font-normal">(pode editar à vontade; ____ = campo sem preencher)</span></p>
+        <input id="ctTitulo" class="campo mt-2" maxlength="120" placeholder="Título do contrato">
+        <textarea id="ctTexto" class="campo mt-2 font-mono text-xs" style="height:340px"></textarea>
+        <p class="text-xs text-slate-500 mt-1">Dica: "## " no começo da linha vira título, "- " vira item de lista e **texto** fica em negrito.</p>
+      </div>
+      <p class="text-xs text-amber-300">⚖️ Os modelos são um ponto de partida. Revise com o seu advogado. A Master Nuvem não presta serviço jurídico e não é parte do contrato.</p>
+      <p id="ctErro" class="text-red-400 min-h-[1.25rem]"></p>
+      <div class="flex flex-wrap gap-3">
+        <button type="button" id="ctEnviar" class="cta font-bold px-5 py-2.5 rounded-xl">Enviar para assinatura</button>
+        <button type="button" id="ctCancelarForm" class="text-slate-400 hover:text-white">Cancelar</button>
+      </div>
+    </div>
+
+    <div id="ctModelos" class="hidden bg-slate-900/50 rounded-2xl p-4 space-y-3 text-sm">
+      <p class="font-semibold">✏️ Meus modelos <span class="text-xs text-slate-400 font-normal">(o seu texto padrão, com os campos {{...}} que se preenchem sozinhos)</span></p>
+      <div id="ctListaModelos" class="space-y-1"></div>
+      <div class="grid md:grid-cols-2 gap-3">
+        <label class="block">Começar a partir de<select id="ctBase" class="campo mt-1"></select></label>
+        <input id="ctModeloNome" class="campo self-end" maxlength="80" placeholder="Nome do seu modelo (ex.: Casamento completo)">
+      </div>
+      <textarea id="ctModeloTexto" class="campo font-mono text-xs" style="height:300px"></textarea>
+      <p class="text-xs text-slate-500">Campos disponíveis: <span id="ctListaCampos"></span></p>
+      <p id="ctModeloErro" class="text-red-400 min-h-[1.25rem]"></p>
+      <div class="flex gap-3"><button type="button" id="ctModeloSalvar" class="cta font-bold px-4 py-2 rounded-xl">Salvar modelo</button><button type="button" id="ctModeloFechar" class="text-slate-400 hover:text-white">Fechar</button></div>
+    </div>
+
+    <div id="ctLista" class="space-y-2"></div>
   </section>
 
   <!-- Cobranças dos links fechados -->
@@ -734,6 +793,228 @@ fetch("/api/bancos").then(function (r) { return r.json(); }).then(function (d) {
   sel.appendChild(new Option("Outro (não está na lista)", "outro"));
 }).catch(function () {});
 
+/* ---------- contratos ---------- */
+
+var ct = { modelos: [], meus: [], campos: [], contratos: [], editado: false, modeloEditando: 0 };
+var CT_STATUS = { enviado: ["✉️ Enviado", "text-slate-300"], visto: ["👀 Visto pelo cliente", "text-amber-300"], assinado: ["✅ Assinado", "text-emerald-300"], cancelado: ["Cancelado", "text-slate-500"] };
+
+function ctPreencher(texto, valores) {
+  return String(texto).replace(/\{\{([a-z_]+)\}\}/g, function (m, k) { var v = (valores[k] || "").trim(); return v || "____"; });
+}
+function ctReais(c) { return c ? "R$ " + (c / 100).toFixed(2).replace(".", ",") : ""; }
+function ctTodosModelos() {
+  return ct.meus.map(function (m) { return { id: "meu:" + m.id, nome: "⭐ " + m.nome, texto: m.texto }; }).concat(ct.modelos);
+}
+function ctLembrar(k, v) { try { localStorage.setItem("ct_" + k, v); } catch (e) {} }
+function ctLembrado(k) { try { return localStorage.getItem("ct_" + k) || ""; } catch (e) { return ""; } }
+
+async function carregarContratos() {
+  var r = await api("/api/contratos");
+  if (!r.ok) { document.getElementById("ctLista").textContent = r.dados.error || "Não foi possível carregar."; return; }
+  ct.modelos = r.dados.modelos; ct.meus = r.dados.meus; ct.campos = r.dados.campos; ct.contratos = r.dados.contratos;
+  desenharContratos();
+}
+
+function desenharContratos() {
+  var lista = document.getElementById("ctLista");
+  lista.innerHTML = "";
+  if (!ct.contratos.length) lista.appendChild(el("p", "text-sm text-slate-400", "Nenhum contrato ainda. Clique em ➕ Novo contrato."));
+  ct.contratos.forEach(function (c) {
+    var s = CT_STATUS[c.status] || [c.status, ""];
+    var parado = c.status !== "assinado" && c.status !== "cancelado" && (Date.now() - new Date(String(c.created_at).replace(" ", "T") + "Z").getTime()) > 3 * 86400000;
+    var l = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/50 rounded-xl px-4 py-3 text-sm" + (parado ? " border border-red-400/50" : ""));
+    var esq = el("div", "min-w-0");
+    esq.appendChild(el("p", "font-semibold break-words", (parado ? "🔴 " : "") + c.titulo));
+    esq.appendChild(el("p", "text-xs " + s[1], s[0] + " · " + c.destinatario_nome + " · " + dataBr(c.created_at) + (parado ? " · parado há mais de 3 dias" : "")));
+    l.appendChild(esq);
+    var acoes = el("div", "flex flex-wrap gap-3");
+    function acao(txt, fn, classe) { var b = el("button", classe || "link", txt); b.type = "button"; b.addEventListener("click", fn); acoes.appendChild(b); }
+    acao("Abrir", function () { window.open(c.link, "_blank", "noopener"); });
+    if (c.status !== "assinado" && c.status !== "cancelado") {
+      acao("WhatsApp", function () {
+        window.open("https://wa.me/?text=" + encodeURIComponent("Olá, " + c.destinatario_nome.split(" ")[0] + "! Segue o contrato para você ler e assinar online: " + c.link), "_blank", "noopener");
+      });
+      acao("Copiar link", function () { navigator.clipboard.writeText(c.link); this.textContent = "Copiado ✓"; });
+      acao("Reenviar e-mail", async function () {
+        var r = await api("/api/contratos/reenviar", { id: c.id });
+        avisar(r.ok ? (r.dados.email_enviado ? "E-mail reenviado para " + c.destinatario_email + "." : "O contrato está salvo, mas o e-mail não saiu. Mande o link pelo WhatsApp.") : (r.dados.error || "Não foi possível."));
+      });
+      acao("Cancelar", async function () {
+        if (!(await confirmar("Cancelar este contrato?", "O link para de funcionar e o cliente não consegue mais assinar.", "Sim, cancelar"))) return;
+        await api("/api/contratos/cancelar", { id: c.id });
+        carregarContratos();
+      }, "perigo");
+    }
+    l.appendChild(acoes);
+    lista.appendChild(l);
+  });
+}
+
+function ctDesenharCampos(valores) {
+  var caixa = document.getElementById("ctCampos");
+  caixa.innerHTML = "";
+  ct.campos.forEach(function (c) {
+    var lab = el("label", "block text-xs text-slate-400", c[1]);
+    var inp = el("input", "campo mt-1 text-sm");
+    inp.id = "ctc_" + c[0];
+    inp.placeholder = "ex.: " + c[2];
+    inp.value = valores[c[0]] || "";
+    inp.addEventListener("input", function () { ctAtualizarTexto(false); });
+    lab.appendChild(inp);
+    caixa.appendChild(lab);
+  });
+}
+function ctValores() {
+  var v = {};
+  ct.campos.forEach(function (c) { var i = document.getElementById("ctc_" + c[0]); v[c[0]] = i ? i.value : ""; });
+  return v;
+}
+function ctModeloAtual() {
+  var id = document.getElementById("ctModelo").value;
+  return ctTodosModelos().find(function (m) { return m.id === id; }) || ct.modelos[0];
+}
+// Refaz o texto a partir do modelo + campos (pergunta antes se o fotógrafo já editou o texto à mão).
+async function ctAtualizarTexto(forcar) {
+  if (ct.editado && !forcar) return;
+  document.getElementById("ctTexto").value = ctPreencher(ctModeloAtual().texto, ctValores());
+  ct.editado = false;
+}
+
+// Dados que já temos: cliente, estúdio e as regras do álbum (fotos incluídas, preço da foto a mais, dias de acesso).
+function ctValoresIniciais() {
+  var v = {};
+  ct.campos.forEach(function (c) { var i = document.getElementById("ctc_" + c[0]); if (i) v[c[0]] = i.value; });
+  var cliId = document.getElementById("ctCliente").value;
+  var cli = dados.clientes.find(function (c) { return String(c.id) === cliId; });
+  if (cli) { v.cliente_nome = cli.nome; v.cliente_email = cli.email; }
+  else if (cliId === "outro") { v.cliente_nome = document.getElementById("ctOutroNome").value; v.cliente_email = document.getElementById("ctOutroEmail").value; }
+  v.estudio_nome = v.estudio_nome || (dados.portal && dados.portal.nome) || "";
+  ["estudio_documento", "estudio_cidade", "cidade_foro", "forma_pagamento", "prazo_entrega"].forEach(function (k) { v[k] = v[k] || ctLembrado(k); });
+  var alb = dados.albuns.find(function (a) { return String(a.id) === document.getElementById("ctAlbum").value; });
+  if (alb) {
+    var r = alb.regras || {};
+    v.tipo_evento = v.tipo_evento || alb.tipo || "";
+    if (r.max_fotos) v.qtd_fotos = String(r.max_fotos);
+    if (r.preco_extra_centavos) v.preco_foto_extra = ctReais(r.preco_extra_centavos);
+    if (r.acesso_ate) v.dias_galeria = String(Math.max(1, Math.round((new Date(String(r.acesso_ate).replace(" ", "T") + "Z") - Date.now()) / 86400000)));
+  }
+  return v;
+}
+
+function ctAtualizarAlbuns() {
+  var sel = document.getElementById("ctAlbum");
+  var cliId = document.getElementById("ctCliente").value;
+  sel.innerHTML = "";
+  sel.appendChild(new Option("Nenhum", ""));
+  dados.albuns.filter(function (a) { return String(a.cliente_id) === cliId; }).forEach(function (a) { sel.appendChild(new Option(a.titulo, a.id)); });
+  mostrar("ctOutro", cliId === "outro");
+}
+
+function ctTituloPadrao() {
+  var m = ctModeloAtual(), v = ctValores();
+  return (m.nome.replace(/^⭐ /, "").split(" (")[0] + (v.cliente_nome ? " - " + v.cliente_nome : "")).slice(0, 120);
+}
+
+function ctRecalcular() {
+  ctDesenharCampos(ctValoresIniciais());
+  document.getElementById("ctTitulo").value = ctTituloPadrao();
+  ctAtualizarTexto(true);
+}
+
+document.getElementById("ctNovo").addEventListener("click", async function () {
+  if (!ct.campos.length) await carregarContratos();
+  mostrar("ctModelos", false);
+  var selM = document.getElementById("ctModelo");
+  selM.innerHTML = "";
+  ctTodosModelos().forEach(function (m) { selM.appendChild(new Option(m.nome, m.id)); });
+  var selC = document.getElementById("ctCliente");
+  selC.innerHTML = "";
+  dados.clientes.filter(function (c) { return !c.removido_em; }).forEach(function (c) { selC.appendChild(new Option(c.nome, c.id)); });
+  selC.appendChild(new Option("Outra pessoa (não é cliente do portal)", "outro"));
+  ctAtualizarAlbuns();
+  ctDesenharCampos({});
+  ctRecalcular();
+  mostrar("ctForm", true);
+  document.getElementById("ctErro").textContent = "";
+});
+document.getElementById("ctModelo").addEventListener("change", function () { document.getElementById("ctTitulo").value = ctTituloPadrao(); ctAtualizarTexto(true); });
+document.getElementById("ctCliente").addEventListener("change", function () { ctAtualizarAlbuns(); ctRecalcular(); });
+document.getElementById("ctAlbum").addEventListener("change", ctRecalcular);
+["ctOutroNome", "ctOutroEmail"].forEach(function (id) { document.getElementById(id).addEventListener("input", ctRecalcular); });
+document.getElementById("ctTexto").addEventListener("input", function () { ct.editado = true; });
+document.getElementById("ctCancelarForm").addEventListener("click", function () { mostrar("ctForm", false); });
+
+document.getElementById("ctEnviar").addEventListener("click", async function () {
+  var erro = document.getElementById("ctErro"), b = this;
+  erro.textContent = "";
+  var v = ctValores();
+  var texto = document.getElementById("ctTexto").value;
+  if (texto.indexOf("____") > -1 && !(await confirmar("Ainda há campos em branco", "O texto tem \"____\" (campos sem preencher). Enviar mesmo assim?", "Enviar assim", false))) return;
+  var cliId = document.getElementById("ctCliente").value;
+  ["estudio_documento", "estudio_cidade", "cidade_foro", "forma_pagamento", "prazo_entrega"].forEach(function (k) { if (v[k]) ctLembrar(k, v[k]); });
+  b.disabled = true;
+  var r = await api("/api/contratos/novo", {
+    titulo: document.getElementById("ctTitulo").value, texto: texto,
+    cliente_id: cliId !== "outro" ? cliId : null, album_id: document.getElementById("ctAlbum").value || null,
+    destinatario_nome: v.cliente_nome, destinatario_email: v.cliente_email
+  });
+  b.disabled = false;
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível enviar."; return; }
+  mostrar("ctForm", false);
+  await avisoCopiar("Contrato enviado! 📝", r.dados.email_enviado ? "Mandamos o link para " + v.cliente_email + ". Se quiser, mande também pelo WhatsApp:" : "O e-mail não saiu agora. Mande o link pelo WhatsApp:",
+    [["Link para assinar", r.dados.link]], "Olá, " + (v.cliente_nome || "").split(" ")[0] + "! Segue o contrato para você ler e assinar online: " + r.dados.link);
+  carregarContratos();
+});
+
+/* meus modelos */
+function ctDesenharModelos() {
+  var lista = document.getElementById("ctListaModelos");
+  lista.innerHTML = "";
+  if (!ct.meus.length) lista.appendChild(el("p", "text-xs text-slate-400", "Você ainda não tem modelos próprios."));
+  ct.meus.forEach(function (m) {
+    var l = el("div", "flex items-center justify-between gap-2 bg-slate-950/40 rounded-lg px-3 py-2");
+    l.appendChild(el("span", "", "⭐ " + m.nome));
+    var a = el("span", "flex gap-3");
+    var ed = el("button", "link", "Editar"); ed.type = "button";
+    ed.addEventListener("click", function () { ct.modeloEditando = m.id; document.getElementById("ctModeloNome").value = m.nome; document.getElementById("ctModeloTexto").value = m.texto; });
+    var rm = el("button", "perigo", "Remover"); rm.type = "button";
+    rm.addEventListener("click", async function () {
+      if (!(await confirmar("Remover o modelo?", m.nome, "Remover"))) return;
+      await api("/api/contratos/modelos/remover", { id: m.id });
+      await carregarContratos(); ctDesenharModelos();
+    });
+    a.appendChild(ed); a.appendChild(rm); l.appendChild(a); lista.appendChild(l);
+  });
+}
+document.getElementById("ctModelosBtn").addEventListener("click", async function () {
+  if (!ct.campos.length) await carregarContratos();
+  mostrar("ctForm", false);
+  var base = document.getElementById("ctBase");
+  base.innerHTML = "";
+  ct.modelos.forEach(function (m) { base.appendChild(new Option(m.nome, m.id)); });
+  ct.modeloEditando = 0;
+  document.getElementById("ctModeloNome").value = "";
+  document.getElementById("ctModeloTexto").value = ct.modelos[0].texto;
+  document.getElementById("ctListaCampos").textContent = ct.campos.map(function (c) { return "{{" + c[0] + "}}"; }).join(" ");
+  ctDesenharModelos();
+  mostrar("ctModelos", true);
+});
+document.getElementById("ctBase").addEventListener("change", function () {
+  var m = ct.modelos.find(function (x) { return x.id === this.value; }, this);
+  if (m) { ct.modeloEditando = 0; document.getElementById("ctModeloTexto").value = m.texto; }
+});
+document.getElementById("ctModeloFechar").addEventListener("click", function () { mostrar("ctModelos", false); });
+document.getElementById("ctModeloSalvar").addEventListener("click", async function () {
+  var erro = document.getElementById("ctModeloErro");
+  erro.textContent = "";
+  var r = await api("/api/contratos/modelos/salvar", { id: ct.modeloEditando, nome: document.getElementById("ctModeloNome").value, texto: document.getElementById("ctModeloTexto").value });
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
+  ct.modeloEditando = r.dados.id;
+  await carregarContratos();
+  ctDesenharModelos();
+  avisar("Modelo salvo! Ele aparece com ⭐ na lista de modelos do \"Novo contrato\".", "Pronto");
+});
+
 async function carregar() {
   var r = await api("/api/portal");
   dados.portal = r.dados.portal;
@@ -772,6 +1053,7 @@ async function carregar() {
   }
   // Sem portal ainda: o primeiro passo é configurar o estúdio. Depois, a tela inicial com os links.
   if (dados.portal && telaInicial && abaPedida === "receber") mostrarTela("receber");
+  else if (dados.portal && telaInicial && abaPedida === "contratos") { mostrarTela("contratos"); carregarContratos(); }
   else if (dados.portal) mostrarTela(document.getElementById("secConfig").classList.contains("hidden") || telaInicial ? "home" : "config");
   else if (r.dados.plano) mostrarTela("config");
   telaInicial = false;
@@ -848,7 +1130,7 @@ document.getElementById("cfgLogoTirar").addEventListener("click", async function
 
 /* ---------- telas: uma coisa de cada vez ---------- */
 
-var TELAS = { home: "vHome", criar: "vCriar", config: "secConfig", receber: "secReceber", cobrancas: "secCobrancas", album: "secAberto", evento: "vEvento" };
+var TELAS = { home: "vHome", criar: "vCriar", config: "secConfig", receber: "secReceber", contratos: "secContratos", cobrancas: "secCobrancas", album: "secAberto", evento: "vEvento" };
 var central = { clientes: [] };   // carregarCentral() fica em window e é chamada também pela venda de eventos
 var eventosLista = [];
 var filtroAtual = "";
@@ -878,6 +1160,8 @@ document.getElementById("cfgIrReceber").addEventListener("click", function () {
   mostrarTela("receber");
 });
 document.getElementById("irCobrancas").addEventListener("click", function () { mostrarTela("cobrancas"); });
+document.getElementById("irContratos").addEventListener("click", function () { mostrarTela("contratos"); carregarContratos(); });
+document.getElementById("ctVoltar").addEventListener("click", function () { mostrarTela("home"); });
 document.getElementById("cfgVoltar").addEventListener("click", function () { mostrarTela(dados.portal ? "home" : "config"); });
 document.getElementById("cobVoltar").addEventListener("click", function () { mostrarTela("home"); });
 document.getElementById("evVoltar").addEventListener("click", function () { mostrarTela("home"); carregarCentral(); });
