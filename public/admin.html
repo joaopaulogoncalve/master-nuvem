@@ -38,7 +38,14 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
   <p id="carregando" class="text-slate-400">Carregando...</p>
 
   <div id="conteudo" class="hidden space-y-6">
-    <div class="glass rounded-3xl p-6 space-y-4">
+    <div id="adInicio">
+      <h1 class="text-2xl font-bold mb-1">Painel <span class="grad">admin</span></h1>
+      <p class="text-sm text-slate-400 mb-4">🔴 = precisa de você. Toque num quadrado para abrir.</p>
+      <div id="adHome" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div>
+    </div>
+    <button type="button" id="adVoltar" class="hidden text-sm font-semibold text-cyan-300 hover:text-white">← Voltar ao início</button>
+
+    <div id="secSentinela" class="adSec hidden glass rounded-3xl p-6 space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="text-lg font-bold">🛡️ Sentinela <span class="text-sm font-normal text-slate-400">vigia de segurança a cada 20 minutos</span></h2>
         <button type="button" id="btnVistos" class="text-sm font-semibold text-cyan-300 hover:text-white">Marcar alertas como vistos</button>
@@ -49,14 +56,15 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         <summary class="cursor-pointer font-semibold">Alertas (<span id="senQtd">0</span>) <span id="senNovos" class="text-amber-300"></span></summary>
         <div id="senAlertas" class="space-y-1 mt-2"></div>
       </details>
-      <p class="text-xs text-slate-500">A sentinela tranca a conta quando: alguém acerta a senha mas erra o código de 2 etapas várias vezes, ou a mesma conta entra de muitas conexões diferentes em 1 hora.
-        A pessoa recebe e-mail e volta criando uma senha nova. Também avisa por e-mail: muitas senhas erradas, muitos downloads de uma vez, conta de administrador nova e cada entrada no admin.</p>
+      <details class="text-xs text-slate-500"><summary class="cursor-pointer">Como a sentinela funciona?</summary><p class="mt-1">A sentinela tranca a conta quando: alguém acerta a senha mas erra o código de 2 etapas várias vezes, ou a mesma conta entra de muitas conexões diferentes em 1 hora.
+        A pessoa recebe e-mail e volta criando uma senha nova. Também avisa por e-mail: muitas senhas erradas, muitos downloads de uma vez, conta de administrador nova e cada entrada no admin.</p></details>
     </div>
 
-    <div class="glass rounded-3xl p-6 space-y-3">
+    <div id="secBancos" class="adSec hidden glass rounded-3xl p-6 space-y-3">
       <h2 class="text-lg font-bold">🏦 Bancos <span class="text-sm font-normal text-slate-400">links oficiais do "Como recebo" e da Nuvenzinha</span></h2>
       <div id="bcPedidos" class="space-y-2"></div>
-      <div id="bcForm" class="bg-slate-900/50 rounded-2xl p-4 space-y-2 text-sm">
+      <button type="button" id="bcNovo" class="text-sm font-semibold text-cyan-300 hover:text-white">➕ Adicionar banco</button>
+      <div id="bcForm" class="hidden bg-slate-900/50 rounded-2xl p-4 space-y-2 text-sm">
         <p id="bcTitulo" class="font-semibold">Adicionar banco</p>
         <p id="bcAviso" class="hidden text-xs text-amber-300"></p>
         <div class="grid md:grid-cols-2 gap-2">
@@ -73,7 +81,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <div id="bcLista" class="space-y-1"></div>
     </div>
 
-    <div class="glass rounded-3xl p-6 space-y-3">
+    <div id="secBlog" class="adSec hidden glass rounded-3xl p-6 space-y-3">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="text-lg font-bold">📝 Blog <span class="text-sm font-normal text-slate-400">agenda de publicação</span></h2>
         <a href="/blog" target="_blank" class="text-sm font-semibold text-cyan-300 hover:text-white">Abrir o blog →</a>
@@ -82,9 +90,9 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <div id="listaBlog" class="space-y-1"></div>
     </div>
 
-    <div class="glass rounded-3xl p-6">
+    <div id="secB2" class="adSec hidden glass rounded-3xl p-6">
       <div class="flex items-center justify-between gap-3 mb-4">
-        <h2 class="text-lg font-bold">Backblaze B2 <span class="text-sm font-normal text-slate-400">armazenamento e custo</span></h2>
+        <h2 class="text-lg font-bold">💾 Backblaze B2 <span class="text-sm font-normal text-slate-400">armazenamento e custo</span></h2>
         <button type="button" id="btnB2" class="text-sm font-semibold text-cyan-300 hover:text-white">Atualizar</button>
       </div>
       <p id="b2Carregando" class="text-sm text-slate-400">Consultando o Backblaze...</p>
@@ -101,9 +109,11 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <p id="b2Erro" class="hidden text-sm text-red-400"></p>
     </div>
 
-    <div class="glass rounded-3xl p-6">
-      <h2 class="text-lg font-bold">Cupons de teste grátis</h2>
+    <div id="secCupons" class="adSec hidden glass rounded-3xl p-6">
+      <h2 class="text-lg font-bold">🎟️ Cupons</h2>
       <p class="text-sm text-slate-400 mt-1">A pessoa cria a conta e digita o cupom no Painel. Cada conta usa só 1 cupom. Link pronto: <span class="text-cyan-300">masternuvem.com.br/painel?cupom=CODIGO</span></p>
+      <button type="button" id="cupNovo" class="text-sm font-semibold text-cyan-300 hover:text-white mt-3">➕ Novo cupom</button>
+      <div id="cupForm" class="hidden">
       <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mt-4 items-end">
         <label class="text-xs text-slate-400 md:col-span-2">Código<input id="cupCodigo" class="campo mt-1 uppercase" maxlength="30" placeholder="NUVEM1DIA"></label>
         <label class="text-xs text-slate-400">Espaço (MB)<input id="cupMb" type="number" min="1" class="campo mt-1" value="20"></label>
@@ -116,10 +126,11 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <p class="text-xs text-slate-500 mt-2">Com preço fixo, o cupom leva ao pagamento do espaço escolhido por esse valor, por 30 dias (ex.: 1000 MB por R$ 1,00 para testar o PIX).</p>
       <p id="cupErro" class="text-sm text-red-400 mt-2 min-h-[1.25rem]"></p>
       <button type="button" id="btnCupomSalvar" class="cta font-bold px-4 py-2.5 rounded-xl text-sm">Salvar cupom</button>
+      </div>
       <div id="listaCupons" class="mt-4 space-y-2"></div>
     </div>
 
-    <div class="glass rounded-3xl p-6 space-y-5">
+    <div id="secAssistente" class="adSec hidden glass rounded-3xl p-6 space-y-5">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="text-lg font-bold">☁️ Assistente (chat da nuvem)</h2>
         <p id="assResumo" class="text-sm text-slate-400"></p>
@@ -135,7 +146,8 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         <div id="listaSemResposta" class="space-y-1 mt-2"></div>
       </div>
 
-      <div id="formFaq" class="bg-slate-900/50 rounded-2xl p-4 space-y-2">
+      <button type="button" id="faqNovo" class="text-sm font-semibold text-cyan-300 hover:text-white">➕ Ensinar uma resposta nova</button>
+      <div id="formFaq" class="hidden bg-slate-900/50 rounded-2xl p-4 space-y-2">
         <p class="font-semibold" id="faqTitulo">Ensinar uma resposta nova</p>
         <input id="faqPergunta" class="campo" maxlength="150" placeholder="Pergunta (ex.: Vocês emitem nota fiscal?)">
         <input id="faqPalavras" class="campo" maxlength="600" placeholder="Palavras-chave separadas por vírgula (ex.: nota fiscal, nf, nfe, recibo)">
@@ -153,6 +165,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       </details>
     </div>
 
+    <div id="secClientes" class="adSec hidden space-y-6">
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div class="glass rounded-2xl p-5"><p class="text-xs text-slate-400 uppercase tracking-wider">Clientes</p><p id="totClientes" class="text-2xl font-bold mt-1">-</p></div>
       <div class="glass rounded-2xl p-5"><p class="text-xs text-slate-400 uppercase tracking-wider">Planos ativos</p><p id="totPlanos" class="text-2xl font-bold mt-1">-</p></div>
@@ -163,6 +176,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
     <input id="busca" type="search" placeholder="Buscar por nome ou e-mail" class="campo">
 
     <div id="lista" class="space-y-4"></div>
+    </div>
   </div>
 </main>
 
@@ -539,6 +553,7 @@ function bcLimpar() {
   document.getElementById("bcAviso").classList.add("hidden");
   document.getElementById("bcCancelar").classList.add("hidden");
   document.getElementById("bcErro").textContent = "";
+  document.getElementById("bcForm").classList.add("hidden");
 }
 function bcEditar(b, pedido) {
   bcLimpar();
@@ -560,6 +575,7 @@ function bcEditar(b, pedido) {
     av.classList.remove("hidden");
   }
   document.getElementById("bcCancelar").classList.remove("hidden");
+  document.getElementById("bcForm").classList.remove("hidden");
   document.getElementById("bcForm").scrollIntoView({ behavior: "smooth", block: "center" });
 }
 async function carregarBancos() {
@@ -761,6 +777,100 @@ document.getElementById("btnCupomSalvar").addEventListener("click", async functi
   if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
   document.getElementById("cupCodigo").value = "";
   carregarCupons();
+});
+
+/* ---------- tela inicial: quadradinhos com resumo e ponto vermelho ---------- */
+
+var SECOES = [
+  ["Clientes", "👥 Clientes"], ["Assistente", "☁️ Assistente"], ["Sentinela", "🛡️ Sentinela"],
+  ["Bancos", "🏦 Bancos"], ["Blog", "📝 Blog"], ["B2", "💾 Backblaze"], ["Cupons", "🎟️ Cupons"]
+];
+var resumoTile = {};
+
+function abrirSecao(nome) {
+  document.getElementById("adInicio").classList.toggle("hidden", !!nome);
+  document.getElementById("adVoltar").classList.toggle("hidden", !nome);
+  document.querySelectorAll(".adSec").forEach(function (s) { s.classList.toggle("hidden", s.id !== "sec" + nome); });
+  window.scrollTo(0, 0);
+}
+document.getElementById("adVoltar").addEventListener("click", function () { abrirSecao(""); atualizarTiles(); });
+
+function contarTexto(id, re) {
+  var m = (document.getElementById(id).textContent || "").match(re);
+  return m ? parseInt(m[1], 10) : 0;
+}
+
+function atualizarTiles() {
+  var trancadas = document.querySelectorAll("#senTrancadas .bg-red-500\\/10").length;
+  var novos = contarTexto("senNovos", /(\d+) novo/);
+  var chamados = contarTexto("assResumo", /(\d+) chamado/);
+  var semResp = Array.prototype.filter.call(document.getElementById("listaSemResposta").children, function (x) { return x.tagName !== "P"; }).length;
+  var pedidos = document.getElementById("bcPedidos").children.length;
+  var quebrados = (document.getElementById("bcLista").textContent.match(/❌/g) || []).length;
+  var noAr = (document.getElementById("listaBlog").textContent.match(/No ar/g) || []).length;
+  var agendados = (document.getElementById("listaBlog").textContent.match(/⏰/g) || []).length;
+  var r = {
+    Clientes: [document.getElementById("totClientes").textContent + " cliente(s) · " + document.getElementById("totPlanos").textContent + " plano(s) · " + document.getElementById("totReceita").textContent + "/mês", 0],
+    Assistente: [chamados ? chamados + " chamado(s) esperando resposta" : (semResp ? semResp + " pergunta(s) sem resposta" : "Tudo respondido"), chamados],
+    Sentinela: [trancadas ? trancadas + " conta(s) trancada(s)" : (novos ? novos + " alerta(s) novo(s)" : "Tudo tranquilo"), trancadas + novos],
+    Bancos: [pedidos ? pedidos + " pedido(s) de banco" : (quebrados ? quebrados + " link(s) quebrado(s)" : document.getElementById("bcLista").children.length + " bancos · links ok"), pedidos + quebrados],
+    Blog: [noAr + " no ar · " + agendados + " agendado(s)", 0],
+    B2: ["Lucro: " + document.getElementById("b2Lucro").textContent + "/mês", document.getElementById("b2Aviso").classList.contains("hidden") ? 0 : 1],
+    Cupons: [document.getElementById("listaCupons").children.length + " cupom(ns)", 0]
+  };
+  var home = document.getElementById("adHome");
+  home.innerHTML = "";
+  var totalAlertas = 0;
+  SECOES.forEach(function (s) {
+    var x = r[s[0]], alerta = x[1] > 0;
+    totalAlertas += alerta ? 1 : 0;
+    var b = el("button", "glass rounded-2xl p-4 text-left hover:border-cyan-400 relative" + (alerta ? " border-red-400" : ""));
+    b.type = "button";
+    b.style.borderColor = alerta ? "#f87171" : "";
+    var topo = el("p", "font-bold flex items-center gap-2", s[1]);
+    if (alerta) topo.appendChild(el("span", "inline-block w-3 h-3 rounded-full bg-red-500 animate-pulse", ""));
+    b.appendChild(topo);
+    b.appendChild(el("p", "text-sm mt-1 " + (alerta ? "text-red-300 font-semibold" : "text-slate-400"), x[0]));
+    b.addEventListener("click", function () { abrirSecao(s[0]); });
+    home.appendChild(b);
+  });
+  document.title = (totalAlertas ? "(" + totalAlertas + ") " : "") + "Painel admin - Master Nuvem";
+}
+
+// Listas longas: mostra os primeiros itens e um botão "Ver todos".
+function limitarLista(id, n) {
+  var lista = document.getElementById(id);
+  if (!lista) return;
+  var antigo = lista.parentNode.querySelector("[data-ver-mais='" + id + "']");
+  if (antigo) antigo.remove();
+  var itens = Array.prototype.slice.call(lista.children);
+  if (itens.length <= n) return;
+  itens.forEach(function (x, i) { x.classList.toggle("hidden", i >= n); });
+  var b = el("button", "text-sm font-semibold text-cyan-300 hover:text-white mt-1", "Ver todos (" + itens.length + ") ▾");
+  b.type = "button";
+  b.setAttribute("data-ver-mais", id);
+  b.addEventListener("click", function () { itens.forEach(function (x) { x.classList.remove("hidden"); }); b.remove(); });
+  lista.insertAdjacentElement("afterend", b);
+}
+
+// Depois de cada carregamento: encurta as listas e atualiza os quadradinhos.
+[["carregar", []], ["carregarB2", []], ["carregarCupons", [["listaCupons", 4]]], ["carregarAssistente", [["listaSemResposta", 5]]],
+ ["carregarSentinela", [["senAlertas", 8]]], ["carregarBlog", [["listaBlog", 6]]], ["carregarBancos", [["bcLista", 6]]]].forEach(function (x) {
+  var original = window[x[0]];
+  window[x[0]] = async function () {
+    var r = await original.apply(this, arguments);
+    x[1].forEach(function (l) { limitarLista(l[0], l[1]); });
+    atualizarTiles();
+    return r;
+  };
+});
+
+document.getElementById("bcNovo").addEventListener("click", function () { bcLimpar(); document.getElementById("bcForm").classList.remove("hidden"); document.getElementById("bcCancelar").classList.remove("hidden"); });
+document.getElementById("cupNovo").addEventListener("click", function () { document.getElementById("cupForm").classList.toggle("hidden"); });
+document.getElementById("faqNovo").addEventListener("click", function () { limparFormFaq(); document.getElementById("formFaq").classList.remove("hidden"); });
+// "Ensinar" e "Editar" nas listas do assistente também abrem o formulário.
+["listaSemResposta", "listaFaq"].forEach(function (id) {
+  document.getElementById(id).addEventListener("click", function (e) { if (e.target.tagName === "BUTTON") document.getElementById("formFaq").classList.remove("hidden"); }, true);
 });
 
 document.getElementById("busca").addEventListener("input", desenhar);
