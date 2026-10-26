@@ -112,6 +112,12 @@ export async function urlArquivo(env, chaveObjeto, nome, baixar, segundos) {
   });
 }
 
+// Grava um objeto pequeno direto do Worker (usado pela cópia de segurança do banco).
+export async function enviarObjeto(env, chaveObjeto, corpo, tipo) {
+  const url = await urlAssinada(env, "PUT", chaveObjeto, 300);
+  return await fetch(url, { method: "PUT", headers: { "Content-Type": tipo || "application/octet-stream" }, body: corpo });
+}
+
 export async function removerObjeto(env, chaveObjeto) {
   const url = await urlAssinada(env, "DELETE", chaveObjeto, 120);
   return await fetch(url, { method: "DELETE" });
@@ -121,6 +127,7 @@ export async function removerObjeto(env, chaveObjeto) {
 export async function medirBucket(env) {
   let bytes = 0;
   let objetos = 0;
+  let copiasBytes = 0;   // cópias de segurança do banco (backups/): ficam fora da conta de arquivos de clientes
   let token = "";
   for (let pagina = 0; pagina < 50; pagina++) {
     const extra = { "list-type": "2", "max-keys": "1000" };
@@ -128,15 +135,16 @@ export async function medirBucket(env) {
     const r = await fetch(await urlAssinada(env, "GET", "", 60, extra));
     const xml = await r.text();
     if (!r.ok) throw new Error("B2 respondeu " + r.status + ": " + xml.slice(0, 200));
-    for (const m of xml.matchAll(/<Size>(\d+)<\/Size>/g)) {
-      bytes += Number(m[1]);
+    for (const m of xml.matchAll(/<Contents>[\s\S]*?<Key>([^<]*)<\/Key>[\s\S]*?<Size>(\d+)<\/Size>[\s\S]*?<\/Contents>/g)) {
+      if (m[1].indexOf("backups/") === 0) { copiasBytes += Number(m[2]); continue; }
+      bytes += Number(m[2]);
       objetos++;
     }
     const prox = xml.match(/<NextContinuationToken>([^<]+)<\/NextContinuationToken>/);
-    if (!/<IsTruncated>true<\/IsTruncated>/.test(xml) || !prox) return { bytes: bytes, objetos: objetos, completo: true };
+    if (!/<IsTruncated>true<\/IsTruncated>/.test(xml) || !prox) return { bytes: bytes, objetos: objetos, copias_bytes: copiasBytes, completo: true };
     token = prox[1];
   }
-  return { bytes: bytes, objetos: objetos, completo: false };
+  return { bytes: bytes, objetos: objetos, copias_bytes: copiasBytes, completo: false };
 }
 
 export async function tratarArquivos(request, env, url) {
