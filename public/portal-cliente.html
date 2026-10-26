@@ -100,6 +100,16 @@ body.tema-minimalista .heroi .sobre{align-items:center;text-align:center}
   <p id="carregando" class="suave">Carregando...</p>
   <p id="naoExiste" class="hidden cartao p-6 text-center suave">Portal não encontrado. Confira o link que você recebeu.</p>
 
+  <!-- Criar a senha pelo link do e-mail de boas-vindas -->
+  <section id="secConvite" class="hidden max-w-sm mx-auto cartao p-6 space-y-3">
+    <h1 class="titulo text-2xl font-bold text-center">Crie a sua senha</h1>
+    <p id="conviteOla" class="text-sm suave text-center"></p>
+    <input id="conviteSenha" type="password" class="campo" placeholder="Senha (mínimo 8 caracteres)" autocomplete="new-password">
+    <input id="conviteSenha2" type="password" class="campo" placeholder="Repita a senha" autocomplete="new-password">
+    <p id="conviteErro" class="text-sm text-red-500 min-h-[1.25rem]"></p>
+    <button type="button" id="btnConvite" class="btn w-full">Criar senha e entrar</button>
+  </section>
+
   <!-- Login -->
   <section id="secLogin" class="hidden max-w-sm mx-auto cartao p-6">
     <h1 class="titulo text-2xl font-bold text-center">Entrar</h1>
@@ -112,6 +122,9 @@ body.tema-minimalista .heroi .sobre{align-items:center;text-align:center}
     </form>
     <p class="text-xs suave text-center mt-4">Esqueceu a senha? Fale com o estúdio para receber uma nova.</p>
   </section>
+
+  <!-- Contratos para assinar (o obrigatório trava os álbuns até a assinatura) -->
+  <section id="secContratos" class="hidden space-y-3 mb-6"></section>
 
   <!-- Pagamentos -->
   <section id="secPagamentos" class="hidden space-y-3 mb-8">
@@ -174,7 +187,7 @@ body.tema-minimalista .heroi .sobre{align-items:center;text-align:center}
 <script>
 var slug = (window.location.pathname.split("/")[2] || "").toLowerCase();
 var albumAtual = null, pagina = 0, arquivos = [], filtro = false, naTela = null;
-var regras = null, escolhidas = 0, relogio = null, ultimoMe = null, fotosBaixadas = 0, extraPendente = null;
+var regras = null, escolhidas = 0, relogio = null, ultimoMe = null, fotosBaixadas = 0, extraPendente = null, fotosEditadas = 0;
 
 function el(tag, classe, texto) {
   var e = document.createElement(tag);
@@ -244,8 +257,20 @@ function iniciarPrevia() {
   ], null);
 }
 
+var convite = new URLSearchParams(window.location.search).get("convite");
+
 async function iniciar() {
   if (previa) { iniciarPrevia(); return; }
+  if (convite) {
+    var info0 = await api("/api/p/info?slug=" + encodeURIComponent(slug));
+    mostrar("carregando", false);
+    if (info0.ok) aplicarMarca(info0.dados);
+    var cv = await api("/api/p/convite", { slug: slug, t: convite });
+    if (!cv.ok) { document.getElementById("conviteOla").textContent = cv.dados.error || "Link inválido."; mostrar("conviteSenha", false); mostrar("conviteSenha2", false); mostrar("btnConvite", false); }
+    else document.getElementById("conviteOla").textContent = "Olá, " + cv.dados.nome.split(" ")[0] + "! Seu login é " + cv.dados.email + ". Escolha uma senha para entrar.";
+    mostrar("secConvite", true);
+    return;
+  }
   var info = await api("/api/p/info?slug=" + encodeURIComponent(slug));
   mostrar("carregando", false);
   if (!info.ok) { mostrar("naoExiste", true); return; }
@@ -258,6 +283,18 @@ async function iniciar() {
   mostrar("secLogin", false);
   mostrarAlbuns(me.dados.albuns, me.dados);
 }
+
+document.getElementById("btnConvite").addEventListener("click", async function () {
+  var s1 = document.getElementById("conviteSenha").value, s2 = document.getElementById("conviteSenha2").value, erro = document.getElementById("conviteErro");
+  erro.textContent = "";
+  if (s1.length < 8) { erro.textContent = "A senha precisa ter pelo menos 8 caracteres."; return; }
+  if (s1 !== s2) { erro.textContent = "As duas senhas estão diferentes."; return; }
+  this.disabled = true;
+  var r = await api("/api/p/convite", { slug: slug, t: convite, senha: s1 });
+  this.disabled = false;
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível."; return; }
+  window.location.href = "/p/" + slug;   // já entra, sem o código do convite na barra
+});
 
 function reais(c) {
   return "R$ " + (c / 100).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -340,6 +377,24 @@ function mostrarAlbuns(albuns, me) {
   if (me) mostrarCobrancas(me);
   var lista = document.getElementById("listaAlbuns");
   lista.innerHTML = "";
+  // Contratos para assinar: aparecem no topo; o obrigatório esconde os álbuns até a assinatura.
+  var pend = (me && me.contratos_pendentes) || [];
+  var secC = document.getElementById("secContratos");
+  secC.innerHTML = "";
+  mostrar("secContratos", pend.length > 0);
+  var travado = pend.some(function (c) { return c.obrigatorio; });
+  pend.forEach(function (c) {
+    var card = el("div", "cartao p-5 space-y-3");
+    card.style.borderWidth = "2px";
+    card.style.borderColor = "var(--marca)";
+    card.appendChild(el("p", "titulo text-lg font-bold", "📝 " + (c.obrigatorio ? "Antes de ver suas fotos, assine o contrato" : "Você tem um contrato para assinar")));
+    card.appendChild(el("p", "text-sm suave", c.titulo + " · leva 1 minuto: você lê, informa nome e CPF e confirma com um código no seu e-mail."));
+    var a = el("a", "btn inline-block", "Ler e assinar o contrato");
+    a.href = c.link;
+    card.appendChild(a);
+    secC.appendChild(card);
+  });
+  document.getElementById("listaAlbuns").classList.toggle("hidden", travado);
   if (!albuns.length) lista.appendChild(el("p", "suave", "Ainda não há álbuns para você. Assim que o estúdio enviar, eles aparecem aqui."));
   albuns.forEach(function (a) {
     var c = el("button", "cartao overflow-hidden text-left hover:shadow-lg transition");
@@ -411,6 +466,7 @@ async function carregarPagina() {
   regras = r.dados.regras;
   escolhidas = r.dados.escolhidas;
   fotosBaixadas = r.dados.fotos_baixadas || 0;
+  fotosEditadas = r.dados.fotos_editadas_pedidas || 0;
   extraPendente = r.dados.extra_pendente || null;
   mostrar("avisoTrancado", !!r.dados.trancado);
   albumAtual.trancado = !!r.dados.trancado;
@@ -435,7 +491,7 @@ function atualizarRegras() {
     linhas.push(["⏳", "Seu acesso termina em " + tempoRestante(falta) + " (" + quando(regras.acesso_ate).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) + ")", "font-semibold"]);
   }
   if (regras.pode_escolher) linhas.push(["❤️", regras.limite_escolha ? "Escolhidas: " + escolhidas + " de " + regras.limite_escolha : "Escolhidas: " + escolhidas, ""]);
-  if (regras.pode_editar) linhas.push(["✏️", "Quer mudar alguma foto? Abra a foto e toque em \"Pedir edição\".", ""]);
+  if (regras.pode_editar) linhas.push(["✏️", regras.limite_edicao ? "Edições pedidas: " + fotosEditadas + " de " + regras.limite_edicao + " foto(s). Abra a foto e toque em \"Pedir edição\"." : "Quer mudar alguma foto? Abra a foto e toque em \"Pedir edição\".", ""]);
   if (!regras.pode_baixar) linhas.push(["👀", "Por enquanto é só para ver" + (regras.pode_escolher ? " e escolher" : "") + ". O download será liberado pelo estúdio.", ""]);
   else {
     if (regras.limite_fotos) linhas.push(["📸", "Você já baixou " + fotosBaixadas + " de " + regras.limite_fotos + " foto(s)." + (fotosBaixadas >= regras.limite_fotos ? (regras.preco_extra_centavos ? " Quer mais? Toque em \"Pedir fotos a mais\"." : " Para baixar mais, fale com o estúdio.") : ""), fotosBaixadas >= regras.limite_fotos ? "font-semibold" : ""]);
@@ -593,6 +649,8 @@ async function pedirEdicao(f) {
   var r = await api("/api/p/edicao", { file_id: f.id, comentario: txt });
   if (!r.ok) { avisar(r.dados.error || "Não foi possível enviar."); return; }
   f.edicao = "aberto";
+  fotosEditadas++;
+  atualizarRegras();
   desenharGrade();
   avisar("Pedido enviado para o estúdio! ✏️");
 }

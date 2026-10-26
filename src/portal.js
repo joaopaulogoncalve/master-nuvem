@@ -4,6 +4,51 @@
 import { urlArquivo, removerObjeto } from "./arquivos.js";
 import { chaveIp, chaveConta, limiteAtingido, registrarTentativa, registrarEvento } from "./limite.js";
 
+// Aviso simples por e-mail para o fotógrafo (ex.: cliente pediu fotos a mais). Falha no e-mail não trava o pedido.
+async function avisarFotografo(env, para, assunto, linhas) {
+  return await emailComBotao(env, para, assunto, linhas, { texto: "Abrir o Meu estúdio", link: "https://masternuvem.com.br/meu-portal" });
+}
+
+async function emailComBotao(env, para, assunto, linhas, botao) {
+  if (!env.RESEND_API_KEY || !para) return false;
+  const esc = function (s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); };
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: "Master Nuvem <nao-responda@masternuvem.com.br>", to: [para], subject: assunto,
+        html: "<div style=\"font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#0f172a\"><h2 style=\"color:#0ea5e9\">Master Nuvem</h2>" +
+          linhas.map(function (l) { return "<p>" + esc(l) + "</p>"; }).join("") +
+          "<p style=\"margin:28px 0\"><a href=\"" + esc(botao.link) + "\" style=\"background:#0ea5e9;color:#fff;padding:12px 22px;border-radius:10px;text-decoration:none;font-weight:bold\">" + esc(botao.texto) + "</a></p></div>",
+        text: linhas.join("\n\n") + "\n\n" + botao.texto + ": " + botao.link
+      })
+    });
+    if (!r.ok) console.error("Resend recusou o e-mail:", r.status);
+    return r.ok;
+  } catch (e) {
+    console.error("Falha ao enviar e-mail:", e.message);
+    return false;
+  }
+}
+
+// Boas-vindas ao cliente do portal: login + botão "Criar minha senha" (link de 7 dias). A senha nunca vai por e-mail.
+const DIAS_CONVITE = 7;
+async function enviarConvite(env, portal, cli) {
+  const b = new Uint8Array(24);
+  crypto.getRandomValues(b);
+  const token = paraHex(b);
+  await env.DB.prepare("UPDATE portal_clientes SET convite_hash = ?, convite_expira = datetime('now', ?) WHERE id = ?")
+    .bind(await sha256Hex(token), "+" + DIAS_CONVITE + " days", cli.id).run();
+  const site = "https://masternuvem.com.br/p/" + portal.slug;
+  return await emailComBotao(env, cli.email, portal.nome + " criou o seu acesso às fotos", [
+    "Olá, " + cli.nome.split(" ")[0] + "!",
+    portal.nome + " criou a sua área para ver, escolher e baixar as suas fotos.",
+    "Seu login é este e-mail: " + cli.email,
+    "Clique no botão para criar a sua senha (o link vale " + DIAS_CONVITE + " dias). Depois é só entrar em " + site
+  ], { texto: "Criar minha senha", link: site + "?convite=" + token });
+}
+
 const MAX_ERROS_LOGIN_IP = 20;
 const MAX_ERROS_LOGIN_CONTA = 10;
 
@@ -137,6 +182,7 @@ function regrasAlbum(a) {
     pode_escolher: a.pode_escolher !== 0,
     limite_escolha: a.limite_escolha || null,
     pode_editar: !!a.pode_editar,
+    limite_edicao: a.pode_editar && a.limite_edicao ? a.limite_edicao : null,
     // Quantas fotos diferentes pode baixar (limite combinado + fotos a mais já pagas). null = todas.
     max_fotos: a.max_fotos || null,
     fotos_extras: a.fotos_extras || 0,
@@ -183,7 +229,7 @@ async function arquivoDeUso(env, userId, id, uso) {
   return f ? f.id : undefined;
 }
 
-const COLUNAS_REGRAS ="a.acesso_ate, a.max_downloads, a.pode_baixar, a.pode_escolher, a.limite_escolha, a.pode_editar, a.max_fotos, a.fotos_extras, a.preco_extra_centavos, a.faixas_extra";
+const COLUNAS_REGRAS ="a.acesso_ate, a.max_downloads, a.pode_baixar, a.pode_escolher, a.limite_escolha, a.pode_editar, a.limite_edicao, a.max_fotos, a.fotos_extras, a.preco_extra_centavos, a.faixas_extra";
 
 // Monta uma página de arquivos de um álbum, com link de prévia (só imagens), favorita, downloads e pedido de edição do cliente.
 // A prévia é a versão leve (files.previa_id) quando existe; fotos antigas, sem prévia, usam o próprio original.
@@ -510,6 +556,12 @@ export async function tratarPortalDono(request, env, url) {
     await env.DB.prepare(
       "UPDATE albuns SET max_downloads = ?, pode_baixar = ?, pode_escolher = ?, limite_escolha = ?, pode_editar = ? WHERE id = ?"
     ).bind(maxD, corpo.pode_baixar === false ? 0 : 1, corpo.pode_escolher === false ? 0 : 1, lim, corpo.pode_editar ? 1 : 0, album.id).run();
+    // Quantas fotos o cliente pode mandar editar (só muda quando vem no pedido; vazio = sem limite).
+    if (corpo.limite_edicao !== undefined) {
+      const le = corpo.limite_edicao === "" || corpo.limite_edicao === null ? null : parseInt(corpo.limite_edicao, 10);
+      if (le !== null && (!le || le < 1 || le > 10000)) return resp({ error: "Quantidade de fotos para editar inválida (ou vazio para sem limite)" }, 400);
+      await env.DB.prepare("UPDATE albuns SET limite_edicao = ? WHERE id = ?").bind(le, album.id).run();
+    }
     if (corpo.prazo_dias !== undefined && corpo.prazo_dias !== null && corpo.prazo_dias !== "") {
       const dias = parseInt(corpo.prazo_dias, 10);
       if (isNaN(dias) || dias < 0 || dias > 365) return resp({ error: "Prazo inválido (0 a 365 dias)" }, 400);
@@ -634,12 +686,20 @@ export async function tratarPortalDono(request, env, url) {
       if (String(e.message).includes("UNIQUE")) return resp({ error: "Você já tem um cliente com esse e-mail" }, 409);
       throw e;
     }
-    return resp({ ok: true, id: novoId }, 200);
+    const emailEnviado = corpo.enviar_acesso === false ? false : await enviarConvite(env, portal, { id: novoId, nome: nome, email: email });
+    return resp({ ok: true, id: novoId, email_enviado: emailEnviado }, 200);
   }
 
   const cliente = corpo.cliente_id !== undefined
     ? await env.DB.prepare("SELECT id FROM portal_clientes WHERE id = ? AND portal_id = ?").bind(parseInt(corpo.cliente_id, 10) || 0, portal.id).first()
     : null;
+
+  if (caminho === "/api/portal/clientes/convite") {
+    if (!cliente) return resp({ error: "Cliente não encontrado" }, 404);
+    const cli = await env.DB.prepare("SELECT id, nome, email FROM portal_clientes WHERE id = ?").bind(cliente.id).first();
+    const ok = await enviarConvite(env, portal, cli);
+    return resp(ok ? { ok: true, email: cli.email } : { error: "Não conseguimos enviar o e-mail agora. Mande o acesso pelo WhatsApp." }, ok ? 200 : 502);
+  }
 
   if (caminho === "/api/portal/clientes/senha") {
     if (!cliente) return resp({ error: "Cliente não encontrado" }, 404);
@@ -759,6 +819,36 @@ export async function tratarPortalCliente(request, env, url) {
     return resp({ ok: true }, 200, cookieCliente(token, DIAS_SESSAO_CLIENTE * 86400));
   }
 
+  if (caminho === "/api/p/convite") {
+    if (request.method !== "POST") return resp({ error: "Método não permitido" }, 405);
+    if (!origemOk(request, url)) return resp({ error: "Origem inválida" }, 403);
+    const corpo = await lerJson(request);
+    if (!corpo) return resp({ error: "JSON inválido" }, 400);
+    const kIp = await chaveIp(request);
+    if (await limiteAtingido(env, kIp, "portal_login", MAX_ERROS_LOGIN_IP)) return resp({ error: "Muitas tentativas. Espere 1 hora." }, 429);
+    const c = await env.DB.prepare(
+      "SELECT c.id, c.nome, c.email FROM portal_clientes c JOIN portais p ON p.id = c.portal_id " +
+      "WHERE p.slug = ? AND c.convite_hash = ? AND c.convite_expira > datetime('now') AND c.removido_em IS NULL"
+    ).bind(String(corpo.slug || "").toLowerCase(), await sha256Hex(String(corpo.t || ""))).first();
+    if (!c) {
+      await registrarTentativa(env, kIp, "portal_login");
+      return resp({ error: "Este link venceu ou já foi usado. Peça um novo ao estúdio." }, 400);
+    }
+    if (corpo.senha === undefined) return resp({ nome: c.nome, email: c.email }, 200);   // só confere o link
+    const senha = String(corpo.senha || "");
+    if (senha.length < 8 || senha.length > 100) return resp({ error: "A senha precisa ter de 8 a 100 caracteres" }, 400);
+    const h = await novaSenhaHash(senha);
+    await env.DB.prepare("UPDATE portal_clientes SET password_hash = ?, password_salt = ?, convite_hash = NULL, convite_expira = NULL, travada_em = NULL WHERE id = ?").bind(h.hash, h.salt, c.id).run();
+    await env.DB.prepare("DELETE FROM portal_sessoes WHERE cliente_id = ?").bind(c.id).run();
+    await registrarEvento(env, request, "portal_login_ok", { cliente_id: c.id });
+    const b = new Uint8Array(32);
+    crypto.getRandomValues(b);
+    const token = paraHex(b);
+    await env.DB.prepare("INSERT INTO portal_sessoes (token_hash, cliente_id, expires_at) VALUES (?, ?, datetime('now', ?))")
+      .bind(await sha256Hex(token), c.id, "+" + DIAS_SESSAO_CLIENTE + " days").run();
+    return resp({ ok: true }, 200, cookieCliente(token, DIAS_SESSAO_CLIENTE * 86400));
+  }
+
   if (caminho === "/api/p/logout") {
     if (request.method !== "POST") return resp({ error: "Método não permitido" }, 405);
     if (!origemOk(request, url)) return resp({ error: "Origem inválida" }, 403);
@@ -799,7 +889,11 @@ export async function tratarPortalCliente(request, env, url) {
       }
       albuns.push(x);
     }
+    const pendentes = await env.DB.prepare(
+      "SELECT titulo, token, obrigatorio FROM contratos WHERE cliente_id = ? AND status IN ('enviado', 'visto') ORDER BY obrigatorio DESC, id"
+    ).bind(c.id).all();
     return resp({
+      contratos_pendentes: pendentes.results.map(function (x) { return { titulo: x.titulo, link: "/c/" + x.token, obrigatorio: !!x.obrigatorio }; }),
       nome: c.nome,
       portal: { slug: c.slug, nome: c.portal_nome, cor: c.cor, tema: c.cliente_tema || c.portal_tema || "classico", logo: await urlDoArquivo(env, c.logo_file_id), bio: c.bio || null, instrucoes_pagamento: instr ? instr.instrucoes_pagamento : null },
       albuns: albuns,
@@ -821,6 +915,12 @@ export async function tratarPortalCliente(request, env, url) {
 
   const MSG_VENCIDO = "O prazo de acesso a este álbum terminou. Fale com o estúdio para liberar de novo.";
 
+  // Contrato obrigatório ainda não assinado: os álbuns ficam fechados até a assinatura.
+  async function contratoObrigatorio() {
+    const x = await env.DB.prepare("SELECT token FROM contratos WHERE cliente_id = ? AND obrigatorio = 1 AND status IN ('enviado', 'visto') LIMIT 1").bind(c.id).first();
+    return x ? resp({ error: "Assine o contrato para liberar os seus álbuns.", contrato: true, link: "/c/" + x.token }, 403) : null;
+  }
+
   // Arquivo (original, nunca a prévia) de um álbum deste cliente, já com as regras do álbum.
   async function arquivoDoCliente(id) {
     return await env.DB.prepare(
@@ -830,6 +930,8 @@ export async function tratarPortalCliente(request, env, url) {
   }
 
   if (caminho === "/api/p/album" && request.method === "GET") {
+    const trava = await contratoObrigatorio();
+    if (trava) return trava;
     const album = await albumDoCliente(url.searchParams.get("id"));
     if (!album) return resp({ error: "Álbum não encontrado" }, 404);
     if (albumVencido(album)) return resp({ error: MSG_VENCIDO, vencido: true }, 403);
@@ -846,6 +948,8 @@ export async function tratarPortalCliente(request, env, url) {
     dados.escolhidas = escolhidas.n;
     dados.trancado = trancado;
     dados.fotos_baixadas = await fotosBaixadas(album.id);
+    const ed = await env.DB.prepare("SELECT COUNT(DISTINCT file_id) AS n FROM pedidos_edicao WHERE album_id = ? AND cliente_id = ?").bind(album.id, c.id).first();
+    dados.fotos_editadas_pedidas = ed.n;
     const pend = await env.DB.prepare("SELECT fotos_extra, valor_centavos FROM cobrancas WHERE album_id = ? AND cliente_id = ? AND status = 'pendente' AND fotos_extra IS NOT NULL ORDER BY id DESC LIMIT 1")
       .bind(album.id, c.id).first();
     dados.extra_pendente = pend || null;
@@ -880,10 +984,18 @@ export async function tratarPortalCliente(request, env, url) {
     await env.DB.prepare(
       "INSERT INTO cobrancas (portal_id, cliente_id, album_id, descricao, valor_centavos, link_pagamento, bloqueia_album, itens, fotos_extra) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)"
     ).bind(p.id, c.id, album.id, (qtd + (qtd === 1 ? " foto a mais" : " fotos a mais")).slice(0, 120), conta.total, p.link_pagamento || null, JSON.stringify(itens), qtd).run();
+    const dono = await env.DB.prepare("SELECT u.email FROM portais p JOIN users u ON u.id = p.user_id WHERE p.id = ?").bind(p.id).first();
+    const valorTxt = "R$ " + (conta.total / 100).toFixed(2).replace(".", ",");
+    await avisarFotografo(env, dono && dono.email, "📸 " + c.nome + " pediu " + qtd + " foto(s) a mais", [
+      c.nome + " pediu " + qtd + " foto(s) a mais no álbum \"" + album.titulo + "\", no total de " + valorTxt + ".",
+      "A cobrança já está em Cobranças, no Meu estúdio. Quando o pagamento cair na sua conta, clique em \"Marcar como pago\": as fotos são liberadas na hora."
+    ]);
     return resp({ ok: true, valor_centavos: conta.total, unit: conta.unit }, 200);
   }
 
   if (caminho === "/api/p/baixar" && request.method === "GET") {
+    const trava = await contratoObrigatorio();
+    if (trava) return trava;
     const f = await arquivoDoCliente(url.searchParams.get("id"));
     if (!f) return resp({ error: "Arquivo não encontrado" }, 404);
     if (albumVencido(f)) return resp({ error: MSG_VENCIDO }, 403);
@@ -921,6 +1033,12 @@ export async function tratarPortalCliente(request, env, url) {
     if (!f.pode_editar) return resp({ error: "Pedidos de edição não estão liberados neste álbum." }, 403);
     const comentario = String(corpo.comentario || "").replace(/[\u0000-\u0009\u000b-\u001f]/g, " ").trim().slice(0, 500);
     if (comentario.length < 3) return resp({ error: "Conte o que você quer mudar nesta foto" }, 400);
+    // Limite combinado: quantas fotos diferentes podem ir para edição (pedir de novo a mesma foto não conta).
+    if (f.limite_edicao) {
+      const ja = await env.DB.prepare("SELECT 1 AS t FROM pedidos_edicao WHERE file_id = ? AND cliente_id = ? LIMIT 1").bind(f.id, c.id).first();
+      const fotos = await env.DB.prepare("SELECT COUNT(DISTINCT file_id) AS n FROM pedidos_edicao WHERE album_id = ? AND cliente_id = ?").bind(f.album_id, c.id).first();
+      if (!ja && fotos.n >= f.limite_edicao) return resp({ error: "Você já pediu edição de " + fotos.n + " foto(s), o combinado com o estúdio. Fale com ele se precisar de mais." }, 400);
+    }
     const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM pedidos_edicao WHERE album_id = ? AND cliente_id = ?").bind(f.album_id, c.id).first();
     if (n.n >= 300) return resp({ error: "Limite de pedidos de edição deste álbum atingido. Fale com o estúdio." }, 400);
     await env.DB.prepare("INSERT INTO pedidos_edicao (album_id, file_id, cliente_id, comentario) VALUES (?, ?, ?, ?)")

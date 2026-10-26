@@ -143,7 +143,7 @@ export async function tratarContratosDono(request, env, url) {
   if (caminho === "/api/contratos" && request.method === "GET") {
     const meus = await env.DB.prepare("SELECT id, nome, texto, updated_at FROM contrato_modelos WHERE portal_id = ? ORDER BY nome").bind(portal.id).all();
     const lista = await env.DB.prepare(
-      "SELECT c.id, c.titulo, c.status, c.destinatario_nome, c.destinatario_email, c.created_at, c.visto_em, c.assinado_em, c.token, c.album_id, " +
+      "SELECT c.id, c.titulo, c.status, c.destinatario_nome, c.destinatario_email, c.created_at, c.visto_em, c.assinado_em, c.token, c.album_id, c.obrigatorio, " +
       "c.cliente_id FROM contratos c WHERE c.portal_id = ? ORDER BY c.id DESC LIMIT 200"
     ).bind(portal.id).all();
     return resp({
@@ -213,8 +213,8 @@ export async function tratarContratosDono(request, env, url) {
     if (n.n >= 100) return resp({ error: "Limite de 100 contratos por dia" }, 429);
     const token = paraHex(crypto.getRandomValues(new Uint8Array(24)));
     const r = await env.DB.prepare(
-      "INSERT INTO contratos (portal_id, cliente_id, album_id, titulo, texto, destinatario_nome, destinatario_email, token) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    ).bind(portal.id, clienteId, albumId, titulo, t, nome, email, token).run();
+      "INSERT INTO contratos (portal_id, cliente_id, album_id, titulo, texto, destinatario_nome, destinatario_email, token, obrigatorio) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(portal.id, clienteId, albumId, titulo, t, nome, email, token, clienteId && corpo.obrigatorio ? 1 : 0).run();
     const enviado = await emailParaAssinar(env, { titulo: titulo, destinatario_nome: nome, destinatario_email: email, token: token }, portal.nome);
     return resp({ ok: true, id: r.meta.last_row_id, link: linkContrato(token), email_enviado: enviado }, 200);
   }
@@ -243,14 +243,15 @@ async function contratoPeloToken(env, t) {
   const token = String(t || "");
   if (!/^[0-9a-f]{48}$/.test(token)) return null;
   return await env.DB.prepare(
-    "SELECT c.*, p.nome AS estudio, u.email AS estudio_email FROM contratos c JOIN portais p ON p.id = c.portal_id JOIN users u ON u.id = p.user_id WHERE c.token = ?"
+    "SELECT c.*, p.nome AS estudio, p.slug AS estudio_slug, u.email AS estudio_email FROM contratos c JOIN portais p ON p.id = c.portal_id JOIN users u ON u.id = p.user_id WHERE c.token = ?"
   ).bind(token).first();
 }
 
 function contratoParaCliente(c) {
   const x = {
     titulo: c.titulo, texto: c.texto, estudio: c.estudio, status: c.status,
-    destinatario_nome: c.destinatario_nome, email_mascarado: emailMascarado(c.destinatario_email), criado_em: c.created_at
+    destinatario_nome: c.destinatario_nome, email_mascarado: emailMascarado(c.destinatario_email), criado_em: c.created_at,
+    portal: c.cliente_id ? "/p/" + c.estudio_slug : null
   };
   if (c.status === "assinado") {
     x.assinatura = {

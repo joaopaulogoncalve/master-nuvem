@@ -32,7 +32,10 @@ body{background:#f1f5f9}
       <p class="text-sm text-slate-500">Contrato enviado por</p>
       <p id="estudio" class="text-xl font-bold"></p>
     </div>
-    <span id="selo" class="text-sm font-semibold px-3 py-1.5 rounded-full"></span>
+    <div class="flex items-center gap-2">
+      <button type="button" onclick="window.print()" class="text-sm font-semibold px-3 py-1.5 rounded-full border border-slate-300 bg-white">📄 Baixar PDF</button>
+      <span id="selo" class="text-sm font-semibold px-3 py-1.5 rounded-full"></span>
+    </div>
   </div>
 
   <article id="doc" class="hidden folha doc rounded-2xl p-6 md:p-10"></article>
@@ -42,7 +45,10 @@ body{background:#f1f5f9}
     <p class="text-lg font-bold text-emerald-700">✅ Contrato assinado eletronicamente</p>
     <div id="dadosAssinatura" class="text-sm text-slate-700 mt-3 space-y-1"></div>
     <p class="text-xs text-slate-500 mt-4">Assinatura eletrônica com confirmação por código enviado ao e-mail, nos termos do art. 10, § 2º, da MP 2.200-2/2001. O código de verificação (SHA-256) muda se uma única letra do texto for alterada: ele prova que este é o texto assinado.</p>
-    <button type="button" onclick="window.print()" class="naoImprime mt-4 text-sm font-semibold text-sky-700">🖨️ Imprimir ou salvar em PDF</button>
+    <div class="naoImprime mt-4 flex flex-wrap gap-3 items-center">
+      <a id="irPortal" href="#" class="hidden btn inline-block">📷 Ver os meus álbuns</a>
+      <button type="button" onclick="window.print()" class="text-sm font-semibold text-sky-700">🖨️ Imprimir ou salvar em PDF</button>
+    </div>
   </section>
 
   <!-- Assinar -->
@@ -125,6 +131,7 @@ function desenhar(d) {
   mostrar("assinar", !assinado);
   mostrar("comprovante", assinado);
   if (assinado) {
+    if (d.portal) { document.getElementById("irPortal").href = d.portal; mostrar("irPortal", true); }
     var a = d.assinatura, caixa = document.getElementById("dadosAssinatura");
     caixa.innerHTML = "";
     [["Assinado por", a.nome], ["CPF/CNPJ", a.documento], ["E-mail confirmado", a.email], ["Data e hora", a.quando_br + " (horário de Brasília)"], ["Código de verificação (SHA-256)", a.hash]].forEach(function (x) {
@@ -144,6 +151,7 @@ async function iniciar() {
   var r = await api("/api/c/info?t=" + token);
   if (!r.ok) { mostrar("carregando", false); document.getElementById("erro").textContent = r.dados.error || "Contrato não encontrado."; mostrar("erro", true); return; }
   desenhar(r.dados);
+  if (new URLSearchParams(window.location.search).get("pdf") === "1") setTimeout(function () { window.print(); }, 400);
 }
 
 // CPF/CNPJ com máscara enquanto digita.
