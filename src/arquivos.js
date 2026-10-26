@@ -1,3 +1,4 @@
+import { registrarEvento } from "./limite.js";
 const enc = new TextEncoder();
 const MAX_ARQUIVO = 4500000000;
 const GB = 1000000000;
@@ -104,9 +105,38 @@ async function urlAssinada(env, metodo, chaveObjeto, expira, extra) {
   return "https://" + host + caminho + "?" + consulta + "&X-Amz-Signature=" + assinatura;
 }
 
-async function removerObjeto(env, chaveObjeto) {
+// Link temporário para ver (inline) ou baixar (attachment) um objeto do bucket. Usado também pelo Portal.
+export async function urlArquivo(env, chaveObjeto, nome, baixar, segundos) {
+  return await urlAssinada(env, "GET", chaveObjeto, segundos || 300, {
+    "response-content-disposition": (baixar ? "attachment" : "inline") + "; filename*=UTF-8''" + codificar(nome)
+  });
+}
+
+export async function removerObjeto(env, chaveObjeto) {
   const url = await urlAssinada(env, "DELETE", chaveObjeto, 120);
   return await fetch(url, { method: "DELETE" });
+}
+
+// Soma o que está guardado de verdade no bucket (lista os objetos pela API S3, 1000 por página).
+export async function medirBucket(env) {
+  let bytes = 0;
+  let objetos = 0;
+  let token = "";
+  for (let pagina = 0; pagina < 50; pagina++) {
+    const extra = { "list-type": "2", "max-keys": "1000" };
+    if (token) extra["continuation-token"] = token;
+    const r = await fetch(await urlAssinada(env, "GET", "", 60, extra));
+    const xml = await r.text();
+    if (!r.ok) throw new Error("B2 respondeu " + r.status + ": " + xml.slice(0, 200));
+    for (const m of xml.matchAll(/<Size>(\d+)<\/Size>/g)) {
+      bytes += Number(m[1]);
+      objetos++;
+    }
+    const prox = xml.match(/<NextContinuationToken>([^<]+)<\/NextContinuationToken>/);
+    if (!/<IsTruncated>true<\/IsTruncated>/.test(xml) || !prox) return { bytes: bytes, objetos: objetos, completo: true };
+    token = prox[1];
+  }
+  return { bytes: bytes, objetos: objetos, completo: false };
 }
 
 export async function tratarArquivos(request, env, url) {
@@ -117,8 +147,9 @@ export async function tratarArquivos(request, env, url) {
 
   if (caminho === "/api/files" && request.method === "GET") {
     const plano = await planoAtivo(env, u.id);
+    // Fotos de álbuns do Portal aparecem no "Meu portal"; aqui só os arquivos soltos (a cota conta tudo).
     const lista = await env.DB.prepare(
-      "SELECT id, name, size_bytes, created_at FROM files WHERE user_id = ? AND status = 'ready' ORDER BY id DESC"
+      "SELECT id, name, size_bytes, created_at FROM files WHERE user_id = ? AND status = 'ready' AND album_id IS NULL AND evento_id IS NULL AND uso IS NULL ORDER BY id DESC"
     ).bind(u.id).all();
     const uso = await env.DB.prepare(
       "SELECT COALESCE(SUM(size_bytes), 0) AS total FROM files WHERE user_id = ?"
@@ -138,6 +169,7 @@ export async function tratarArquivos(request, env, url) {
       "SELECT object_key, name FROM files WHERE id = ? AND user_id = ? AND status = 'ready'"
     ).bind(id, u.id).first();
     if (!reg) return resp({ error: "Arquivo não encontrado" }, 404);
+    await registrarEvento(env, request, "download", { user_id: u.id });
     const link = await urlAssinada(env, "GET", reg.object_key, 300, {
       "response-content-disposition": "attachment; filename*=UTF-8''" + codificar(reg.name)
     });
@@ -163,6 +195,25 @@ export async function tratarArquivos(request, env, url) {
     const plano = await planoAtivo(env, u.id);
     if (!plano) return resp({ error: "Você ainda não tem um plano ativo" }, 403);
 
+    // Envio direto para um álbum do Portal: o álbum tem que ser do próprio usuário.
+    let albumId = null;
+    if (corpo.album_id !== undefined && corpo.album_id !== null) {
+      const album = await env.DB.prepare(
+        "SELECT a.id FROM albuns a JOIN portais p ON p.id = a.portal_id WHERE a.id = ? AND p.user_id = ? AND a.removido_em IS NULL"
+      ).bind(parseInt(corpo.album_id, 10) || 0, u.id).first();
+      if (!album) return resp({ error: "Álbum não encontrado" }, 404);
+      albumId = album.id;
+    }
+    // Envio para uma galeria de evento (original ou prévia com marca d'água): o evento tem que ser do próprio usuário.
+    let eventoId = null;
+    if (corpo.evento_id !== undefined && corpo.evento_id !== null) {
+      const ev = await env.DB.prepare(
+        "SELECT e.id FROM eventos e JOIN portais p ON p.id = e.portal_id WHERE e.id = ? AND p.user_id = ? AND e.removido_em IS NULL"
+      ).bind(parseInt(corpo.evento_id, 10) || 0, u.id).first();
+      if (!ev) return resp({ error: "Evento não encontrado" }, 404);
+      eventoId = ev.id;
+    }
+
     await env.DB.prepare(
       "DELETE FROM files WHERE user_id = ? AND status = 'pending' AND created_at < datetime('now', '-1 day')"
     ).bind(u.id).run();
@@ -179,8 +230,10 @@ export async function tratarArquivos(request, env, url) {
     const chave = "u" + u.id + "/" + paraHex(bytes);
 
     const r = await env.DB.prepare(
-      "INSERT INTO files (user_id, object_key, name, size_bytes, status) VALUES (?, ?, ?, ?, 'pending')"
-    ).bind(u.id, chave, nome, Math.floor(tamanho)).run();
+      "INSERT INTO files (user_id, object_key, name, size_bytes, status, album_id, evento_id, e_previa, uso) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?)"
+    ).bind(u.id, chave, nome, Math.floor(tamanho), albumId, eventoId, albumId && corpo.previa === true ? 1 : 0,
+      // Logo do estúdio ou capa de álbum/evento: fica fora de Meus arquivos e das fotos (mas conta na cota).
+      !albumId && !eventoId && (corpo.uso === "logo" || corpo.uso === "capa") ? corpo.uso : null).run();
 
     const link = await urlAssinada(env, "PUT", chave, 3600);
     return resp({ id: r.meta.last_row_id, url: link }, 200);

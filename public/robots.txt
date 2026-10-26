@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /painel
+Disallow: /arquivos
+Disallow: /admin
+Disallow: /meu-portal
+Disallow: /meus-eventos
+Disallow: /redefinir
+Disallow: /p/
+
+Sitemap: https://masternuvem.com.br/sitemap.xml

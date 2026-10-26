@@ -4,7 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Master Nuvem - Armazenamento Sob Medida</title>
+<meta name="description" content="Armazenamento na nuvem do tamanho exato do seu negócio e portal com a sua marca para entregar fotos e vídeos aos seus clientes. Teste grátis por 24 horas.">
+<link rel="icon" type="image/png" href="/marca/icone-64.png">
+<link rel="apple-touch-icon" href="/marca/icone-180.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://masternuvem.com.br/">
+<meta property="og:title" content="Master Nuvem - Seu espaço na nuvem, com a sua marca">
+<meta property="og:description" content="Entregue fotos e vídeos num portal com a sua marca. Pague só pelo espaço que usar. Teste grátis por 24h com o cupom NUVEM1DIA.">
+<meta property="og:image" content="https://masternuvem.com.br/marca/logo-completa.png">
+<meta name="theme-color" content="#030a1c">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="/avisos.js"></script>
 <style>
 body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c;overflow-x:hidden}
 body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(#38bdf812 1px,transparent 1px),linear-gradient(90deg,#38bdf812 1px,transparent 1px);background-size:48px 48px;-webkit-mask-image:linear-gradient(#000,transparent 85%);mask-image:linear-gradient(#000,transparent 85%)}
@@ -30,17 +40,31 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .cta{background:linear-gradient(90deg,#0ea5e9,#6366f1);box-shadow:0 0 30px #38bdf866}
 .cta:hover{filter:brightness(1.15)}
 .cta:disabled{opacity:.6}
+.mascote-grande{width:min(380px,80vw);filter:drop-shadow(0 0 40px #38bdf855);animation:flutuar 5s ease-in-out infinite}
+@keyframes flutuar{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-14px) rotate(1deg)}}
+.balao{position:relative;background:#fff;color:#0f172a;border-radius:16px;padding:10px 14px;font-weight:700;font-size:15px;box-shadow:0 10px 30px #0006}
+.balao::after{content:"";position:absolute;left:28px;bottom:-8px;border:8px solid transparent;border-top-color:#fff;border-bottom:0}
+/* boas-vindas no cantinho */
+#boasVindas{position:fixed;right:16px;bottom:96px;z-index:60;width:min(320px,calc(100vw - 32px));transform:translateY(140%);opacity:0;transition:transform .6s cubic-bezier(.2,1.2,.3,1),opacity .4s}
+#boasVindas.aberto{transform:none;opacity:1}
+#boasVindas .mini{width:86px;animation:flutuar 4s ease-in-out infinite;filter:drop-shadow(0 0 18px #38bdf866)}
+@keyframes acenar{0%,100%{transform:rotate(0)}25%{transform:rotate(-14deg)}75%{transform:rotate(14deg)}}
+.mao{display:inline-block;transform-origin:70% 80%;animation:acenar 1.2s ease-in-out 3}
+@media (prefers-reduced-motion:reduce){.mascote-grande,#boasVindas .mini,.mao{animation:none}}
 </style>
 </head>
 <body class="text-white font-sans antialiased">
 
 <nav class="fixed w-full z-50 border-b border-blue-900/50 bg-slate-950/60 backdrop-blur">
   <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl cta flex items-center justify-center font-bold text-lg">MN</div>
+    <a href="/" class="flex items-center gap-2">
+      <img src="/marca/mascote.svg" alt="" class="h-10 w-auto">
       <span class="font-bold text-xl">Master<span class="grad">Nuvem</span></span>
+    </a>
+    <div class="flex items-center gap-2 sm:gap-3">
+      <a id="linkConta" href="/entrar" class="font-semibold px-3 sm:px-4 py-2 rounded-lg text-sm text-blue-200 border border-blue-400/40 hover:bg-blue-500/10 transition">Entrar</a>
+      <a href="#calculadora" class="cta hidden sm:inline-block font-semibold px-4 py-2 rounded-lg text-sm transition">Simular Espaço</a>
     </div>
-    <a href="#calculadora" class="cta font-semibold px-4 py-2 rounded-lg text-sm transition">Simular Espaço</a>
   </div>
 </nav>
 
@@ -62,16 +86,16 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
       </h1>
       <p class="text-slate-300 text-lg max-w-xl">
         De 1 GB até 5 TB. Escolha quanto precisa, pague só por isso e contrate em minutos por PIX ou cartão.
+        Fotógrafo ou videomaker? Entregue os álbuns num <a href="/portais" class="text-cyan-300 underline">portal com a sua marca</a>.
       </p>
-      <a href="#calculadora" class="cta inline-block mt-8 font-bold px-8 py-3.5 rounded-xl transition">Montar meu plano</a>
-    </div>
-    <div class="flex justify-center">
-      <div class="rack">
-        <div class="unit"><i class="led"></i><i class="led b"></i><b></b></div>
-        <div class="unit"><i class="led b"></i><i class="led"></i><b></b></div>
-        <div class="unit"><i class="led"></i><i class="led b"></i><b></b></div>
-        <div class="unit"><i class="led b"></i><i class="led"></i><b></b></div>
+      <div class="flex flex-wrap gap-3 mt-8">
+        <a href="#calculadora" class="cta inline-block font-bold px-8 py-3.5 rounded-xl transition">Montar meu plano</a>
+        <a href="/painel?cupom=NUVEM1DIA" class="inline-block font-bold px-6 py-3.5 rounded-xl border border-cyan-400/50 text-cyan-200 hover:bg-cyan-500/10 transition">Testar grátis por 24h</a>
       </div>
+    </div>
+    <div class="flex flex-col items-center">
+      <p class="balao mb-4">Oi! Eu guardo tudo pra você ☁️</p>
+      <img src="/marca/mascote.svg" alt="Mascote da Master Nuvem: uma nuvem sorridente" class="mascote-grande">
     </div>
   </div>
 </header>
@@ -116,9 +140,45 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
   <div class="glass rounded-2xl p-5"><h3 class="font-bold text-cyan-300 mb-1">Sob medida</h3><p class="text-sm text-slate-400">Do menor ao maior plano, sem combos engessados.</p></div>
   <div class="glass rounded-2xl p-5"><h3 class="font-bold text-cyan-300 mb-1">Criptografado</h3><p class="text-sm text-slate-400">Arquivos guardados com criptografia em nuvem profissional.</p></div>
   <div class="glass rounded-2xl p-5"><h3 class="font-bold text-cyan-300 mb-1">PIX ou cartão</h3><p class="text-sm text-slate-400">Contratação rápida, com pagamento pelo Mercado Pago.</p></div>
-  <div class="glass rounded-2xl p-5"><h3 class="font-bold text-violet-300 mb-1">Entrega de arquivos <span class="text-xs font-semibold text-violet-200 bg-violet-500/20 px-2 py-0.5 rounded-full">em breve</span></h3><p class="text-sm text-slate-400">Links para enviar e receber arquivos pesados dos seus clientes.</p></div>
+  <a href="/portais" class="glass rounded-2xl p-5 block hover:border-cyan-400/60"><h3 class="font-bold text-violet-300 mb-1">Portal do Cliente <span class="text-xs font-semibold text-violet-200 bg-violet-500/20 px-2 py-0.5 rounded-full">novo</span></h3><p class="text-sm text-slate-400">Seus clientes veem os álbuns com a sua marca, escolhem as favoritas e baixam depois de pagar.</p></a>
 </section>
 
+<footer class="border-t border-blue-900/50 mt-10">
+  <div class="max-w-5xl mx-auto px-4 py-8 text-center text-sm text-slate-500 space-y-2">
+    <p class="space-x-2"><a href="/" class="hover:text-white">Início</a> · <a href="/sobre" class="hover:text-white">Quem somos</a> · <a href="/blog" class="hover:text-white">Blog</a> · <a href="/termos" class="hover:text-white">Termos de uso</a> · <a href="/privacidade" class="hover:text-white">Privacidade</a> · <a href="mailto:contato@masternuvem.com.br" class="hover:text-white">contato@masternuvem.com.br</a> · <a href="https://wa.me/5562982846067?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Master%20Nuvem." target="_blank" rel="noopener" class="hover:text-white">WhatsApp (62) 98284-6067</a></p>
+    <p class="text-xs">Master Nuvem · 66.265.791 JOAO PAULO DA SILVA GONCALVES (MEI) · CNPJ 66.265.791/0001-90 · Goiânia - GO</p>
+    <p class="text-xs">Pagamentos pelo Mercado Pago · arquivos guardados na Backblaze e na Cloudflare</p>
+  </div>
+</footer>
+
+<!-- Boas-vindas do mascote (aparece uma vez a cada 7 dias) -->
+<aside id="boasVindas" class="glass rounded-3xl p-4" aria-live="polite">
+  <button type="button" id="fecharBoasVindas" class="absolute top-2 right-3 text-slate-400 hover:text-white text-lg" aria-label="Fechar">×</button>
+  <div class="flex items-end gap-3">
+    <img src="/marca/mascote.svg" alt="" class="mini shrink-0">
+    <div class="pb-1">
+      <p class="font-bold">Seja bem-vindo! <span class="mao">👋</span></p>
+      <p class="text-sm text-slate-300 mt-1">Teste a Master Nuvem <strong class="text-white">grátis por 24h</strong> com o cupom <strong class="text-cyan-300">NUVEM1DIA</strong>.</p>
+    </div>
+  </div>
+  <a href="/painel?cupom=NUVEM1DIA" class="cta block text-center font-bold mt-3 py-2.5 rounded-xl text-sm">Quero testar grátis</a>
+</aside>
+
 <script src="/app.js"></script>
+<script>
+(function () {
+  var caixa = document.getElementById("boasVindas");
+  var chave = "mn_boas_vindas_fechado";
+  var fechadoEm = 0;
+  try { fechadoEm = parseInt(localStorage.getItem(chave), 10) || 0; } catch (e) {}
+  if (Date.now() - fechadoEm < 7 * 86400000) return;
+  setTimeout(function () { caixa.classList.add("aberto"); }, 1500);
+  document.getElementById("fecharBoasVindas").addEventListener("click", function () {
+    caixa.classList.remove("aberto");
+    try { localStorage.setItem(chave, String(Date.now())); } catch (e) {}
+  });
+})();
+</script>
+<script src="/assistente.js" defer></script>
 </body>
 </html>

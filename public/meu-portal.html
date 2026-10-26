@@ -1,0 +1,2360 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Meu portal - Master Nuvem</title>
+<link rel="icon" type="image/png" href="/marca/icone-64.png">
+<link rel="apple-touch-icon" href="/marca/icone-180.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+<style>
+body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
+.glass{background:linear-gradient(160deg,#0c1a3dcc,#07102acc);border:1px solid #1e40af88;box-shadow:0 0 50px #38bdf822;backdrop-filter:blur(10px)}
+.grad{background:linear-gradient(90deg,#38bdf8,#818cf8,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.cta{background:linear-gradient(90deg,#0ea5e9,#6366f1);box-shadow:0 0 30px #38bdf866}
+.cta:hover{filter:brightness(1.15)}
+.cta:disabled{opacity:.6}
+.campo{width:100%;padding:10px 12px;border-radius:12px;background:#0a1633;border:1px solid #1e3a8a;color:#fff;outline:none}
+.campo:focus{border-color:#38bdf8}
+.link{color:#67e8f9;font-weight:600;font-size:14px}
+.link:hover{color:#fff}
+.perigo{color:#fca5a5;font-weight:600;font-size:14px}
+.barra{height:6px;border-radius:9px;background:#1e293b;overflow:hidden}
+.barra i{display:block;height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#818cf8)}
+.mini{border-radius:10px;overflow:hidden;background:#0f172a;position:relative}
+.mini img{width:100%;aspect-ratio:1/1;object-fit:cover}
+.aba.on{background:linear-gradient(90deg,#0ea5e9,#6366f1);border-color:transparent;color:#fff}
+.miniatura{aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:#0f172a;position:relative}
+.miniatura img{width:100%;height:100%;object-fit:cover}
+.miniatura .selo{position:absolute;right:6px;bottom:6px;background:#fff;color:#e11d48;border-radius:999px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:13px}
+</style>
+</head>
+<body class="text-white font-sans antialiased min-h-screen">
+
+<nav class="border-b border-blue-900/50 bg-slate-950/60 backdrop-blur">
+  <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+    <a href="/" class="flex items-center gap-2 font-bold text-xl"><img src="/marca/mascote.svg" alt="" class="h-8 w-auto">Master<span class="grad">Nuvem</span></a>
+    <div class="flex gap-5 text-sm font-semibold text-blue-300">
+      <a href="/painel" class="hover:text-white">Painel</a>
+      <a href="/arquivos" class="hover:text-white">Arquivos</a>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-5xl mx-auto px-4 py-8 space-y-6">
+  <p id="carregando" class="text-slate-400">Carregando...</p>
+  <p id="semPlano" class="hidden glass rounded-2xl p-5 text-amber-300">Para criar o seu portal, você precisa de um plano ativo. <a href="/#calculadora" class="link">Contratar plano →</a></p>
+
+  <!-- TELA: início -->
+  <div id="vHome" class="hidden space-y-6">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold">Meu <span class="grad">estúdio</span></h1>
+        <p id="homeSub" class="text-slate-400 text-sm mt-1"></p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" id="irContratos" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">📝 Contratos</button>
+        <button type="button" id="irCobrancas" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">💰 Cobranças</button>
+        <button type="button" id="irConfig" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">🎨 Minha página</button>
+        <button type="button" id="irReceber" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">💳 Como recebo</button>
+      </div>
+    </div>
+
+    <div id="checklist" class="hidden glass rounded-2xl p-4" style="border-color:#f59e0b88">
+      <p class="font-bold text-amber-200">✨ Complete seu cadastro: <span id="ckConta"></span></p>
+      <div id="ckItens" class="flex flex-wrap gap-2 mt-3"></div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3">
+      <div class="glass rounded-2xl p-4"><p class="text-xs text-slate-400">Recebido no mês</p><p id="stMes" class="text-xl md:text-2xl font-bold mt-1 text-emerald-300">-</p></div>
+      <div class="glass rounded-2xl p-4"><p class="text-xs text-slate-400">A receber</p><p id="stReceber" class="text-xl md:text-2xl font-bold mt-1 text-amber-300">-</p></div>
+      <div class="glass rounded-2xl p-4"><p class="text-xs text-slate-400">Precisam de você</p><p id="stAtencao" class="text-xl md:text-2xl font-bold mt-1">-</p></div>
+    </div>
+
+    <button type="button" id="btnNovo" class="cta w-full font-bold text-lg px-6 py-4 rounded-2xl">➕ Criar novo</button>
+
+    <div class="space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-lg font-bold">Seus links</h2>
+        <div class="flex gap-2">
+          <button type="button" data-filtro="" class="filtro aba text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-800">Todos</button>
+          <button type="button" data-filtro="fechado" class="filtro aba text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-800">🔒 Fechados</button>
+          <button type="button" data-filtro="aberto" class="filtro aba text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-800">🌐 Abertos</button>
+        </div>
+      </div>
+      <div id="tiles" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+      <p id="tilesVazio" class="hidden glass rounded-2xl p-6 text-center text-slate-400">Você ainda não criou nenhum link. Clique em <strong class="text-white">➕ Criar novo</strong>.</p>
+      <p class="text-xs text-slate-500">🔴 precisa de você · ❓ cliente ainda não viu ou o prazo está acabando · ✅ tudo certo · 🗑️ remover</p>
+      <div id="lixeira" class="hidden glass rounded-2xl p-4 space-y-2">
+        <p class="text-sm font-semibold text-slate-200">🗑️ Removidos recentemente <span class="font-normal text-slate-400">· dá para desfazer por 30 minutos; depois as fotos são apagadas para sempre</span></p>
+        <div id="listaLixeira" class="space-y-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TELA: criar novo (uma pergunta por vez) -->
+  <div id="vCriar" class="hidden">
+    <div class="glass rounded-3xl p-6 max-w-2xl mx-auto space-y-5">
+      <div class="flex items-center justify-between gap-3">
+        <button type="button" id="wzVoltar" class="link">← Voltar</button>
+        <p id="wzPassoTxt" class="text-xs text-slate-400"></p>
+        <button type="button" id="wzCancelar" class="text-sm text-slate-400 hover:text-white">✕ Cancelar</button>
+      </div>
+
+      <div id="wzP1" class="wz space-y-4">
+        <h2 class="text-xl font-bold">O que você quer criar?</h2>
+        <button type="button" id="criarFechado" class="w-full text-left bg-slate-900/50 hover:bg-slate-900 border border-cyan-400/40 rounded-2xl p-5">
+          <span class="block text-lg font-bold text-cyan-200">🔒 Álbum para um cliente</span>
+          <span class="block text-sm text-slate-400 mt-1">Casamento, 15 anos, ensaio, empresa... O cliente entra com login e senha.</span>
+        </button>
+        <button type="button" id="criarAberto" class="w-full text-left bg-slate-900/50 hover:bg-slate-900 border border-emerald-400/40 rounded-2xl p-5">
+          <span class="block text-lg font-bold text-emerald-200">🌐 Evento com fotos à venda</span>
+          <span class="block text-sm text-slate-400 mt-1">Corrida, rua, futebol, formatura... Link aberto, marca d'água e preço por foto.</span>
+        </button>
+      </div>
+
+      <!-- Álbum (link fechado) -->
+      <div id="wzF1" class="wz hidden space-y-4">
+        <h2 class="text-xl font-bold">Para quem é o álbum?</h2>
+        <div class="flex flex-wrap gap-4 text-sm">
+          <label class="flex items-center gap-2"><input type="radio" name="wzCli" value="novo" checked> Cliente novo</label>
+          <label class="flex items-center gap-2"><input type="radio" name="wzCli" value="existente"> Cliente que já tenho</label>
+        </div>
+        <div id="wzCliNovo" class="space-y-3">
+          <label class="text-sm text-slate-300 block">Nome<input id="cliNome" class="campo mt-1" maxlength="80" placeholder="Ana e João" autocomplete="off"></label>
+          <label class="text-sm text-slate-300 block">E-mail (é o login dele)<input id="cliEmail" type="email" class="campo mt-1" maxlength="120" placeholder="ana@email.com" autocomplete="off"></label>
+          <label class="text-sm text-slate-300 block">Senha
+            <div class="flex gap-2 mt-1"><input id="cliSenha" class="campo" maxlength="100" placeholder="mín. 8 caracteres" autocomplete="new-password"><button type="button" id="btnGerar" class="link whitespace-nowrap">Gerar</button></div>
+          </label>
+          <label class="text-sm text-slate-300 block">🎨 Layout da área deste cliente<select id="cliTema" class="campo mt-1"><option value="">Igual ao do estúdio</option><option value="classico">Clássico</option><option value="escuro">Galeria escura</option><option value="minimalista">Minimalista</option><option value="delicado">Delicado</option><option value="casamento">💍 Casamento</option><option value="quinze">👑 15 anos</option><option value="infantil">🎈 Infantil</option><option value="festa">🎉 Festa / aniversário</option></select></label>
+        </div>
+        <label id="wzCliExistente" class="hidden text-sm text-slate-300 block">Escolha o cliente<select id="albCliente" class="campo mt-1"></select></label>
+        <button type="button" id="wzF1ok" class="cta w-full font-bold px-6 py-3 rounded-xl">Próximo →</button>
+      </div>
+
+      <div id="wzF2" class="wz hidden space-y-4">
+        <h2 class="text-xl font-bold">Como se chama o álbum?</h2>
+        <label class="text-sm text-slate-300 block">Nome do álbum<input id="albTitulo" class="campo mt-1" maxlength="100" placeholder="Casamento Ana & João"></label>
+        <label class="text-sm text-slate-300 block">Tipo de trabalho<select id="albTipo" class="campo mt-1"></select></label>
+        <label class="text-sm text-slate-300 block">Um recado para o cliente (opcional)<textarea id="albDescricao" class="campo mt-1 h-20" maxlength="600" placeholder="Que dia lindo! Escolham as 60 fotos para o álbum até sexta."></textarea></label>
+        <label class="text-sm text-slate-300 block">Foto de capa (opcional: sem ela, usamos a primeira foto)<input id="albCapa" type="file" accept="image/jpeg,image/png,image/webp" class="campo mt-1 text-sm"></label>
+        <button type="button" id="wzF2ok" class="cta w-full font-bold px-6 py-3 rounded-xl">Próximo →</button>
+      </div>
+
+      <div id="wzF3" class="wz hidden space-y-4 text-sm text-slate-300">
+        <h2 class="text-xl font-bold text-white">O que o cliente pode fazer?</h2>
+        <label class="block">⏳ Por quanto tempo ele acessa
+          <select id="wzPrazo" class="campo mt-1">
+            <option value="0">Sem prazo</option><option value="2">2 dias</option><option value="3">3 dias</option><option value="4">4 dias</option>
+            <option value="7" selected>7 dias</option><option value="15">15 dias</option><option value="30">30 dias</option>
+          </select>
+        </label>
+        <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="wzEscolher" type="checkbox" checked> ❤️ Escolher fotos, até
+          <input id="wzLimite" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"></label>
+        <label class="flex items-center gap-2 bg-slate-900/50 rounded-xl p-3"><input id="wzEditar" type="checkbox"> ✏️ Pedir edição de fotos</label>
+        <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="wzBaixar" type="checkbox" checked> ⬇️ Pode baixar as fotos originais · cada foto até
+          <input id="wzMaxDown" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> vez(es)</label>
+        <div id="wzBlocoFotos"></div>
+        <p class="text-xs text-slate-500">Dá para mudar depois, no álbum.</p>
+        <p id="wzErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+        <button type="button" id="btnCriarFechado" class="cta w-full font-bold px-6 py-3 rounded-xl">Criar álbum ✓</button>
+      </div>
+
+      <!-- Evento (link aberto): os campos do formulário do evento são colocados aqui -->
+      <div id="wzA1" class="wz hidden space-y-4">
+        <h2 class="text-xl font-bold">Sobre o evento</h2>
+        <div id="wzA1campos"></div>
+        <label class="text-sm text-slate-300 block">Texto sobre o evento (opcional)<textarea id="evDescricao" class="campo mt-1 h-20" maxlength="600" placeholder="Fotos da 5ª Corrida Noturna. Procure pelo seu número de peito!"></textarea></label>
+        <button type="button" id="wzA1ok" class="cta w-full font-bold px-6 py-3 rounded-xl">Próximo →</button>
+      </div>
+      <div id="wzPX" class="wz hidden space-y-4">
+        <h2 class="text-xl font-bold">Onde você recebe o PIX?</h2>
+        <p class="text-sm text-slate-400">Quem comprar as fotos vê estes dados junto com o valor. O dinheiro vai direto para você.</p>
+        <textarea id="wzPix" class="campo h-24" maxlength="500" placeholder="PIX (celular, e-mail, CPF ou CNPJ): ...&#10;Nome que aparece no banco: ..."></textarea>
+        <button type="button" id="wzPXok" class="cta w-full font-bold px-6 py-3 rounded-xl">Salvar e continuar →</button>
+      </div>
+      <div id="wzA2" class="wz hidden space-y-4">
+        <h2 class="text-xl font-bold">Quanto custa cada foto?</h2>
+        <div id="wzA2visual" class="space-y-3">
+          <label class="text-sm text-slate-300 block">🎨 Layout da página do evento<select id="evTema" class="campo mt-1"><option value="">Igual ao do estúdio</option><option value="classico">Clássico</option><option value="escuro">Galeria escura</option><option value="minimalista">Minimalista</option><option value="delicado">Delicado</option><option value="casamento">💍 Casamento</option><option value="quinze">👑 15 anos</option><option value="infantil">🎈 Infantil</option><option value="festa">🎉 Festa / aniversário</option></select></label>
+          <label class="text-sm text-slate-300 block">Foto de capa (opcional: sem ela, usamos a primeira foto)<input id="evCapa" type="file" accept="image/jpeg,image/png,image/webp" class="campo mt-1 text-sm"></label>
+        </div>
+        <div id="wzA2campos" class="space-y-4"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. Configuração -->
+  <section id="secConfig" class="hidden glass rounded-3xl p-6">
+    <div id="cfgDetalhes">
+    <div class="flex items-center justify-between gap-3"><div><h2 class="text-lg font-bold">🎨 Minha página</h2><p class="text-sm text-slate-400">É assim que os seus clientes veem você: nome, logomarca, cores e layout.</p><p id="cfgPasso" class="hidden text-xs font-semibold text-amber-300 mt-1"></p></div><button type="button" id="cfgVoltar" class="link">← Meus links</button></div>
+    <div class="grid md:grid-cols-3 gap-4 mt-4">
+      <label class="text-sm text-slate-300 md:col-span-1">Nome do estúdio
+        <input id="cfgNome" class="campo mt-1" maxlength="60" placeholder="Estúdio Aurora" autocomplete="organization">
+      </label>
+      <label class="text-sm text-slate-300 md:col-span-1">Endereço
+        <div class="flex items-center mt-1"><span class="text-xs text-slate-500 mr-1 whitespace-nowrap">/p/</span><input id="cfgSlug" class="campo" maxlength="40" placeholder="estudio-aurora" autocomplete="off"></div>
+      </label>
+      <label class="text-sm text-slate-300">Cor da sua marca
+        <input id="cfgCor" type="color" value="#be185d" class="mt-1 w-full h-11 rounded-xl bg-transparent border border-blue-900 cursor-pointer">
+      </label>
+    </div>
+    <div id="blocoMarca" class="hidden mt-5 space-y-4">
+      <div>
+        <p class="text-sm text-slate-300">🏷️ Sua logomarca (aparece no cantinho das páginas dos clientes e dos eventos)</p>
+        <div class="flex items-center gap-4 mt-2">
+          <div class="w-20 h-20 rounded-2xl bg-slate-900/70 border border-blue-900 flex items-center justify-center overflow-hidden"><img id="cfgLogoImg" class="hidden max-w-full max-h-full" alt=""><span id="cfgLogoVazio" class="text-xs text-slate-500">sem logo</span></div>
+          <div class="space-y-2">
+            <input id="cfgLogoArq" type="file" accept="image/png,image/jpeg,image/webp" class="hidden">
+            <button type="button" id="cfgLogoBtn" class="cta font-bold px-4 py-2 rounded-xl text-sm">Enviar logo</button>
+            <button type="button" id="cfgLogoTirar" class="hidden block perigo text-xs">Tirar a logo</button>
+          </div>
+        </div>
+      </div>
+      <label class="text-sm text-slate-300 block">✍️ Sobre você (opcional: aparece para os clientes)
+        <textarea id="cfgBio" class="campo mt-1 h-20" maxlength="600" placeholder="Fotógrafo de casamentos em Goiânia há 10 anos..."></textarea>
+      </label>
+    </div>
+    <p class="text-sm text-slate-300 mt-5 mb-2">🎨 Layout: vale para os álbuns dos clientes e para as páginas dos eventos. Escolha e clique em Salvar.</p>
+    <div id="temas" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
+        <input type="radio" name="tema" value="classico" class="hidden">
+        <span class="block rounded-xl overflow-hidden" style="background:#f1f5f9"><span class="block h-5" style="background:var(--cfgcor,#be185d)"></span><span class="grid grid-cols-3 gap-1 p-2"><i class="block aspect-square rounded bg-slate-300"></i><i class="block aspect-square rounded bg-slate-300"></i><i class="block aspect-square rounded bg-slate-300"></i></span></span>
+        <span class="block text-sm font-semibold mt-2">Clássico</span><span class="block text-xs text-slate-400">Claro, com a sua cor no topo</span>
+      </label>
+      <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
+        <input type="radio" name="tema" value="escuro" class="hidden">
+        <span class="block rounded-xl overflow-hidden" style="background:#0a0a0a"><span class="block h-5 border-b border-white/10"></span><span class="grid grid-cols-3 gap-1 p-2"><i class="block aspect-square rounded bg-zinc-700"></i><i class="block aspect-square rounded bg-zinc-700"></i><i class="block aspect-square rounded bg-zinc-700"></i></span></span>
+        <span class="block text-sm font-semibold mt-2">Galeria escura</span><span class="block text-xs text-slate-400">Fundo preto, fotos em destaque</span>
+      </label>
+      <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
+        <input type="radio" name="tema" value="minimalista" class="hidden">
+        <span class="block rounded-xl overflow-hidden" style="background:#fff"><span class="block h-5 text-center" style="font:italic 9px Georgia;color:#111;line-height:20px">Estúdio</span><span class="grid grid-cols-2 gap-2 p-2"><i class="block aspect-[4/3] bg-neutral-300"></i><i class="block aspect-[4/3] bg-neutral-300"></i></span></span>
+        <span class="block text-sm font-semibold mt-2">Minimalista</span><span class="block text-xs text-slate-400">Branco, elegante, muito espaço</span>
+      </label>
+      <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
+        <input type="radio" name="tema" value="delicado" class="hidden">
+        <span class="block rounded-xl overflow-hidden" style="background:#fdf6f0"><span class="block h-8" style="background:linear-gradient(135deg,#f3d9d0,#e9d5f5)"></span><span class="grid grid-cols-3 gap-1 p-2"><i class="block aspect-square rounded-lg bg-rose-200"></i><i class="block aspect-square rounded-lg bg-rose-200"></i><i class="block aspect-square rounded-lg bg-rose-200"></i></span></span>
+        <span class="block text-sm font-semibold mt-2">Delicado</span><span class="block text-xs text-slate-400">Tons suaves e capa com foto</span>
+      </label>
+      <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
+        <input type="radio" name="tema" value="casamento" class="hidden">
+        <span class="block rounded-xl overflow-hidden" style="background:#fbf8f3"><span class="block h-6 text-center" style="font:22px 'Great Vibes',cursive;color:#b08d57;border-bottom:1px solid #b08d57;line-height:24px">Ana &amp; João</span><span class="grid grid-cols-3 gap-1 p-2"><i class="block aspect-square bg-stone-300"></i><i class="block aspect-square bg-stone-300"></i><i class="block aspect-square bg-stone-300"></i></span></span>
+        <span class="block text-sm font-semibold mt-2">💍 Casamento</span><span class="block text-xs text-slate-400">Marfim e dourado, letra de convite</span>
+      </label>
+      <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
+        <input type="radio" name="tema" value="quinze" class="hidden">
+        <span class="block rounded-xl overflow-hidden" style="background:#fff5f8"><span class="block h-6" style="background:linear-gradient(135deg,#f9d3df,#efc3e3,#f6e3c3)"></span><span class="grid grid-cols-3 gap-1 p-2"><i class="block aspect-square rounded-lg bg-pink-200 border-2 border-white"></i><i class="block aspect-square rounded-lg bg-pink-200 border-2 border-white"></i><i class="block aspect-square rounded-lg bg-pink-200 border-2 border-white"></i></span></span>
+        <span class="block text-sm font-semibold mt-2">👑 15 anos</span><span class="block text-xs text-slate-400">Rosé com dourado</span>
+      </label>
+      <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
+        <input type="radio" name="tema" value="infantil" class="hidden">
+        <span class="block rounded-xl overflow-hidden" style="background:#fffbea"><span class="block h-6" style="background:linear-gradient(90deg,#60a5fa,#a78bfa,#f472b6,#fbbf24)"></span><span class="grid grid-cols-3 gap-1 p-2"><i class="block aspect-square rounded-xl border-4 border-blue-400"></i><i class="block aspect-square rounded-xl border-4 border-pink-400"></i><i class="block aspect-square rounded-xl border-4 border-yellow-400"></i></span></span>
+        <span class="block text-sm font-semibold mt-2">🎈 Infantil</span><span class="block text-xs text-slate-400">Colorido e alegre</span>
+      </label>
+      <label class="tema cursor-pointer rounded-2xl p-2 border-2 border-transparent has-[:checked]:border-cyan-400 bg-slate-900/50">
+        <input type="radio" name="tema" value="festa" class="hidden">
+        <span class="block rounded-xl overflow-hidden" style="background:#140d2b"><span class="block h-6" style="background:linear-gradient(120deg,#7c3aed,#db2777,#f59e0b)"></span><span class="grid grid-cols-3 gap-1 p-2"><i class="block aspect-square rounded bg-violet-800"></i><i class="block aspect-square rounded bg-violet-800"></i><i class="block aspect-square rounded bg-violet-800"></i></span></span>
+        <span class="block text-sm font-semibold mt-2">🎉 Festa / aniversário</span><span class="block text-xs text-slate-400">Noite, roxo e dourado</span>
+      </label>
+    </div>
+    <p id="cfgErro" class="text-sm text-red-400 mt-3 min-h-[1.25rem]"></p>
+    <div class="flex flex-wrap items-center gap-4">
+      <button type="button" id="btnSalvar" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Salvar</button>
+      <span id="cfgOk" class="hidden text-sm text-emerald-300">Salvo!</span>
+      <p id="cfgLink" class="hidden text-sm text-slate-300">Link para os seus clientes: <a id="cfgUrl" target="_blank" class="link break-all"></a> <button type="button" id="btnCopiar" class="link ml-2">Copiar</button></p>
+    </div>
+    <button type="button" id="cfgIrReceber" class="hidden mt-5 w-full font-bold text-white px-5 py-3 rounded-xl" style="background:linear-gradient(90deg,#059669,#10b981)">Próximo: 💳 Como você recebe →</button>
+
+    </div>
+  </section>
+
+  <!-- Como recebo: PIX, link de pagamento, nota fiscal e passo a passo por banco/app -->
+  <section id="secReceber" class="hidden glass rounded-3xl p-6 space-y-5">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-bold">💳 Como recebo</h2>
+        <p class="text-sm text-slate-400">Os seus clientes pagam <strong class="text-emerald-300">direto para você</strong>. A Master Nuvem não cobra comissão nem taxa: só o armazenamento.</p>
+        <p id="recPasso" class="hidden text-xs font-semibold text-amber-300 mt-1"></p>
+      </div>
+      <button type="button" id="recVoltar" class="link whitespace-nowrap">← Meus links</button>
+    </div>
+    <p id="recSemPortal" class="hidden text-amber-300 text-sm">Primeiro crie a sua página em <button type="button" id="recIrPagina" class="link">🎨 Minha página</button>. Depois volte aqui.</p>
+    <div id="blocoPix" class="hidden space-y-1">
+      <label class="text-sm text-slate-300">🔑 Sua chave PIX (aparece nas cobranças dos álbuns e nos pedidos de fotos de eventos)
+        <textarea id="instrucoes" class="campo mt-1 h-20" maxlength="500" placeholder="PIX (CNPJ): 12.345.678/0001-90 – Estúdio Aurora&#10;Banco: ..."></textarea>
+      </label>
+            <label class="text-sm text-slate-300 block mt-4">🔗 Seu link de pagamento (opcional: Mercado Pago, InfinitePay...). Aparece como botão "Pagar" ao lado do PIX
+        <input id="cfgLinkPag" class="campo mt-1" maxlength="300" placeholder="https://...">
+      </label>
+      <label class="text-sm text-slate-300 block mt-4">🧾 Você emite nota fiscal para os seus clientes?
+        <select id="cfgNota" class="campo mt-1" style="max-width:360px">
+          <option value="0">Não</option>
+          <option value="1">Sim: quem comprar pode pedir, com CPF ou CNPJ</option>
+        </select>
+        <span class="block text-xs text-slate-500 mt-1">Se sim, o pedido mostra o CPF/CNPJ do cliente e você emite a nota no portal da sua prefeitura.</span>
+      </label>
+      <div class="flex flex-wrap items-center gap-3 pt-4">
+        <button type="button" id="btnInstrucoes" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Salvar</button>
+        <span id="instrOk" class="hidden text-sm text-emerald-300">Salvo!</span>
+      </div>
+    </div>
+
+    <div id="guiaBancos" class="pt-5 border-t border-blue-900/60">
+      <label class="font-bold block" for="qualBanco">🏦 Qual é o seu banco?</label>
+      <p class="text-sm text-slate-400 mt-1">Mostramos onde achar a chave PIX e o link de pagamento, e como o pagamento é confirmado.</p>
+      <select id="qualBanco" class="campo mt-2" style="max-width:360px"><option value="">Escolha...</option></select>
+      <div id="guiaPassos" class="mt-3"></div>
+    </div>
+  </section>
+
+  <!-- Contratos: modelo pronto, preenchido sozinho, assinatura online -->
+  <section id="secContratos" class="hidden glass rounded-3xl p-6 space-y-5">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-bold">📝 Contratos</h2>
+        <p class="text-sm text-slate-400">Escolha um modelo e o cliente: o contrato já vem preenchido. Revise, envie, e o cliente assina online com um código no e-mail.</p>
+      </div>
+      <button type="button" id="ctVoltar" class="link whitespace-nowrap">← Meus links</button>
+    </div>
+    <div class="flex flex-wrap gap-3">
+      <button type="button" id="ctNovo" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">➕ Novo contrato</button>
+      <button type="button" id="ctModelosBtn" class="text-sm font-semibold text-cyan-300 hover:text-white">✏️ Meus modelos</button>
+    </div>
+
+    <div id="ctForm" class="hidden bg-slate-900/50 rounded-2xl p-4 space-y-4 text-sm">
+      <div class="grid md:grid-cols-3 gap-3">
+        <label class="block">1. Modelo<select id="ctModelo" class="campo mt-1"></select></label>
+        <label class="block">2. Para qual cliente?<select id="ctCliente" class="campo mt-1"></select></label>
+        <label class="block">3. Álbum (opcional)<select id="ctAlbum" class="campo mt-1"><option value="">Nenhum</option></select></label>
+      </div>
+      <div id="ctOutro" class="hidden grid md:grid-cols-2 gap-3">
+        <input id="ctOutroNome" class="campo" maxlength="100" placeholder="Nome de quem vai assinar">
+        <input id="ctOutroEmail" class="campo" type="email" maxlength="120" placeholder="E-mail de quem vai assinar">
+      </div>
+      <details open>
+        <summary class="cursor-pointer font-semibold">4. Dados do contrato <span class="text-xs text-slate-400 font-normal">(já preenchidos com o que temos; complete o resto)</span></summary>
+        <div id="ctCampos" class="grid md:grid-cols-3 gap-3 mt-3"></div>
+      </details>
+      <div>
+        <p class="font-semibold">5. Confira o texto <span class="text-xs text-slate-400 font-normal">(pode editar à vontade; ____ = campo sem preencher)</span></p>
+        <input id="ctTitulo" class="campo mt-2" maxlength="120" placeholder="Título do contrato">
+        <textarea id="ctTexto" class="campo mt-2 font-mono text-xs" style="height:340px"></textarea>
+        <p class="text-xs text-slate-500 mt-1">Dica: "## " no começo da linha vira título, "- " vira item de lista e **texto** fica em negrito.</p>
+      </div>
+      <p class="text-xs text-amber-300">⚖️ Os modelos são um ponto de partida. Revise com o seu advogado. A Master Nuvem não presta serviço jurídico e não é parte do contrato.</p>
+      <p id="ctErro" class="text-red-400 min-h-[1.25rem]"></p>
+      <div class="flex flex-wrap gap-3">
+        <button type="button" id="ctEnviar" class="cta font-bold px-5 py-2.5 rounded-xl">Enviar para assinatura</button>
+        <button type="button" id="ctCancelarForm" class="text-slate-400 hover:text-white">Cancelar</button>
+      </div>
+    </div>
+
+    <div id="ctModelos" class="hidden bg-slate-900/50 rounded-2xl p-4 space-y-3 text-sm">
+      <p class="font-semibold">✏️ Meus modelos <span class="text-xs text-slate-400 font-normal">(o seu texto padrão, com os campos {{...}} que se preenchem sozinhos)</span></p>
+      <div id="ctListaModelos" class="space-y-1"></div>
+      <div class="grid md:grid-cols-2 gap-3">
+        <label class="block">Começar a partir de<select id="ctBase" class="campo mt-1"></select></label>
+        <input id="ctModeloNome" class="campo self-end" maxlength="80" placeholder="Nome do seu modelo (ex.: Casamento completo)">
+      </div>
+      <textarea id="ctModeloTexto" class="campo font-mono text-xs" style="height:300px"></textarea>
+      <p class="text-xs text-slate-500">Campos disponíveis: <span id="ctListaCampos"></span></p>
+      <p id="ctModeloErro" class="text-red-400 min-h-[1.25rem]"></p>
+      <div class="flex gap-3"><button type="button" id="ctModeloSalvar" class="cta font-bold px-4 py-2 rounded-xl">Salvar modelo</button><button type="button" id="ctModeloFechar" class="text-slate-400 hover:text-white">Fechar</button></div>
+    </div>
+
+    <div id="ctLista" class="space-y-2"></div>
+  </section>
+
+  <!-- Cobranças dos links fechados -->
+  <section id="secCobrancas" class="hidden glass rounded-3xl p-6 space-y-5">
+    <button type="button" id="cobVoltar" class="link">← Meus links</button>
+    <div>
+      <h2 class="text-lg font-bold">💰 Cobranças dos álbuns <span class="text-sm font-normal text-slate-400">(links fechados, opcional)</span></h2>
+      <p class="text-sm text-slate-400 mt-1">Como os clientes dos álbuns pagam? (as fotos de eventos já têm o preço por foto)</p>
+    </div>
+    <div class="grid md:grid-cols-2 gap-3">
+      <label class="cursor-pointer bg-slate-900/50 rounded-2xl p-4 border-2 border-transparent has-[:checked]:border-cyan-400 flex gap-3">
+        <input type="radio" name="modoCobrar" value="0" class="mt-1">
+        <span><span class="font-bold block">🔓 Acesso livre</span><span class="text-sm text-slate-400">O cliente vê e baixa tudo. Você combina o pagamento por fora, do seu jeito.</span></span>
+      </label>
+      <label class="cursor-pointer bg-slate-900/50 rounded-2xl p-4 border-2 border-transparent has-[:checked]:border-cyan-400 flex gap-3">
+        <input type="radio" name="modoCobrar" value="1" class="mt-1">
+        <span><span class="font-bold block">💰 Cobrar pelo portal</span><span class="text-sm text-slate-400">Monte sua tabela de preços, envie cobranças e, se quiser, tranque o álbum até o pagamento.</span></span>
+      </label>
+    </div>
+    <p id="modoOk" class="hidden text-sm text-emerald-300">Salvo!</p>
+
+    <div id="blocoCobrar" class="hidden space-y-5">
+    <p class="text-sm text-slate-400">O dinheiro vai <strong class="text-white">direto para você</strong> (seu PIX ou o link da sua maquininha). Aqui você organiza quem pagou.</p>
+    <div class="grid grid-cols-3 gap-3">
+      <div class="bg-slate-900/50 rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">A receber</p><p id="resReceber" class="text-xl font-bold mt-1">-</p></div>
+      <div class="bg-slate-900/50 rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">Atrasado</p><p id="resAtrasado" class="text-xl font-bold mt-1 text-red-300">-</p></div>
+      <div class="bg-slate-900/50 rounded-2xl p-4"><p class="text-xs text-slate-400 uppercase tracking-wider">Recebido no mês</p><p id="resMes" class="text-xl font-bold mt-1 text-emerald-300">-</p></div>
+    </div>
+
+    <!-- Tabela de preços -->
+    <div class="bg-slate-900/40 rounded-2xl p-4 space-y-3">
+      <p class="font-bold">Sua tabela de preços</p>
+      <p class="text-xs text-slate-400">Toque numa sugestão para preencher, ajuste o preço e adicione:</p>
+      <div id="sugestoes" class="flex flex-wrap gap-2"></div>
+      <div class="grid md:grid-cols-4 gap-2 items-end">
+        <label class="text-xs text-slate-400 md:col-span-2">Serviço<input id="preNome" class="campo mt-1" maxlength="60" placeholder="Foto extra"></label>
+        <label class="text-xs text-slate-400">Como cobra<select id="preUnidade" class="campo mt-1"></select></label>
+        <label class="text-xs text-slate-400">Preço (R$)<input id="preValor" class="campo mt-1" inputmode="decimal" placeholder="15,00"></label>
+      </div>
+      <p id="preErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+      <button type="button" id="btnPreco" class="link">+ Adicionar à tabela</button>
+      <div id="listaPrecos" class="space-y-1"></div>
+    </div>
+
+    <!-- Nova cobrança -->
+    <div class="bg-slate-900/40 rounded-2xl p-4 space-y-3">
+      <p class="font-bold">Nova cobrança</p>
+      <div class="grid md:grid-cols-2 gap-3">
+        <label class="text-sm text-slate-300">Cliente<select id="cobCliente" class="campo mt-1"></select></label>
+        <label class="text-sm text-slate-300">Álbum (opcional)<select id="cobAlbum" class="campo mt-1"></select></label>
+      </div>
+      <div>
+        <p class="text-sm text-slate-300 mb-1">Itens da tabela</p>
+        <div id="itensCobranca" class="space-y-2"></div>
+        <button type="button" id="btnItem" class="link mt-2">+ Adicionar item</button>
+      </div>
+      <div class="grid md:grid-cols-2 gap-3">
+        <label class="text-sm text-slate-300">Descrição (opcional se usar itens)<input id="cobDescricao" class="campo mt-1" maxlength="120" placeholder="Saldo do casamento"></label>
+        <label class="text-sm text-slate-300">Outro valor (R$, opcional)<input id="cobValor" class="campo mt-1" inputmode="decimal" placeholder="ex.: 800,00"></label>
+        <label class="text-sm text-slate-300">Vencimento (opcional)<input id="cobVenc" type="date" class="campo mt-1"></label>
+        <label class="text-sm text-slate-300">Link de pagamento (opcional)<input id="cobLink" class="campo mt-1" maxlength="300" placeholder="https://..."></label>
+      </div>
+      <label id="blocoTrancar" class="hidden flex items-start gap-2 text-sm text-slate-300">
+        <input id="cobTrancar" type="checkbox" class="mt-1">
+        <span>🔒 Trancar o álbum até eu marcar como pago (o cliente não vê nem baixa as fotos até lá)</span>
+      </label>
+      <p class="text-lg font-bold">Total: <span id="cobTotal" class="text-cyan-300">R$ 0,00</span></p>
+      <p id="cobErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+      <button type="button" id="btnCobranca" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Criar cobrança</button>
+    </div>
+    <div id="listaCobrancas" class="space-y-2"></div>
+    </div>
+  </section>
+
+  <!-- TELA: álbum (link fechado) -->
+  <section id="secAberto" class="hidden space-y-4">
+    <button type="button" id="btnFechar" class="link">← Meus links</button>
+    <div class="glass rounded-3xl p-5">
+      <p id="abTipo" class="text-xs uppercase tracking-wider text-slate-400"></p>
+      <h2 id="abTitulo" class="text-xl font-bold"></h2>
+      <p id="abInfo" class="text-sm text-slate-400"></p>
+      <p id="resumoRegras" class="text-xs text-slate-500 mt-1"></p>
+      <div class="mt-4 bg-slate-900/60 rounded-2xl p-4 space-y-3">
+        <p class="text-sm font-semibold">🔗 Link para enviar ao cliente</p>
+        <div class="flex gap-2">
+          <input id="abLinkCliente" readonly class="campo text-sm" style="padding:8px 10px">
+          <button type="button" id="abCopiarLink" class="cta font-bold px-4 rounded-xl text-sm whitespace-nowrap">Copiar</button>
+        </div>
+        <div class="flex flex-wrap gap-3 items-center">
+          <a id="abWhatsapp" target="_blank" rel="noopener" class="inline-block font-bold text-sm px-4 py-2 rounded-xl" style="background:#16a34a">💬 Enviar no WhatsApp</a>
+          <button type="button" id="abCopiarMsg" class="link">📋 Copiar mensagem com o login</button>
+          <button type="button" id="abVerVisual" class="link">🎨 Visual: <span id="abTema"></span> (trocar)</button>
+        </div>
+        <p class="text-xs text-slate-500">A senha não vai na mensagem, por segurança: mande do jeito que você combinou com o cliente (ou use "Nova senha" em ⚙️ Mais).</p>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button type="button" data-aba="fotos" class="abaAlb aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800">📷 Fotos</button>
+      <button type="button" data-aba="regras" class="abaAlb aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800">🔐 Regras</button>
+      <button type="button" data-aba="cliente" class="abaAlb aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800" id="abaCliente">❤️ Escolhas e edições</button>
+      <button type="button" data-aba="visual" class="abaAlb aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800">🎨 Visual</button>
+      <button type="button" data-aba="mais" class="abaAlb aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800">⚙️ Mais</button>
+    </div>
+
+    <div id="paneFotos" class="pane glass rounded-3xl p-5 space-y-4">
+      <div class="border border-dashed border-blue-800 rounded-2xl p-5 text-center">
+        <input id="arquivosEnviar" type="file" multiple accept="image/*,video/*" class="hidden">
+        <button type="button" id="btnEnviar" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">⬆ Enviar fotos e vídeos</button>
+        <p class="text-xs text-slate-500 mt-2">Pode escolher muitas de uma vez (até 4,5 GB cada). O cliente vê uma prévia leve; o original só se você liberar o download.</p>
+        <div id="progresso" class="hidden mt-4 text-left">
+          <p id="progTexto" class="text-sm text-slate-300 mb-1"></p>
+          <div class="barra"><i id="progBarra"></i></div>
+        </div>
+      </div>
+      <div id="grade" class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-2"></div>
+      <div class="text-center"><button type="button" id="btnMais" class="hidden link">Carregar mais</button></div>
+    </div>
+
+    <div id="paneRegras" class="pane hidden glass rounded-3xl p-5 space-y-4 text-sm text-slate-300">
+      <label class="block">⏳ Prazo de acesso
+        <select id="rgPrazo" class="campo mt-1" style="max-width:320px">
+          <option value="">Manter como está</option>
+          <option value="0">Sem prazo</option>
+          <option value="2">2 dias a partir de agora</option>
+          <option value="3">3 dias a partir de agora</option>
+          <option value="4">4 dias a partir de agora</option>
+          <option value="7">7 dias a partir de agora</option>
+          <option value="15">15 dias a partir de agora</option>
+          <option value="30">30 dias a partir de agora</option>
+        </select>
+        <span id="rgPrazoAtual" class="block text-xs text-slate-400 mt-1"></span>
+      </label>
+      <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="rgEscolher" type="checkbox"> ❤️ Escolher fotos, até
+        <input id="rgLimite" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"></label>
+      <label class="flex items-center gap-2 bg-slate-900/50 rounded-xl p-3"><input id="rgEditar" type="checkbox"> ✏️ Pedir edição de fotos</label>
+      <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="rgBaixar" type="checkbox"> ⬇️ Pode baixar as fotos originais · cada foto até
+        <input id="rgMaxDown" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> vez(es)</label>
+        <div id="rgBlocoFotos"></div>
+      <p class="text-xs text-slate-500">Exemplo: 7 dias para escolher até 60, sem baixar. Depois de editar, libere o download por mais 15 dias.</p>
+      <p id="rgErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+      <button type="button" id="btnRegras" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Salvar regras</button>
+      <span id="rgOk" class="hidden text-sm text-emerald-300 ml-2">Salvo!</span>
+    </div>
+
+    <div id="paneCliente" class="pane hidden glass rounded-3xl p-5 space-y-4">
+      <div>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p class="font-bold">❤️ Fotos escolhidas</p>
+          <button type="button" id="btnFavoritas" class="link">Ver a lista</button>
+        </div>
+        <div id="caixaFavoritas" class="hidden bg-slate-900/60 rounded-2xl p-4 text-sm mt-2">
+          <p class="font-semibold mb-2">Escolhidas pelo cliente: <span id="favQtd"></span></p>
+          <textarea id="favLista" readonly class="campo h-32 text-xs"></textarea>
+          <button type="button" id="btnCopiarFav" class="link mt-2">Copiar lista</button>
+        </div>
+      </div>
+      <div id="caixaEdicoes">
+        <p class="font-bold">✏️ Pedidos de edição</p>
+        <div id="listaEdicoes" class="space-y-2 mt-2"></div>
+      </div>
+    </div>
+
+    <div id="paneVisual" class="pane hidden glass rounded-3xl p-5 space-y-4 text-sm text-slate-300">
+      <label class="block">🎨 Layout da área deste cliente (vale para todos os álbuns dele)<select id="vsTema" class="campo mt-1" style="max-width:320px"><option value="">Igual ao do estúdio</option><option value="classico">Clássico</option><option value="escuro">Galeria escura</option><option value="minimalista">Minimalista</option><option value="delicado">Delicado</option><option value="casamento">💍 Casamento</option><option value="quinze">👑 15 anos</option><option value="infantil">🎈 Infantil</option><option value="festa">🎉 Festa / aniversário</option></select></label>
+      <label class="block">💬 Recado para o cliente neste álbum<textarea id="vsDescricao" class="campo mt-1 h-20" maxlength="600"></textarea></label>
+      <div>
+        <p>🖼️ Foto de capa</p>
+        <div class="flex items-center gap-4 mt-2">
+          <div class="w-32 h-20 rounded-xl bg-slate-900/70 border border-blue-900 overflow-hidden flex items-center justify-center"><img id="vsCapaImg" class="hidden w-full h-full object-cover" alt=""><span id="vsCapaVazio" class="text-xs text-slate-500 text-center px-2">usando a 1ª foto</span></div>
+          <div class="space-y-1"><input id="vsCapaArq" type="file" accept="image/jpeg,image/png,image/webp" class="hidden"><button type="button" id="vsCapaBtn" class="link">Escolher foto de capa</button><button type="button" id="vsCapaTirar" class="hidden block perigo text-xs">Voltar para a 1ª foto</button></div>
+        </div>
+      </div>
+      <button type="button" id="btnVisual" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Salvar visual</button>
+      <span id="vsOk" class="hidden text-emerald-300 ml-2">Salvo!</span>
+    </div>
+
+    <div id="paneMais" class="pane hidden glass rounded-3xl p-5 space-y-4">
+      <div>
+        <p class="font-bold">👤 Cliente</p>
+        <p id="abCliente" class="text-sm text-slate-300 mt-1"></p>
+        <p id="abClienteNums" class="text-xs text-slate-400 mt-1"></p>
+      </div>
+      <div class="flex flex-wrap gap-4">
+        <button type="button" id="abCopiarAcesso" class="link">📋 Copiar o acesso para enviar</button>
+        <button type="button" id="abNovaSenha" class="link">🔑 Nova senha</button>
+      </div>
+      <div class="pt-3 border-t border-blue-900/60">
+        <div class="flex flex-wrap gap-6"><button type="button" id="btnApagarAlbum" class="perigo">🗑️ Remover este álbum</button><button type="button" id="btnRemoverCliente" class="perigo">🗑️ Remover o cliente e todos os álbuns</button></div>
+        <p class="text-xs text-slate-500 mt-2">Você tem 30 minutos para desfazer, na tela inicial. Depois, as fotos são apagadas para sempre.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TELA: evento (link aberto) — o painel do evento é colocado aqui -->
+  <section id="vEvento" class="hidden space-y-4">
+    <button type="button" id="evVoltar" class="link">← Meus links</button>
+  </section>
+
+  <!-- Links abertos (eventos): o JavaScript coloca cada parte no lugar certo da página -->
+  <div id="evHolder" class="hidden">
+<div>
+    <h1 class="text-2xl md:text-3xl font-bold">Meus eventos <span class="grad">· venda de fotos</span></h1>
+    <p class="text-slate-400 mt-1">Corrida, futebol, formatura, convidados da festa... Publique as fotos com marca d'água num link aberto. A pessoa escolhe, paga no <strong class="text-white">seu PIX</strong> e baixa o original quando você confirmar. <strong class="text-emerald-300">0% de comissão.</strong></p>
+  </div>
+  <p id="ev_carregando" class="text-slate-400">Carregando...</p>
+  <p id="ev_semPortal" class="hidden glass rounded-2xl p-5 text-amber-300">Primeiro crie o seu portal (nome do estúdio e cor) em <a href="/meu-portal" class="link">Meu portal →</a></p>
+  <section id="ev_secPix" class="hidden glass rounded-3xl p-5 space-y-2">
+    <p id="ev_pixTitulo" class="font-bold">💳 Onde você recebe</p>
+    <p id="ev_pixAviso" class="hidden text-sm text-amber-300">⚠️ Cadastre a sua chave PIX: sem ela, ninguém consegue fazer pedido.</p>
+    <textarea id="ev_pixTexto" class="campo h-20" maxlength="500" placeholder="PIX (celular, e-mail, CPF ou CNPJ): ...&#10;Nome que aparece no banco: ..."></textarea>
+    <div class="flex items-center gap-3">
+      <button type="button" id="ev_btnPix" class="cta font-bold px-4 py-2 rounded-xl text-sm">Salvar</button>
+      <span id="ev_pixOk" class="hidden text-sm text-emerald-300">Salvo!</span>
+      <span class="text-xs text-slate-500">Aparece para o comprador junto com o valor do pedido. É o mesmo de Meu portal.</span>
+    </div>
+  </section>
+
+  <!-- Criar / editar evento -->
+  <section id="ev_secForm" class="hidden glass rounded-3xl p-6 space-y-4">
+    <h2 id="ev_formTitulo" class="text-lg font-bold">Novo evento</h2>
+    <div class="grid md:grid-cols-3 gap-3">
+      <label class="text-sm text-slate-300 md:col-span-2">Nome do evento<input id="ev_evTitulo" class="campo mt-1" maxlength="100" placeholder="Corrida de Goiânia 2026"></label>
+      <label class="text-sm text-slate-300">Tipo<select id="ev_evTipo" class="campo mt-1"></select></label>
+      <label class="text-sm text-slate-300">Endereço do link
+        <div class="flex items-center mt-1"><span class="text-xs text-slate-500 mr-1">/e/</span><input id="ev_evSlug" class="campo" maxlength="60" placeholder="corrida-goiania-2026"></div>
+      </label>
+      <label class="text-sm text-slate-300">Data<input id="ev_evData" type="date" class="campo mt-1"></label>
+      <label class="text-sm text-slate-300">Local<input id="ev_evLocal" class="campo mt-1" maxlength="100" placeholder="Parque Vaca Brava"></label>
+    </div>
+    <div class="bg-slate-900/40 rounded-2xl p-4 space-y-3">
+      <p class="font-bold">Preço</p>
+      <div class="grid md:grid-cols-3 gap-3 items-end">
+        <label class="text-sm text-slate-300">1 foto (R$)<input id="ev_evPreco" class="campo mt-1" inputmode="decimal" placeholder="15,00"></label>
+        <div class="md:col-span-2 text-sm text-slate-400">Desconto por quantidade (opcional): quem leva mais paga menos por foto.</div>
+      </div>
+      <div id="ev_faixas" class="space-y-2"></div>
+      <p id="ev_exemploPreco" class="text-sm text-cyan-200"></p>
+    </div>
+    <div class="grid md:grid-cols-2 gap-3">
+      <label class="text-sm text-slate-300">Texto da marca d'água<input id="ev_evMarca" class="campo mt-1" maxlength="40" placeholder="nome do seu estúdio"></label>
+      <label class="flex items-center gap-2 text-sm text-slate-300 mt-6"><input id="ev_evPublicado" type="checkbox" checked> Link no ar (desmarque para esconder o evento)</label>
+    </div>
+    <p id="ev_evErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+    <div class="flex gap-4 items-center">
+      <button type="button" id="ev_btnSalvarEv" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Criar evento</button>
+      <button type="button" id="ev_btnCancelarEv" class="hidden text-sm text-slate-400 hover:text-white">Cancelar edição</button>
+    </div>
+  </section>
+
+  <section id="ev_secLista" class="hidden space-y-3"></section>
+
+  <!-- Evento aberto -->
+  <section id="ev_secAberto" class="hidden glass rounded-3xl p-6 space-y-5">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <p id="ev_abTipo" class="text-xs uppercase tracking-wider text-slate-400"></p>
+        <h2 id="ev_abTitulo" class="text-xl font-bold"></h2>
+        <p class="text-sm text-slate-400">Link para divulgar: <a id="ev_abLink" target="_blank" class="link break-all"></a> <button type="button" id="ev_abCopiar" class="link ml-2">Copiar</button></p>
+      </div>
+      <button type="button" id="ev_btnFechar" class="link">Fechar</button>
+    </div>
+
+    <div class="border border-dashed border-blue-800 rounded-2xl p-5 space-y-3">
+      <div class="grid md:grid-cols-3 gap-3 items-end">
+        <label class="text-sm text-slate-300 md:col-span-2">Números de peito/camisa destas fotos (opcional)
+          <input id="ev_numerosLeva" class="campo mt-1" maxlength="200" placeholder="ex.: 123, 456 — dá para marcar foto por foto depois">
+        </label>
+        <div>
+          <input id="ev_arquivosEnviar" type="file" multiple accept="image/jpeg,image/png,image/webp" class="hidden">
+          <button type="button" id="ev_btnEnviar" class="cta w-full font-bold px-5 py-2.5 rounded-xl text-sm">⬆ Enviar fotos</button>
+        </div>
+      </div>
+      <p class="text-xs text-slate-500">JPG, PNG ou WEBP. O seu navegador cria uma prévia pequena com a marca d'água; o original fica guardado e só é liberado para quem pagou. Original + prévia usam o espaço do seu plano.</p>
+      <div id="ev_progresso" class="hidden">
+        <p id="ev_progTexto" class="text-sm text-slate-300 mb-1"></p>
+        <div class="barra"><i id="ev_progBarra"></i></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="flex items-center justify-between gap-3">
+        <p class="font-bold">Pedidos</p>
+        <button type="button" id="ev_btnAtualizarPedidos" class="link">Atualizar</button>
+      </div>
+      <p class="text-xs text-slate-400 mt-1">Conferiu o PIX? Clique em "✔ Pago": a pessoa recebe na hora o e-mail para baixar os originais.</p>
+      <div id="ev_listaPedidos" class="space-y-2 mt-2"></div>
+    </div>
+
+    <div>
+      <p class="font-bold">Fotos <span id="ev_abInfo" class="text-sm font-normal text-slate-400"></span></p>
+      <div id="ev_grade" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 mt-2"></div>
+      <div class="text-center mt-3"><button type="button" id="ev_btnMais" class="hidden link">Carregar mais</button></div>
+    </div>
+
+    <div class="pt-2 border-t border-blue-900/60 flex flex-wrap gap-6">
+      <button type="button" id="ev_btnEditar" class="link">✏️ Editar evento e preços</button>
+      <button type="button" id="ev_btnApagar" class="perigo">Apagar evento, fotos e pedidos</button>
+    </div>
+  </section>
+  </div>
+</main>
+
+<script>
+var dados = { portal: null, tipos: [], clientes: [], albuns: [] };
+var aberto = null;      // álbum aberto
+var paginaAtual = 0;
+
+async function api(rota, corpo) {
+  var op = corpo === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo) };
+  var r = await fetch(rota, op);
+  if (r.status === 401) { window.location.href = "/entrar?volta=" + encodeURIComponent("/meu-portal"); throw new Error("login"); }
+  var d = {};
+  try { d = await r.json(); } catch (e) {}
+  return { ok: r.ok, dados: d };
+}
+
+function el(tag, classe, texto) {
+  var e = document.createElement(tag);
+  if (classe) e.className = classe;
+  if (texto !== undefined) e.textContent = texto;
+  return e;
+}
+
+function mostrar(id, sim) { document.getElementById(id).classList.toggle("hidden", !sim); }
+
+function formatarBytes(b) {
+  if (b >= 1e9) return (b / 1e9).toFixed(2) + " GB";
+  if (b >= 1e6) return (b / 1e6).toFixed(1) + " MB";
+  if (b >= 1e3) return (b / 1e3).toFixed(0) + " KB";
+  return b + " B";
+}
+
+function paraSlug(txt) {
+  return txt.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+}
+
+function gerarSenha() {
+  var letras = "abcdefghjkmnpqrstuvwxyz23456789";
+  var b = new Uint8Array(10);
+  crypto.getRandomValues(b);
+  return Array.from(b).map(function (x) { return letras[x % letras.length]; }).join("");
+}
+
+/* ---------- carregar ---------- */
+
+/* ---------- "Complete seu cadastro" ---------- */
+
+function atualizarChecklist() {
+  var p = dados.portal;
+  var itens = [
+    ["1. Criar a página", !!p, "config"],
+    ["2. Logo e layout", !!(p && (p.logo_url || p.logo_file_id || p.bio)), "config"],
+    ["3. Como recebo", !!(p && (p.instrucoes_pagamento || p.link_pagamento)), "receber"]
+  ];
+  var feitos = itens.filter(function (i) { return i[1]; }).length;
+  mostrar("checklist", !!p && feitos < itens.length);
+  document.getElementById("ckConta").textContent = feitos + " de " + itens.length;
+  var caixa = document.getElementById("ckItens");
+  caixa.innerHTML = "";
+  itens.forEach(function (i) {
+    var b = el("button", "text-sm font-semibold px-3 py-2 rounded-xl border " + (i[1] ? "border-emerald-500/50 text-emerald-300" : "border-amber-400/60 text-amber-200 hover:bg-amber-500/10"), (i[1] ? "✅ " : "⬜ ") + i[0]);
+    b.type = "button";
+    b.addEventListener("click", function () { mostrarTela(i[2]); });
+    caixa.appendChild(b);
+  });
+}
+
+/* ---------- "Qual é o seu banco?": links das ajudas oficiais (lista aprovada no /admin) ---------- */
+
+var bancosLista = [];
+function botaoLink(texto, href) {
+  var a = el("a", "inline-block text-sm font-semibold px-3 py-2 rounded-lg border border-blue-800 hover:border-cyan-400", texto + " ↗");
+  a.href = href; a.target = "_blank"; a.rel = "noopener noreferrer";
+  return a;
+}
+function mostrarBanco() {
+  var caixa = document.getElementById("guiaPassos");
+  caixa.innerHTML = "";
+  var v = document.getElementById("qualBanco").value;
+  if (!v) return;
+  if (v === "outro") {
+    var f = el("div", "bg-slate-900/50 rounded-xl p-4 space-y-2");
+    f.appendChild(el("p", "text-sm", "Qual é o banco ou a maquininha? A gente procura o link oficial e te manda por e-mail (em até 48 horas)."));
+    var campo = el("input", "campo");
+    campo.maxLength = 60; campo.placeholder = "Ex.: Banrisul, Cora, SumUp...";
+    var erro = el("p", "text-sm text-red-400");
+    var b = el("button", "cta font-bold px-4 py-2 rounded-xl text-sm", "Pedir os links");
+    b.type = "button";
+    b.addEventListener("click", async function () {
+      erro.textContent = "";
+      var me = await api("/api/me");
+      var r = await api("/api/bancos/pedido", { banco: campo.value, nome: me.ok ? me.dados.nome : "", email: me.ok ? me.dados.email : "" });
+      if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível pedir."; return; }
+      f.innerHTML = "";
+      f.appendChild(el("p", "text-sm text-emerald-300", "✅ Pedido nº " + r.dados.protocolo + " enviado! Vamos mandar os links para " + (me.ok ? me.dados.email : "o seu e-mail") + " em até " + r.dados.prazo + "."));
+    });
+    [campo, erro, b].forEach(function (x) { f.appendChild(x); });
+    caixa.appendChild(f);
+    return;
+  }
+  var bco = bancosLista.find(function (x) { return String(x.id) === v; });
+  if (!bco) return;
+  var card = el("div", "bg-slate-900/50 rounded-xl p-4 space-y-3");
+  var links = el("div", "flex flex-wrap gap-2");
+  if (bco.link_pix) links.appendChild(botaoLink("🔑 Cadastrar a chave PIX", bco.link_pix));
+  if (bco.link_pagamento) links.appendChild(botaoLink("🔗 Criar link de pagamento", bco.link_pagamento));
+  card.appendChild(links);
+  if (!bco.link_pagamento) card.appendChild(el("p", "text-xs text-slate-400", "Este banco não tem link de pagamento com cartão: o cliente paga pelo PIX. Para aceitar cartão, use um app como Mercado Pago, InfinitePay ou PagBank."));
+  if (!bco.link_pix) card.appendChild(el("p", "text-xs text-slate-400", "A chave PIX fica no app do banco onde o dinheiro cai (procure \"Área Pix\" → \"Minhas chaves\")."));
+  // Como o pagamento é confirmado: com PIX direto no banco, quem confere é o fotógrafo.
+  var conf = el("div", "rounded-xl p-3 text-sm " + (bco.tem_api ? "border border-cyan-500/40" : "border border-amber-500/40"));
+  conf.appendChild(el("p", "font-semibold " + (bco.tem_api ? "text-cyan-200" : "text-amber-200"), bco.tem_api ? "🤖 Confirmação automática: possível no futuro" : "✋ Confirmação manual (feita por você)"));
+  conf.appendChild(el("p", "text-slate-300 mt-1", bco.tem_api ?
+    "O " + bco.nome + " tem um sistema que permite confirmar pagamentos sozinho, e isso está nos nossos planos. Por enquanto: confira no app e clique em \"Marcar como pago\" no Meu estúdio." :
+    "O dinheiro cai direto na sua conta e a Master Nuvem não consegue ver se o cliente pagou. Confira no app do " + bco.nome + " e clique em \"Marcar como pago\": só então o álbum ou as fotos são liberados."));
+  card.appendChild(conf);
+  card.appendChild(el("p", "text-xs text-slate-500", "Os links abrem a ajuda oficial do " + bco.nome + "."));
+  caixa.appendChild(card);
+}
+document.getElementById("qualBanco").addEventListener("change", mostrarBanco);
+fetch("/api/bancos").then(function (r) { return r.json(); }).then(function (d) {
+  bancosLista = d.bancos || [];
+  var sel = document.getElementById("qualBanco");
+  bancosLista.forEach(function (b) { sel.appendChild(new Option(b.nome, b.id)); });
+  sel.appendChild(new Option("Outro (não está na lista)", "outro"));
+}).catch(function () {});
+
+/* ---------- contratos ---------- */
+
+var ct = { modelos: [], meus: [], campos: [], contratos: [], editado: false, modeloEditando: 0 };
+var CT_STATUS = { enviado: ["✉️ Enviado", "text-slate-300"], visto: ["👀 Visto pelo cliente", "text-amber-300"], assinado: ["✅ Assinado", "text-emerald-300"], cancelado: ["Cancelado", "text-slate-500"] };
+
+function ctPreencher(texto, valores) {
+  return String(texto).replace(/\{\{([a-z_]+)\}\}/g, function (m, k) { var v = (valores[k] || "").trim(); return v || "____"; });
+}
+function ctReais(c) { return c ? "R$ " + (c / 100).toFixed(2).replace(".", ",") : ""; }
+function ctTodosModelos() {
+  return ct.meus.map(function (m) { return { id: "meu:" + m.id, nome: "⭐ " + m.nome, texto: m.texto }; }).concat(ct.modelos);
+}
+function ctLembrar(k, v) { try { localStorage.setItem("ct_" + k, v); } catch (e) {} }
+function ctLembrado(k) { try { return localStorage.getItem("ct_" + k) || ""; } catch (e) { return ""; } }
+
+async function carregarContratos() {
+  var r = await api("/api/contratos");
+  if (!r.ok) { document.getElementById("ctLista").textContent = r.dados.error || "Não foi possível carregar."; return; }
+  ct.modelos = r.dados.modelos; ct.meus = r.dados.meus; ct.campos = r.dados.campos; ct.contratos = r.dados.contratos;
+  desenharContratos();
+}
+
+function desenharContratos() {
+  var lista = document.getElementById("ctLista");
+  lista.innerHTML = "";
+  if (!ct.contratos.length) lista.appendChild(el("p", "text-sm text-slate-400", "Nenhum contrato ainda. Clique em ➕ Novo contrato."));
+  ct.contratos.forEach(function (c) {
+    var s = CT_STATUS[c.status] || [c.status, ""];
+    var parado = c.status !== "assinado" && c.status !== "cancelado" && (Date.now() - new Date(String(c.created_at).replace(" ", "T") + "Z").getTime()) > 3 * 86400000;
+    var l = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/50 rounded-xl px-4 py-3 text-sm" + (parado ? " border border-red-400/50" : ""));
+    var esq = el("div", "min-w-0");
+    esq.appendChild(el("p", "font-semibold break-words", (parado ? "🔴 " : "") + c.titulo));
+    esq.appendChild(el("p", "text-xs " + s[1], s[0] + " · " + c.destinatario_nome + " · " + dataBr(c.created_at) + (parado ? " · parado há mais de 3 dias" : "")));
+    l.appendChild(esq);
+    var acoes = el("div", "flex flex-wrap gap-3");
+    function acao(txt, fn, classe) { var b = el("button", classe || "link", txt); b.type = "button"; b.addEventListener("click", fn); acoes.appendChild(b); }
+    acao("Abrir", function () { window.open(c.link, "_blank", "noopener"); });
+    if (c.status !== "assinado" && c.status !== "cancelado") {
+      acao("WhatsApp", function () {
+        window.open("https://wa.me/?text=" + encodeURIComponent("Olá, " + c.destinatario_nome.split(" ")[0] + "! Segue o contrato para você ler e assinar online: " + c.link), "_blank", "noopener");
+      });
+      acao("Copiar link", function () { navigator.clipboard.writeText(c.link); this.textContent = "Copiado ✓"; });
+      acao("Reenviar e-mail", async function () {
+        var r = await api("/api/contratos/reenviar", { id: c.id });
+        avisar(r.ok ? (r.dados.email_enviado ? "E-mail reenviado para " + c.destinatario_email + "." : "O contrato está salvo, mas o e-mail não saiu. Mande o link pelo WhatsApp.") : (r.dados.error || "Não foi possível."));
+      });
+      acao("Cancelar", async function () {
+        if (!(await confirmar("Cancelar este contrato?", "O link para de funcionar e o cliente não consegue mais assinar.", "Sim, cancelar"))) return;
+        await api("/api/contratos/cancelar", { id: c.id });
+        carregarContratos();
+      }, "perigo");
+    }
+    l.appendChild(acoes);
+    lista.appendChild(l);
+  });
+}
+
+function ctDesenharCampos(valores) {
+  var caixa = document.getElementById("ctCampos");
+  caixa.innerHTML = "";
+  ct.campos.forEach(function (c) {
+    var lab = el("label", "block text-xs text-slate-400", c[1]);
+    var inp = el("input", "campo mt-1 text-sm");
+    inp.id = "ctc_" + c[0];
+    inp.placeholder = "ex.: " + c[2];
+    inp.value = valores[c[0]] || "";
+    inp.addEventListener("input", function () { ctAtualizarTexto(false); });
+    lab.appendChild(inp);
+    caixa.appendChild(lab);
+  });
+}
+function ctValores() {
+  var v = {};
+  ct.campos.forEach(function (c) { var i = document.getElementById("ctc_" + c[0]); v[c[0]] = i ? i.value : ""; });
+  return v;
+}
+function ctModeloAtual() {
+  var id = document.getElementById("ctModelo").value;
+  return ctTodosModelos().find(function (m) { return m.id === id; }) || ct.modelos[0];
+}
+// Refaz o texto a partir do modelo + campos (pergunta antes se o fotógrafo já editou o texto à mão).
+async function ctAtualizarTexto(forcar) {
+  if (ct.editado && !forcar) return;
+  document.getElementById("ctTexto").value = ctPreencher(ctModeloAtual().texto, ctValores());
+  ct.editado = false;
+}
+
+// Dados que já temos: cliente, estúdio e as regras do álbum (fotos incluídas, preço da foto a mais, dias de acesso).
+function ctValoresIniciais() {
+  var v = {};
+  ct.campos.forEach(function (c) { var i = document.getElementById("ctc_" + c[0]); if (i) v[c[0]] = i.value; });
+  var cliId = document.getElementById("ctCliente").value;
+  var cli = dados.clientes.find(function (c) { return String(c.id) === cliId; });
+  if (cli) { v.cliente_nome = cli.nome; v.cliente_email = cli.email; }
+  else if (cliId === "outro") { v.cliente_nome = document.getElementById("ctOutroNome").value; v.cliente_email = document.getElementById("ctOutroEmail").value; }
+  v.estudio_nome = v.estudio_nome || (dados.portal && dados.portal.nome) || "";
+  ["estudio_documento", "estudio_cidade", "cidade_foro", "forma_pagamento", "prazo_entrega"].forEach(function (k) { v[k] = v[k] || ctLembrado(k); });
+  var alb = dados.albuns.find(function (a) { return String(a.id) === document.getElementById("ctAlbum").value; });
+  if (alb) {
+    var r = alb.regras || {};
+    v.tipo_evento = v.tipo_evento || alb.tipo || "";
+    if (r.max_fotos) v.qtd_fotos = String(r.max_fotos);
+    if (r.preco_extra_centavos) v.preco_foto_extra = ctReais(r.preco_extra_centavos);
+    if (r.acesso_ate) v.dias_galeria = String(Math.max(1, Math.round((new Date(String(r.acesso_ate).replace(" ", "T") + "Z") - Date.now()) / 86400000)));
+  }
+  return v;
+}
+
+function ctAtualizarAlbuns() {
+  var sel = document.getElementById("ctAlbum");
+  var cliId = document.getElementById("ctCliente").value;
+  sel.innerHTML = "";
+  sel.appendChild(new Option("Nenhum", ""));
+  dados.albuns.filter(function (a) { return String(a.cliente_id) === cliId; }).forEach(function (a) { sel.appendChild(new Option(a.titulo, a.id)); });
+  mostrar("ctOutro", cliId === "outro");
+}
+
+function ctTituloPadrao() {
+  var m = ctModeloAtual(), v = ctValores();
+  return (m.nome.replace(/^⭐ /, "").split(" (")[0] + (v.cliente_nome ? " - " + v.cliente_nome : "")).slice(0, 120);
+}
+
+function ctRecalcular() {
+  ctDesenharCampos(ctValoresIniciais());
+  document.getElementById("ctTitulo").value = ctTituloPadrao();
+  ctAtualizarTexto(true);
+}
+
+document.getElementById("ctNovo").addEventListener("click", async function () {
+  if (!ct.campos.length) await carregarContratos();
+  mostrar("ctModelos", false);
+  var selM = document.getElementById("ctModelo");
+  selM.innerHTML = "";
+  ctTodosModelos().forEach(function (m) { selM.appendChild(new Option(m.nome, m.id)); });
+  var selC = document.getElementById("ctCliente");
+  selC.innerHTML = "";
+  dados.clientes.filter(function (c) { return !c.removido_em; }).forEach(function (c) { selC.appendChild(new Option(c.nome, c.id)); });
+  selC.appendChild(new Option("Outra pessoa (não é cliente do portal)", "outro"));
+  ctAtualizarAlbuns();
+  ctDesenharCampos({});
+  ctRecalcular();
+  mostrar("ctForm", true);
+  document.getElementById("ctErro").textContent = "";
+});
+document.getElementById("ctModelo").addEventListener("change", function () { document.getElementById("ctTitulo").value = ctTituloPadrao(); ctAtualizarTexto(true); });
+document.getElementById("ctCliente").addEventListener("change", function () { ctAtualizarAlbuns(); ctRecalcular(); });
+document.getElementById("ctAlbum").addEventListener("change", ctRecalcular);
+["ctOutroNome", "ctOutroEmail"].forEach(function (id) { document.getElementById(id).addEventListener("input", ctRecalcular); });
+document.getElementById("ctTexto").addEventListener("input", function () { ct.editado = true; });
+document.getElementById("ctCancelarForm").addEventListener("click", function () { mostrar("ctForm", false); });
+
+document.getElementById("ctEnviar").addEventListener("click", async function () {
+  var erro = document.getElementById("ctErro"), b = this;
+  erro.textContent = "";
+  var v = ctValores();
+  var texto = document.getElementById("ctTexto").value;
+  if (texto.indexOf("____") > -1 && !(await confirmar("Ainda há campos em branco", "O texto tem \"____\" (campos sem preencher). Enviar mesmo assim?", "Enviar assim", false))) return;
+  var cliId = document.getElementById("ctCliente").value;
+  ["estudio_documento", "estudio_cidade", "cidade_foro", "forma_pagamento", "prazo_entrega"].forEach(function (k) { if (v[k]) ctLembrar(k, v[k]); });
+  b.disabled = true;
+  var r = await api("/api/contratos/novo", {
+    titulo: document.getElementById("ctTitulo").value, texto: texto,
+    cliente_id: cliId !== "outro" ? cliId : null, album_id: document.getElementById("ctAlbum").value || null,
+    destinatario_nome: v.cliente_nome, destinatario_email: v.cliente_email
+  });
+  b.disabled = false;
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível enviar."; return; }
+  mostrar("ctForm", false);
+  await avisoCopiar("Contrato enviado! 📝", r.dados.email_enviado ? "Mandamos o link para " + v.cliente_email + ". Se quiser, mande também pelo WhatsApp:" : "O e-mail não saiu agora. Mande o link pelo WhatsApp:",
+    [["Link para assinar", r.dados.link]], "Olá, " + (v.cliente_nome || "").split(" ")[0] + "! Segue o contrato para você ler e assinar online: " + r.dados.link);
+  carregarContratos();
+});
+
+/* meus modelos */
+function ctDesenharModelos() {
+  var lista = document.getElementById("ctListaModelos");
+  lista.innerHTML = "";
+  if (!ct.meus.length) lista.appendChild(el("p", "text-xs text-slate-400", "Você ainda não tem modelos próprios."));
+  ct.meus.forEach(function (m) {
+    var l = el("div", "flex items-center justify-between gap-2 bg-slate-950/40 rounded-lg px-3 py-2");
+    l.appendChild(el("span", "", "⭐ " + m.nome));
+    var a = el("span", "flex gap-3");
+    var ed = el("button", "link", "Editar"); ed.type = "button";
+    ed.addEventListener("click", function () { ct.modeloEditando = m.id; document.getElementById("ctModeloNome").value = m.nome; document.getElementById("ctModeloTexto").value = m.texto; });
+    var rm = el("button", "perigo", "Remover"); rm.type = "button";
+    rm.addEventListener("click", async function () {
+      if (!(await confirmar("Remover o modelo?", m.nome, "Remover"))) return;
+      await api("/api/contratos/modelos/remover", { id: m.id });
+      await carregarContratos(); ctDesenharModelos();
+    });
+    a.appendChild(ed); a.appendChild(rm); l.appendChild(a); lista.appendChild(l);
+  });
+}
+document.getElementById("ctModelosBtn").addEventListener("click", async function () {
+  if (!ct.campos.length) await carregarContratos();
+  mostrar("ctForm", false);
+  var base = document.getElementById("ctBase");
+  base.innerHTML = "";
+  ct.modelos.forEach(function (m) { base.appendChild(new Option(m.nome, m.id)); });
+  ct.modeloEditando = 0;
+  document.getElementById("ctModeloNome").value = "";
+  document.getElementById("ctModeloTexto").value = ct.modelos[0].texto;
+  document.getElementById("ctListaCampos").textContent = ct.campos.map(function (c) { return "{{" + c[0] + "}}"; }).join(" ");
+  ctDesenharModelos();
+  mostrar("ctModelos", true);
+});
+document.getElementById("ctBase").addEventListener("change", function () {
+  var m = ct.modelos.find(function (x) { return x.id === this.value; }, this);
+  if (m) { ct.modeloEditando = 0; document.getElementById("ctModeloTexto").value = m.texto; }
+});
+document.getElementById("ctModeloFechar").addEventListener("click", function () { mostrar("ctModelos", false); });
+document.getElementById("ctModeloSalvar").addEventListener("click", async function () {
+  var erro = document.getElementById("ctModeloErro");
+  erro.textContent = "";
+  var r = await api("/api/contratos/modelos/salvar", { id: ct.modeloEditando, nome: document.getElementById("ctModeloNome").value, texto: document.getElementById("ctModeloTexto").value });
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
+  ct.modeloEditando = r.dados.id;
+  await carregarContratos();
+  ctDesenharModelos();
+  avisar("Modelo salvo! Ele aparece com ⭐ na lista de modelos do \"Novo contrato\".", "Pronto");
+});
+
+async function carregar() {
+  var r = await api("/api/portal");
+  dados.portal = r.dados.portal;
+  dados.tipos = r.dados.tipos || [];
+  mostrar("carregando", false);
+  mostrar("semPlano", !dados.portal && !r.dados.plano);
+  if (dados.portal) {
+    document.getElementById("cfgNome").value = dados.portal.nome;
+    document.getElementById("cfgSlug").value = dados.portal.slug;
+    document.getElementById("cfgCor").value = dados.portal.cor;
+    document.getElementById("temas").style.setProperty("--cfgcor", dados.portal.cor);
+    var link = window.location.origin + "/p/" + dados.portal.slug;
+    var a = document.getElementById("cfgUrl");
+    a.textContent = link;
+    a.href = link;
+    mostrar("cfgLink", true);
+    document.getElementById("btnSalvar").textContent = "Salvar alterações";
+  }
+  var temaAtual = document.querySelector("input[name=tema][value=" + ((dados.portal && dados.portal.tema) || "classico") + "]");
+  if (temaAtual) temaAtual.checked = true;
+  mostrar("blocoPix", !!dados.portal);
+  mostrar("recSemPortal", !dados.portal);
+  mostrar("blocoMarca", !!dados.portal);
+  mostrar("cfgIrReceber", !!dados.portal);
+  if (!dados.portal) {
+    document.getElementById("cfgPasso").textContent = "Passo 1 de 3: dê um nome ao seu estúdio, escolha o endereço do link e a cor. Depois clique em Salvar.";
+    mostrar("cfgPasso", true);
+  }
+  atualizarChecklist();
+  mostrar("cfgVoltar", !!dados.portal);
+  if (dados.portal) {
+    document.getElementById("cfgLinkPag").value = dados.portal.link_pagamento || "";
+    document.getElementById("cfgNota").value = dados.portal.emite_nota ? "1" : "0";
+    document.getElementById("cfgBio").value = dados.portal.bio || "";
+    mostrarLogo(dados.portal.logo_url);
+  }
+  // Sem portal ainda: o primeiro passo é configurar o estúdio. Depois, a tela inicial com os links.
+  if (dados.portal && telaInicial && abaPedida === "receber") mostrarTela("receber");
+  else if (dados.portal && telaInicial && abaPedida === "contratos") { mostrarTela("contratos"); carregarContratos(); }
+  else if (dados.portal) mostrarTela(document.getElementById("secConfig").classList.contains("hidden") || telaInicial ? "home" : "config");
+  else if (r.dados.plano) mostrarTela("config");
+  telaInicial = false;
+  if (dados.portal) document.getElementById("instrucoes").value = dados.portal.instrucoes_pagamento || "";
+  var tipo = document.getElementById("albTipo");
+  if (!tipo.options.length) dados.tipos.forEach(function (t) { tipo.appendChild(new Option(t, t)); });
+  if (dados.portal) {
+    await carregarClientes();
+    await carregarAlbuns();
+    await carregarCobrancas();
+  }
+}
+
+/* ---------- marca do estúdio: logo, texto, nota fiscal e link de pagamento ---------- */
+
+function mostrarLogo(url) {
+  var img = document.getElementById("cfgLogoImg");
+  if (url) img.src = url;
+  img.classList.toggle("hidden", !url);
+  mostrar("cfgLogoVazio", !url);
+  mostrar("cfgLogoTirar", !!url);
+}
+
+// Reduz a imagem no navegador antes de enviar (logo em PNG para manter o fundo transparente; capa em JPG).
+async function reduzirImagem(arquivo, lado, tipo) {
+  var img;
+  try { img = await createImageBitmap(arquivo, { imageOrientation: "from-image" }); }
+  catch (e) {
+    img = await new Promise(function (ok, falha) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = falha; i.src = URL.createObjectURL(arquivo); });
+  }
+  var esc = Math.min(1, lado / Math.max(img.width, img.height));
+  var c = document.createElement("canvas");
+  c.width = Math.round(img.width * esc);
+  c.height = Math.round(img.height * esc);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return await new Promise(function (ok) { c.toBlob(ok, tipo, 0.85); });
+}
+
+// Envia logo ou capa (arquivo de uso especial, fora de Meus arquivos). Devolve o id do arquivo.
+async function enviarEspecial(blob, nome, uso) {
+  var p = await api("/api/files/upload-url", { name: nome, size: blob.size, uso: uso });
+  if (!p.ok) throw new Error(p.dados.error || "Não foi possível enviar");
+  await enviarParaB2(p.dados.url, blob, function () {});
+  var fim = await api("/api/files/complete", { id: p.dados.id });
+  if (!fim.ok) throw new Error(fim.dados.error || "Não foi possível finalizar");
+  return p.dados.id;
+}
+
+document.getElementById("cfgLogoBtn").addEventListener("click", function () { document.getElementById("cfgLogoArq").click(); });
+document.getElementById("cfgLogoArq").addEventListener("change", async function () {
+  var f = this.files[0];
+  this.value = "";
+  if (!f) return;
+  var botao = document.getElementById("cfgLogoBtn");
+  botao.disabled = true;
+  botao.textContent = "Enviando...";
+  try {
+    var blob = await reduzirImagem(f, 512, "image/png");
+    var id = await enviarEspecial(blob, "logo.png", "logo");
+    var r = await api("/api/portal/marca", { logo_file_id: id });
+    if (!r.ok) throw new Error(r.dados.error);
+    mostrarLogo(URL.createObjectURL(blob));
+    dados.portal.logo_file_id = id;
+    atualizarChecklist();
+  } catch (e) { avisar(e.message || "Não foi possível enviar a logo."); }
+  botao.disabled = false;
+  botao.textContent = "Enviar logo";
+});
+document.getElementById("cfgLogoTirar").addEventListener("click", async function () {
+  if (!(await confirmar("Tirar a logo?", "A logo sai das suas páginas e do portal dos clientes.", "Sim, tirar"))) return;
+  await api("/api/portal/marca", { logo_file_id: null });
+  mostrarLogo(null);
+});
+
+/* ---------- telas: uma coisa de cada vez ---------- */
+
+var TELAS = { home: "vHome", criar: "vCriar", config: "secConfig", receber: "secReceber", contratos: "secContratos", cobrancas: "secCobrancas", album: "secAberto", evento: "vEvento" };
+var central = { clientes: [] };   // carregarCentral() fica em window e é chamada também pela venda de eventos
+var eventosLista = [];
+var filtroAtual = "";
+
+function mostrarTela(nome) {
+  Object.keys(TELAS).forEach(function (k) { mostrar(TELAS[k], k === nome); });
+  window.scrollTo(0, 0);
+}
+
+function abaAlbum(qual) {
+  document.querySelectorAll(".abaAlb").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-aba") === qual); });
+  ["Fotos", "Regras", "Cliente", "Visual", "Mais"].forEach(function (p) { mostrar("pane" + p, p.toLowerCase() === qual); });
+}
+document.querySelectorAll(".abaAlb").forEach(function (b) { b.addEventListener("click", function () { abaAlbum(b.getAttribute("data-aba")); }); });
+
+document.getElementById("irConfig").addEventListener("click", function () { mostrarTela("config"); });
+document.getElementById("irReceber").addEventListener("click", function () { mostrarTela("receber"); });
+document.getElementById("recVoltar").addEventListener("click", function () { mostrarTela(dados.portal ? "home" : "config"); });
+document.getElementById("recIrPagina").addEventListener("click", function () { mostrarTela("config"); });
+document.getElementById("cfgIrReceber").addEventListener("click", function () {
+  // No primeiro cadastro, continua a contagem de passos.
+  if (!document.getElementById("cfgPasso").classList.contains("hidden")) {
+    mostrar("cfgPasso", false);
+    document.getElementById("recPasso").textContent = "Passo 3 de 3: coloque a sua chave PIX (e o link de pagamento, se tiver) e clique em Salvar.";
+    mostrar("recPasso", true);
+  }
+  mostrarTela("receber");
+});
+document.getElementById("irCobrancas").addEventListener("click", function () { mostrarTela("cobrancas"); });
+document.getElementById("irContratos").addEventListener("click", function () { mostrarTela("contratos"); carregarContratos(); });
+document.getElementById("ctVoltar").addEventListener("click", function () { mostrarTela("home"); });
+document.getElementById("cfgVoltar").addEventListener("click", function () { mostrarTela(dados.portal ? "home" : "config"); });
+document.getElementById("cobVoltar").addEventListener("click", function () { mostrarTela("home"); });
+document.getElementById("evVoltar").addEventListener("click", function () { mostrarTela("home"); carregarCentral(); });
+
+// A venda de eventos (/eventos-painel.js) chama isto quando abre um evento.
+window.hubAba = function () { mostrarTela("evento"); abaEvento("fotos"); };
+
+// Coloca as partes da venda de eventos nas telas: campos do evento no assistente (2 passos) e o painel do evento em vEvento.
+var partesEvento = {};
+function montarEventos() {
+  var form = document.getElementById("ev_secForm");
+  if (!form || partesEvento.ok) return;
+  var filhos = Array.from(form.children);   // [título, dados, preço, marca/publicado, erro, botões]
+  document.getElementById("ev_formTitulo").classList.add("hidden");
+  document.getElementById("wzA1campos").appendChild(filhos[1]);
+  [filhos[2], filhos[3], filhos[4], filhos[5]].forEach(function (x) { document.getElementById("wzA2campos").appendChild(x); });
+  filhos[1].className = "space-y-3";
+  var botao = document.getElementById("ev_btnSalvarEv");
+  botao.className = "cta w-full font-bold px-6 py-3 rounded-xl";
+  // Painel do evento com abas: Fotos | Pedidos | Editar.
+  var painel = document.getElementById("ev_secAberto");
+  document.getElementById("vEvento").appendChild(painel);
+  painel.classList.remove("space-y-5");
+  painel.classList.add("space-y-4");
+  var partes = Array.from(painel.children);   // [cabeçalho, envio, pedidos, fotos, ações]
+  document.getElementById("ev_btnFechar").classList.add("hidden");
+  var abas = el("div", "flex flex-wrap gap-2");
+  [["fotos", "📷 Fotos"], ["pedidos", "🧾 Pedidos"], ["editar", "⚙️ Mais"]].forEach(function (a) {
+    var b = el("button", "abaEv aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800", a[1]);
+    b.type = "button";
+    b.setAttribute("data-aba", a[0]);
+    b.addEventListener("click", function () { abaEvento(a[0]); });
+    abas.appendChild(b);
+  });
+  painel.insertBefore(abas, partes[1]);
+  partesEvento = { ok: true, fotos: [partes[1], partes[3]], pedidos: [partes[2]], editar: [partes[4]] };
+  var velho = document.getElementById("ev_btnApagar"), novo = velho.cloneNode(true);
+  novo.textContent = "🗑️ Remover evento (30 min para desfazer)";
+  velho.parentNode.replaceChild(novo, velho);
+  novo.addEventListener("click", function () {
+    var ev = window.EV && window.EV.atual();
+    if (ev) paraLixeira("/api/eventos/lixeira", { id: ev.id }, "o evento \"" + ev.titulo + "\"", "O link sai do ar na hora (inclusive para quem já comprou).");
+  });
+  // Editar o evento abre o assistente já preenchido.
+  document.getElementById("ev_btnEditar").addEventListener("click", function () {
+    mostrarTela("criar");
+    passoAssistente("A1");
+    document.getElementById("wzPassoTxt").textContent = "Editando o evento";
+  });
+}
+
+function abaEvento(qual) {
+  if (!partesEvento.ok) return;
+  document.querySelectorAll(".abaEv").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-aba") === qual); });
+  ["fotos", "pedidos", "editar"].forEach(function (k) { partesEvento[k].forEach(function (x) { x.classList.toggle("hidden", k !== qual); }); });
+}
+
+function horaBr(t) {
+  if (!t) return "";
+  return new Date(String(t).replace(" ", "T") + "Z").toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+// 🔴 precisa de você · ❓ ainda não viu / prazo acabando · ✅ tudo certo
+function sinalCliente(c, a) {
+  if (!c) return ["✅", "Tudo certo"];
+  if ((a && a.edicoes_abertas) || (!a && c.edicoes_abertas)) return ["🔴", "Pediu edição"];
+  if (c.atrasadas) return ["🔴", "Cobrança atrasada"];
+  if (c.travada_em) return ["🔴", "Acesso trancado"];
+  if (a && a.regras && a.regras.vencido) return ["❓", "Prazo encerrado"];
+  if (!c.ultimo_acesso) return ["❓", "Ainda não viu"];
+  if (a && a.regras && a.regras.acesso_ate && new Date(String(a.regras.acesso_ate).replace(" ", "T") + "Z") - Date.now() < 2 * 86400000) return ["❓", "Prazo acabando"];
+  return ["✅", "Tudo certo"];
+}
+
+async function carregarCentral() {
+  var r = await api("/api/portal/central");
+  if (!r.ok || !r.dados.resumo) return;
+  central = r.dados;
+  var ev = await api("/api/eventos");
+  eventosLista = (ev.dados && ev.dados.eventos) || [];
+  var s = r.dados.resumo;
+  document.getElementById("stMes").textContent = reais(s.recebido_mes);
+  document.getElementById("stReceber").textContent = reais(s.a_receber);
+  desenharTiles();
+}
+
+function cartao(icone, titulo, sub, sinal, linha, aoClicar, aoRemover) {
+  var b = el("div", "glass rounded-2xl p-4 text-left hover:border-cyan-400 transition flex flex-col gap-2 min-h-[132px] cursor-pointer");
+  b.setAttribute("role", "button");
+  b.tabIndex = 0;
+  var topo = el("div", "flex items-start justify-between gap-2");
+  var t = el("div", "min-w-0");
+  t.appendChild(el("p", "font-bold leading-tight truncate", icone + " " + titulo));
+  t.appendChild(el("p", "text-xs text-slate-400 truncate mt-0.5", sub));
+  topo.appendChild(t);
+  var lado = el("div", "flex items-center gap-1 shrink-0");
+  lado.appendChild(el("span", "text-lg", sinal[0]));
+  if (aoRemover) {
+    var lixo = el("button", "text-sm opacity-50 hover:opacity-100 px-1", "🗑️");
+    lixo.type = "button";
+    lixo.title = "Remover";
+    lixo.addEventListener("click", function (ev) { ev.stopPropagation(); aoRemover(); });
+    lado.appendChild(lixo);
+  }
+  topo.appendChild(lado);
+  b.appendChild(topo);
+  b.appendChild(el("p", "text-xs " + (sinal[0] === "🔴" ? "text-red-300" : sinal[0] === "❓" ? "text-amber-300" : "text-emerald-300"), sinal[1]));
+  b.appendChild(el("p", "text-xs text-slate-300 mt-auto", linha));
+  b.addEventListener("click", aoClicar);
+  b.addEventListener("keydown", function (e) { if (e.key === "Enter") aoClicar(); });
+  return b;
+}
+
+// Remoção com duas confirmações. O item vai para a lixeira: some para o cliente na hora e pode ser desfeito por 30 min.
+async function paraLixeira(rota, corpo, nome, aviso) {
+  if (!(await confirmar("Remover " + nome + "?", aviso, "Sim, remover"))) return;
+  if (!(await confirmar("Tem certeza?", "Você terá 30 minutos para desfazer em \"Removidos recentemente\". Depois disso, as fotos são apagadas para sempre.", "Tenho certeza"))) return;
+  var r = await api(rota, corpo);
+  if (!r.ok) { avisar(r.dados.error || "Não foi possível remover."); return; }
+  mostrarTela("home");
+  await carregarClientes();
+  await carregarAlbuns();
+}
+
+function minutosRestantes(t) {
+  var fim = new Date(String(t).replace(" ", "T") + "Z").getTime() + 30 * 60000;
+  return Math.max(0, Math.ceil((fim - Date.now()) / 60000));
+}
+
+function desenharTiles() {
+  var grade = document.getElementById("tiles");
+  grade.innerHTML = "";
+  var itens = [], lixo = [];
+  dados.albuns.forEach(function (a) {
+    var c = central.clientes.find(function (x) { return x.id === a.cliente_id; });
+    if (a.removido_em) {
+      // Álbum que saiu junto com o cliente aparece só na linha do cliente.
+      if (!(c && c.removido_em)) lixo.push({ nome: "🔒 " + a.titulo + " (" + a.cliente + ")", quando: a.removido_em, rota: "/api/portal/restaurar", corpo: { tipo: "album", id: a.id } });
+      return;
+    }
+    var sinal = sinalCliente(c, a);
+    itens.push({ tipo: "fechado", sinal: sinal, no: cartao("🔒", a.titulo, a.cliente, sinal,
+      a.arquivos + " foto(s) · ❤️ " + (a.favoritas || 0) + (c ? " · 👁️ " + c.visitas : ""), function () { abrirAlbum(a); },
+      function () { paraLixeira("/api/portal/lixeira", { tipo: "album", id: a.id }, "o álbum \"" + a.titulo + "\"", "O cliente perde o acesso a este álbum na hora."); }) });
+  });
+  central.clientes.forEach(function (c) {
+    if (c.removido_em) {
+      lixo.push({ nome: "👤 " + c.nome + " e os álbuns dele", quando: c.removido_em, rota: "/api/portal/restaurar", corpo: { tipo: "cliente", id: c.id } });
+      return;
+    }
+    // Cliente criado sem álbum: um cartão para criar o álbum dele.
+    if (!c.albuns) itens.push({ tipo: "fechado", sinal: ["❓", "Sem álbum"], no: cartao("🔒", c.nome, c.email, ["❓", "Ainda sem álbum: toque para criar"], "", function () { abrirCriar("fechado", c.id); },
+      function () { paraLixeira("/api/portal/lixeira", { tipo: "cliente", id: c.id }, "o cliente \"" + c.nome + "\"", "Ele perde o acesso ao portal na hora."); }) });
+  });
+  eventosLista.forEach(function (e) {
+    if (e.removido_em) {
+      lixo.push({ nome: "🌐 " + e.titulo, quando: e.removido_em, rota: "/api/eventos/restaurar", corpo: { id: e.id } });
+      return;
+    }
+    var sinal = e.pendentes ? ["🔴", e.pendentes + " pedido(s) esperando o PIX"] : !e.fotos ? ["❓", "Ainda sem fotos"] : !e.publicado ? ["❓", "Fora do ar"] : ["✅", "No ar"];
+    itens.push({ tipo: "aberto", sinal: sinal, no: cartao("🌐", e.titulo, (e.data ? dataBr(e.data) + " · " : "") + "venda por foto", sinal,
+      e.fotos + " foto(s) · " + e.fotos_vendidas + " vendida(s) · " + reais(e.vendido), function () { if (window.EV) window.EV.abrir(e); },
+      function () { paraLixeira("/api/eventos/lixeira", { id: e.id }, "o evento \"" + e.titulo + "\"", "O link sai do ar na hora (inclusive para quem já comprou)."); }) });
+  });
+  // Primeiro o que precisa de atenção.
+  var ordem = { "🔴": 0, "❓": 1, "✅": 2 };
+  itens.sort(function (x, y) { return ordem[x.sinal[0]] - ordem[y.sinal[0]]; });
+  var atencao = itens.filter(function (i) { return i.sinal[0] === "🔴"; }).length;
+  var st = document.getElementById("stAtencao");
+  st.textContent = atencao ? "🔴 " + atencao : "✅ 0";
+  st.className = "text-xl md:text-2xl font-bold mt-1 " + (atencao ? "text-red-300" : "text-emerald-300");
+  document.getElementById("homeSub").textContent = (dados.portal ? dados.portal.nome + " · " : "") + itens.length + " link(s)";
+  var visiveis = itens.filter(function (i) { return !filtroAtual || i.tipo === filtroAtual; });
+  visiveis.forEach(function (i) { grade.appendChild(i.no); });
+  mostrar("tilesVazio", !itens.length);
+  document.querySelectorAll(".filtro").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-filtro") === filtroAtual); });
+  // Removidos recentemente, com Desfazer.
+  var lista = document.getElementById("listaLixeira");
+  lista.innerHTML = "";
+  mostrar("lixeira", lixo.length > 0);
+  lixo.forEach(function (x) {
+    var linha = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/60 rounded-xl px-3 py-2 text-sm");
+    var min = minutosRestantes(x.quando);
+    linha.appendChild(el("span", "text-slate-300", x.nome + " · " + (min ? "apaga em " + min + " min" : "sendo apagado...")));
+    if (min) {
+      var b = el("button", "link", "↩️ Desfazer");
+      b.type = "button";
+      b.addEventListener("click", async function () {
+        var r = await api(x.rota, x.corpo);
+        if (!r.ok) { avisar(r.dados.error || "Não foi possível desfazer."); return; }
+        await carregarClientes();
+        await carregarAlbuns();
+      });
+      linha.appendChild(b);
+    }
+    lista.appendChild(linha);
+  });
+}
+
+document.querySelectorAll(".filtro").forEach(function (b) {
+  b.addEventListener("click", function () { filtroAtual = b.getAttribute("data-filtro"); desenharTiles(); });
+});
+
+/* ---------- criar novo: uma pergunta por tela ---------- */
+
+var PASSOS = { P1: ["", "wzP1"], F1: ["Álbum · passo 1 de 3", "wzF1"], F2: ["Álbum · passo 2 de 3", "wzF2"], F3: ["Álbum · passo 3 de 3", "wzF3"],
+  A1: ["Evento · passo 1 de 2", "wzA1"], PX: ["Evento · seu PIX", "wzPX"], A2: ["Evento · passo 2 de 2", "wzA2"] };
+var VOLTA = { F1: "P1", F2: "F1", F3: "F2", A1: "P1", PX: "A1", A2: "A1" };
+var passoAtual = "P1";
+
+function passoAssistente(p) {
+  passoAtual = p;
+  document.querySelectorAll(".wz").forEach(function (x) { x.classList.add("hidden"); });
+  mostrar(PASSOS[p][1], true);
+  document.getElementById("wzPassoTxt").textContent = PASSOS[p][0];
+  document.getElementById("wzVoltar").classList.toggle("invisible", p === "P1");
+  var campo = document.querySelector("#" + PASSOS[p][1] + " input:not([type=radio]):not([type=checkbox])");
+  if (campo && window.innerWidth > 700) campo.focus();
+}
+
+function abrirCriar(tipo, clienteId) {
+  mostrarTela("criar");
+  document.getElementById("wzErro").textContent = "";
+  if (tipo === "aberto") { if (window.EV) window.EV.novo(); passoAssistente("A1"); return; }
+  if (tipo === "fechado") {
+    document.querySelector("input[name=wzCli][value=" + (clienteId ? "existente" : "novo") + "]").checked = true;
+    trocarTipoCliente();
+    if (clienteId) document.getElementById("albCliente").value = clienteId;
+    passoAssistente(clienteId ? "F2" : "F1");
+    return;
+  }
+  passoAssistente("P1");
+}
+
+function trocarTipoCliente() {
+  var novo = document.querySelector("input[name=wzCli]:checked").value === "novo";
+  mostrar("wzCliNovo", novo);
+  mostrar("wzCliExistente", !novo);
+}
+
+document.getElementById("btnNovo").addEventListener("click", function () { abrirCriar(null); });
+document.getElementById("criarAberto").addEventListener("click", function () { abrirCriar("aberto"); });
+document.getElementById("criarFechado").addEventListener("click", function () { abrirCriar("fechado"); });
+document.getElementById("wzVoltar").addEventListener("click", function () { if (VOLTA[passoAtual]) passoAssistente(VOLTA[passoAtual]); });
+document.getElementById("wzCancelar").addEventListener("click", function () { mostrarTela("home"); });
+document.querySelectorAll("input[name=wzCli]").forEach(function (x) { x.addEventListener("change", trocarTipoCliente); });
+
+document.getElementById("wzF1ok").addEventListener("click", function () {
+  var novo = document.querySelector("input[name=wzCli]:checked").value === "novo";
+  if (novo) {
+    if (document.getElementById("cliNome").value.trim().length < 2) { avisar("Digite o nome do cliente"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById("cliEmail").value.trim())) { avisar("Digite um e-mail válido: é o login do cliente"); return; }
+    if (document.getElementById("cliSenha").value.length < 8) { avisar("A senha precisa ter pelo menos 8 caracteres (use o botão Gerar)"); return; }
+  } else if (!document.getElementById("albCliente").value) { avisar("Escolha o cliente"); return; }
+  passoAssistente("F2");
+});
+document.getElementById("wzF2ok").addEventListener("click", function () {
+  if (document.getElementById("albTitulo").value.trim().length < 2) { avisar("Digite o nome do álbum"); return; }
+  passoAssistente("F3");
+});
+document.getElementById("wzA1ok").addEventListener("click", function () {
+  if (document.getElementById("ev_evTitulo").value.trim().length < 3) { avisar("Dê um nome ao evento"); return; }
+  // Sem PIX ninguém consegue comprar: pergunta antes do preço.
+  passoAssistente(dados.portal.instrucoes_pagamento ? "A2" : "PX");
+});
+document.getElementById("wzPXok").addEventListener("click", async function () {
+  var pix = document.getElementById("wzPix").value.trim();
+  if (pix.length < 5) { avisar("Digite a sua chave PIX"); return; }
+  var r = await api("/api/portal/pagamento", { instrucoes: pix });
+  if (!r.ok) { avisar(r.dados.error || "Não foi possível salvar."); return; }
+  dados.portal.instrucoes_pagamento = pix;
+  document.getElementById("instrucoes").value = pix;
+  passoAssistente("A2");
+});
+
+// Depois que a venda de eventos salva o evento: envia a capa escolhida no assistente.
+window.depoisDeSalvarEvento = async function (id) {
+  var arq = document.getElementById("evCapa").files[0];
+  document.getElementById("evCapa").value = "";
+  if (!arq) return;
+  try {
+    var capa = await enviarEspecial(await reduzirImagem(arq, 1800, "image/jpeg"), "capa.jpg", "capa");
+    await api("/api/eventos/capa", { id: id, capa_file_id: capa });
+  } catch (e) { avisar("O evento foi salvo, mas a foto de capa não foi enviada: " + e.message); }
+};
+
+document.getElementById("btnCriarFechado").addEventListener("click", async function () {
+  var botao = this;
+  var erro = document.getElementById("wzErro");
+  erro.textContent = "";
+  var novo = document.querySelector("input[name=wzCli]:checked").value === "novo";
+  var nome = document.getElementById("cliNome").value, email = document.getElementById("cliEmail").value, senha = document.getElementById("cliSenha").value;
+  botao.disabled = true;
+  try {
+    var clienteId = document.getElementById("albCliente").value;
+    if (novo) {
+      var c = await api("/api/portal/clientes/novo", { nome: nome, email: email, senha: senha, tema: document.getElementById("cliTema").value });
+      if (!c.ok) { erro.textContent = c.dados.error || "Não foi possível criar o cliente."; return; }
+      clienteId = c.dados.id;
+      await carregarClientes();
+      document.querySelector("input[name=wzCli][value=existente]").checked = true;
+      trocarTipoCliente();
+      document.getElementById("albCliente").value = clienteId;
+    } else if (!clienteId) { erro.textContent = "Escolha o cliente"; return; }
+    var a = await api("/api/portal/albuns/novo", { cliente_id: clienteId, tipo: document.getElementById("albTipo").value, titulo: document.getElementById("albTitulo").value });
+    if (!a.ok) { erro.textContent = a.dados.error || "Não foi possível criar o álbum."; return; }
+    var rg = await api("/api/portal/albuns/regras", {
+      id: a.dados.id,
+      prazo_dias: document.getElementById("wzPrazo").value,
+      pode_escolher: document.getElementById("wzEscolher").checked,
+      limite_escolha: document.getElementById("wzLimite").value,
+      pode_editar: document.getElementById("wzEditar").checked,
+      pode_baixar: document.getElementById("wzBaixar").checked,
+      max_downloads: document.getElementById("wzMaxDown").value,
+    max_fotos: lerBlocoFotos("wz").max_fotos,
+    preco_extra: lerBlocoFotos("wz").preco_extra,
+    faixas_extra: lerBlocoFotos("wz").faixas_extra
+    });
+    if (!rg.ok) avisar("O álbum foi criado, mas as regras não foram salvas: " + (rg.dados.error || "erro") + "\nAbra o álbum e ajuste em Regras.");
+    // Recado e foto de capa do álbum (opcionais).
+    var visual = { id: a.dados.id, descricao: document.getElementById("albDescricao").value };
+    var arqCapa = document.getElementById("albCapa").files[0];
+    if (arqCapa) {
+      try { visual.capa_file_id = await enviarEspecial(await reduzirImagem(arqCapa, 1800, "image/jpeg"), "capa.jpg", "capa"); }
+      catch (e) { avisar("O álbum foi criado, mas a foto de capa não foi enviada: " + e.message); }
+    }
+    await api("/api/portal/albuns/visual", visual);
+    if (novo) {
+      var linkCli = window.location.origin + "/p/" + dados.portal.slug;
+      await avisoCopiar("Pronto! 🎉", "Envie estes dados para " + nome + ". Depois é só mandar as fotos do álbum.", [["Link", linkCli], ["E-mail", email], ["Senha", senha]],
+        "Olá, " + nome.split(" ")[0] + "! Suas fotos vão ficar aqui: " + linkCli + "\nE-mail: " + email + "\nSenha: " + senha);
+    }
+    ["cliNome", "cliEmail", "cliSenha", "albTitulo", "wzLimite", "wzMaxDown", "wzMaxFotos", "wzPrecoExtra", "wzFxPreco0", "wzFxPreco1", "albDescricao", "albCapa", "cliTema"].forEach(function (id) { document.getElementById(id).value = ""; });
+    document.getElementById("wzBlocoFotos").atualizar();
+    document.querySelector("input[name=wzCli][value=novo]").checked = true;
+    trocarTipoCliente();
+    await carregarAlbuns();
+    carregarCobrancas();
+    var criado = dados.albuns.find(function (x) { return x.id === a.dados.id; });
+    if (criado) abrirAlbum(criado); else mostrarTela("home");
+  } finally {
+    botao.disabled = false;
+  }
+});
+
+/* ---------- ações do cliente (aba Mais do álbum) ---------- */
+
+// Aba Mais: quem é o cliente e como ele está usando o álbum.
+function preencherCliente() {
+  var c = clienteDoAlbum();
+  document.getElementById("abCliente").textContent = c ? c.nome + " · " + c.email : (aberto ? aberto.cliente : "");
+  document.getElementById("abClienteNums").textContent = c ? "👁️ " + c.visitas + " acesso(s) · 🕒 " + (c.ultimo_acesso ? "último " + horaBr(c.ultimo_acesso) : "ainda não acessou") + " · ⬇️ " + c.downloads + " download(s) · ❤️ " + c.escolhidas + " escolhida(s)" : "";
+  // Link do cliente, mensagem pronta e atalho para o WhatsApp.
+  var link = window.location.origin + "/p/" + dados.portal.slug;
+  document.getElementById("abLinkCliente").value = link;
+  document.getElementById("abWhatsapp").href = "https://wa.me/?text=" + encodeURIComponent(mensagemAcesso(c));
+  var temaCli = (c && c.tema) || (aberto && aberto.cliente_tema) || "";
+  document.getElementById("abTema").textContent = NOMES_TEMA[temaCli || dados.portal.tema] || "Clássico";
+  document.getElementById("vsTema").value = temaCli;
+  document.getElementById("vsDescricao").value = (aberto && aberto.descricao) || "";
+  capaNova = undefined;
+  mostrarCapa(aberto && aberto.capa_url);
+}
+
+var NOMES_TEMA = { classico: "Clássico", escuro: "Galeria escura", minimalista: "Minimalista", delicado: "Delicado", casamento: "Casamento", quinze: "15 anos", infantil: "Infantil", festa: "Festa / aniversário" };
+var LISTA_TEMAS = Object.keys(NOMES_TEMA);
+
+// Prévia do layout em tela cheia, com dados de exemplo. ◀ ▶ passam pelos layouts; "Usar este" chama aoEscolher(tema).
+function verPrevia(tema, aoEscolher) {
+  var i = Math.max(0, LISTA_TEMAS.indexOf(tema || (dados.portal && dados.portal.tema) || "classico"));
+  var fundo = el("div", "fixed inset-0 flex flex-col");
+  fundo.style.cssText = "z-index:2147483500;background:#020617";
+  var barra = el("div", "flex flex-wrap items-center gap-2 p-3 text-white");
+  var ant = el("button", "px-3 py-2 rounded-xl border border-slate-600 font-bold", "◀");
+  var nome = el("p", "font-bold text-lg flex-1 text-center min-w-[8rem]");
+  var prox = el("button", "px-3 py-2 rounded-xl border border-slate-600 font-bold", "▶");
+  var usar = el("button", "px-4 py-2 rounded-xl font-bold text-white", "✔ Usar este layout");
+  usar.style.background = "#0284c7";
+  var fechar = el("button", "px-3 py-2 rounded-xl border border-slate-600 font-bold", "✕");
+  [ant, nome, prox, usar, fechar].forEach(function (b) { if (b.tagName === "BUTTON") b.type = "button"; barra.appendChild(b); });
+  if (!aoEscolher) usar.classList.add("hidden");
+  var quadro = el("iframe", "flex-1 w-full bg-white");
+  quadro.style.border = "0";
+  fundo.appendChild(barra);
+  fundo.appendChild(quadro);
+  document.body.appendChild(fundo);
+  function mostrarTema() {
+    var t = LISTA_TEMAS[i];
+    nome.textContent = "👁️ " + NOMES_TEMA[t] + " (" + (i + 1) + " de " + LISTA_TEMAS.length + ")";
+    var p = dados.portal || {};
+    quadro.src = "/p/previa?previa=" + t + "&nome=" + encodeURIComponent(p.nome || "Seu Estúdio") + "&cor=" + encodeURIComponent(p.cor || "") + (p.logo_url ? "&logo=" + encodeURIComponent(p.logo_url) : "");
+  }
+  ant.addEventListener("click", function () { i = (i + LISTA_TEMAS.length - 1) % LISTA_TEMAS.length; mostrarTema(); });
+  prox.addEventListener("click", function () { i = (i + 1) % LISTA_TEMAS.length; mostrarTema(); });
+  fechar.addEventListener("click", function () { fundo.remove(); });
+  usar.addEventListener("click", function () { fundo.remove(); aoEscolher(LISTA_TEMAS[i]); });
+  mostrarTema();
+}
+
+// Botão "👁️ Ver como fica" ao lado de cada lista de layout.
+["cliTema", "evTema", "vsTema"].forEach(function (id) {
+  var lista = document.getElementById(id);
+  if (!lista) return;
+  var b = el("button", "link text-sm mt-1", "👁️ Ver como fica");
+  b.type = "button";
+  b.addEventListener("click", function () {
+    verPrevia(lista.value, function (t) { lista.value = t; lista.dispatchEvent(new Event("change")); });
+  });
+  lista.parentNode.insertAdjacentElement("afterend", b);
+});
+(function () {
+  var cartoes = document.getElementById("temas");
+  var b = el("button", "link text-sm mt-2", "👁️ Ver os layouts em tela cheia");
+  b.type = "button";
+  b.addEventListener("click", function () {
+    var marcado = document.querySelector("input[name=tema]:checked");
+    verPrevia(marcado && marcado.value, function (t) {
+      var r = document.querySelector("input[name=tema][value=" + t + "]");
+      if (r) { r.checked = true; r.dispatchEvent(new Event("change", { bubbles: true })); }
+      avisar("Layout " + NOMES_TEMA[t] + " escolhido. Clique em Salvar para valer.", "Quase lá");
+    });
+  });
+  cartoes.insertAdjacentElement("afterend", b);
+})();
+
+// Aba Visual do álbum: layout do cliente, recado e foto de capa.
+var capaNova;   // undefined = não mexeu; null = voltar para a 1ª foto; Blob = capa nova escolhida
+function mostrarCapa(url) {
+  var img = document.getElementById("vsCapaImg");
+  if (url) img.src = url;
+  img.classList.toggle("hidden", !url);
+  mostrar("vsCapaVazio", !url);
+  mostrar("vsCapaTirar", !!url);
+}
+document.getElementById("vsCapaBtn").addEventListener("click", function () { document.getElementById("vsCapaArq").click(); });
+document.getElementById("vsCapaArq").addEventListener("change", async function () {
+  var f = this.files[0];
+  this.value = "";
+  if (!f) return;
+  capaNova = await reduzirImagem(f, 1800, "image/jpeg");
+  mostrarCapa(URL.createObjectURL(capaNova));
+});
+document.getElementById("vsCapaTirar").addEventListener("click", function () { capaNova = null; mostrarCapa(null); });
+document.getElementById("btnVisual").addEventListener("click", async function () {
+  var botao = this;
+  botao.disabled = true;
+  try {
+    await api("/api/portal/clientes/visual", { cliente_id: aberto.cliente_id, tema: document.getElementById("vsTema").value });
+    var corpo = { id: aberto.id, descricao: document.getElementById("vsDescricao").value };
+    if (capaNova === null) corpo.capa_file_id = null;
+    else if (capaNova) corpo.capa_file_id = await enviarEspecial(capaNova, "capa.jpg", "capa");
+    var r = await api("/api/portal/albuns/visual", corpo);
+    if (!r.ok) throw new Error(r.dados.error);
+    capaNova = undefined;
+    aberto.descricao = corpo.descricao;
+    aberto.cliente_tema = document.getElementById("vsTema").value || null;
+    document.getElementById("abTema").textContent = NOMES_TEMA[aberto.cliente_tema || dados.portal.tema] || "Clássico";
+    mostrar("vsOk", true);
+    setTimeout(function () { mostrar("vsOk", false); }, 2500);
+    carregarAlbuns();
+  } catch (e) { avisar(e.message || "Não foi possível salvar."); }
+  botao.disabled = false;
+});
+
+function mensagemAcesso(c) {
+  var nome = c ? c.nome.split(" ")[0] : "";
+  return "Olá" + (nome ? ", " + nome : "") + "! 📸 Suas fotos" + (aberto ? " de \"" + aberto.titulo + "\"" : "") + " já estão no portal " + dados.portal.nome + ":\n" +
+    window.location.origin + "/p/" + dados.portal.slug + "\n" + (c ? "Login: " + c.email + "\n" : "") + "A senha é a que eu te mandei. Qualquer dúvida, é só me chamar!";
+}
+
+document.getElementById("abCopiarLink").addEventListener("click", function () {
+  navigator.clipboard.writeText(document.getElementById("abLinkCliente").value);
+  this.textContent = "Copiado!";
+  var b = this;
+  setTimeout(function () { b.textContent = "Copiar"; }, 2000);
+});
+document.getElementById("abCopiarMsg").addEventListener("click", function () {
+  navigator.clipboard.writeText(mensagemAcesso(clienteDoAlbum()));
+  this.textContent = "Copiada!";
+});
+document.getElementById("abVerVisual").addEventListener("click", function () { abaAlbum("visual"); });
+
+function clienteDoAlbum() {
+  return aberto ? central.clientes.find(function (c) { return c.id === aberto.cliente_id; }) : null;
+}
+
+document.getElementById("abCopiarAcesso").addEventListener("click", function () {
+  var c = clienteDoAlbum();
+  if (!c) return;
+  navigator.clipboard.writeText("Olá, " + c.nome.split(" ")[0] + "! Suas fotos estão no portal " + dados.portal.nome + ":\n" +
+    window.location.origin + "/p/" + dados.portal.slug + "\nE-mail: " + c.email + "\n(a senha é a que eu te mandei)");
+  this.textContent = "Copiado!";
+});
+
+document.getElementById("abNovaSenha").addEventListener("click", async function () {
+  var c = clienteDoAlbum();
+  if (!c) return;
+  var nova = await pedirTexto("Nova senha para " + c.nome, "Mínimo 8 caracteres. Já deixamos uma sugestão pronta.", gerarSenha());
+  if (!nova) return;
+  var r2 = await api("/api/portal/clientes/senha", { cliente_id: c.id, senha: nova });
+  if (r2.ok) avisoCopiar("Senha trocada", "Envie a nova senha para " + c.nome + ".", [["Nova senha", nova]], "Olá, " + c.nome.split(" ")[0] + "! Sua nova senha do portal é: " + nova);
+  else avisar(r2.dados.error || "Não foi possível.");
+  carregarCentral();
+});
+
+/* ---------- cobranças ---------- */
+
+function reais(c) {
+  return "R$ " + (c / 100).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function dataBr(t) {
+  if (!t) return "";
+  var d = t.slice(0, 10).split("-");
+  return d[2] + "/" + d[1] + "/" + d[0];
+}
+
+function preencherAlbunsCobranca() {
+  var cli = parseInt(document.getElementById("cobCliente").value, 10);
+  var sel = document.getElementById("cobAlbum");
+  sel.innerHTML = "";
+  sel.appendChild(new Option("Nenhum", ""));
+  dados.albuns.filter(function (a) { return a.cliente_id === cli; }).forEach(function (a) {
+    sel.appendChild(new Option(a.titulo, a.id));
+  });
+  mostrar("blocoTrancar", !!sel.value);
+}
+
+/* ---------- acesso livre × cobrar ---------- */
+
+function aplicarModo(cobrar) {
+  document.querySelectorAll("input[name=modoCobrar]").forEach(function (x) { x.checked = x.value === (cobrar ? "1" : "0"); });
+  mostrar("blocoCobrar", !!cobrar);
+}
+
+document.querySelectorAll("input[name=modoCobrar]").forEach(function (x) {
+  x.addEventListener("change", async function () {
+    var cobrar = this.value === "1";
+    var r = await api("/api/portal/pagamento", { cobrar: cobrar });
+    if (!r.ok) { avisar(r.dados.error || "Não foi possível salvar."); return; }
+    dados.portal.cobrar = cobrar ? 1 : 0;
+    aplicarModo(cobrar);
+    mostrar("modoOk", true);
+    setTimeout(function () { mostrar("modoOk", false); }, 2000);
+    carregarAlbuns();
+  });
+});
+
+/* ---------- tabela de preços ---------- */
+
+var SUGESTOES = [
+  ["Foto extra", "foto", "15,00"], ["Edição de foto", "edicao", "25,00"], ["Vídeo editado", "video", "300,00"],
+  ["Minuto de vídeo", "minuto", "80,00"], ["Hora de cobertura", "hora", "250,00"], ["Ensaio (pacote)", "pacote", "600,00"],
+  ["Álbum impresso", "pacote", "450,00"], ["Deslocamento", "km", "2,50"]
+];
+var precoEditando = 0;
+
+function desenharTabela() {
+  var sel = document.getElementById("preUnidade");
+  if (!sel.options.length) Object.keys(dados.unidades || {}).forEach(function (k) { sel.appendChild(new Option(dados.unidades[k], k)); });
+  var sug = document.getElementById("sugestoes");
+  if (!sug.childNodes.length) SUGESTOES.forEach(function (s) {
+    var b = el("button", "text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-800 text-blue-200 hover:border-cyan-400", s[0]);
+    b.type = "button";
+    b.addEventListener("click", function () {
+      precoEditando = 0;
+      document.getElementById("preNome").value = s[0];
+      document.getElementById("preUnidade").value = s[1];
+      document.getElementById("preValor").value = s[2];
+      document.getElementById("btnPreco").textContent = "+ Adicionar à tabela";
+      document.getElementById("preValor").focus();
+    });
+    sug.appendChild(b);
+  });
+  var lista = document.getElementById("listaPrecos");
+  lista.innerHTML = "";
+  if (!dados.precos.length) lista.appendChild(el("p", "text-sm text-slate-500", "Sua tabela está vazia. Adicione seus serviços acima."));
+  dados.precos.forEach(function (p) {
+    var linha = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/60 rounded-xl px-3 py-2 text-sm");
+    linha.appendChild(el("span", "", p.nome + " · " + reais(p.valor_centavos) + " " + (dados.unidades[p.unidade] || "")));
+    var acoes = el("span", "flex gap-3");
+    var ed = el("button", "link", "Editar");
+    ed.type = "button";
+    ed.addEventListener("click", function () {
+      precoEditando = p.id;
+      document.getElementById("preNome").value = p.nome;
+      document.getElementById("preUnidade").value = p.unidade;
+      document.getElementById("preValor").value = (p.valor_centavos / 100).toFixed(2).replace(".", ",");
+      document.getElementById("btnPreco").textContent = "Salvar alteração";
+    });
+    var rm = el("button", "perigo", "Remover");
+    rm.type = "button";
+    rm.addEventListener("click", async function () {
+      if (!(await confirmar("Remover \"" + p.nome + "\"?", "Sai da sua tabela de preços. Cobranças já criadas não mudam.", "Sim, remover"))) return;
+      await api("/api/portal/precos/remover", { id: p.id });
+      carregarCobrancas();
+    });
+    acoes.appendChild(ed);
+    acoes.appendChild(rm);
+    linha.appendChild(acoes);
+    lista.appendChild(linha);
+  });
+  // atualiza as opções das linhas de item já abertas
+  document.querySelectorAll("#itensCobranca select").forEach(function (s) { preencherOpcoesItem(s); });
+  calcularTotal();
+}
+
+document.getElementById("btnPreco").addEventListener("click", async function () {
+  var erro = document.getElementById("preErro");
+  erro.textContent = "";
+  var r = await api("/api/portal/precos/salvar", {
+    id: precoEditando || undefined,
+    nome: document.getElementById("preNome").value,
+    unidade: document.getElementById("preUnidade").value,
+    valor: document.getElementById("preValor").value
+  });
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
+  precoEditando = 0;
+  document.getElementById("preNome").value = "";
+  document.getElementById("preValor").value = "";
+  this.textContent = "+ Adicionar à tabela";
+  carregarCobrancas();
+});
+
+/* ---------- itens da cobrança ---------- */
+
+function preencherOpcoesItem(sel) {
+  var antes = sel.value;
+  sel.innerHTML = "";
+  sel.appendChild(new Option("Escolha um serviço", ""));
+  dados.precos.forEach(function (p) { sel.appendChild(new Option(p.nome + " (" + reais(p.valor_centavos) + " " + dados.unidades[p.unidade] + ")", p.id)); });
+  sel.value = antes;
+}
+
+function novaLinhaItem() {
+  if (!dados.precos.length) { avisar("Primeiro adicione serviços na sua tabela de preços."); return; }
+  var linha = el("div", "flex flex-wrap items-center gap-2");
+  var sel = el("select", "campo flex-1");
+  sel.style.minWidth = "200px";
+  preencherOpcoesItem(sel);
+  var qtd = el("input", "campo");
+  qtd.type = "number";
+  qtd.min = 1;
+  qtd.value = 1;
+  qtd.style.width = "90px";
+  qtd.title = "Quantidade";
+  var sub = el("span", "text-sm text-slate-300 w-28 text-right", "R$ 0,00");
+  var rm = el("button", "perigo", "×");
+  rm.type = "button";
+  rm.addEventListener("click", function () { linha.remove(); calcularTotal(); });
+  [sel, qtd].forEach(function (x) { x.addEventListener("input", calcularTotal); x.addEventListener("change", calcularTotal); });
+  linha.appendChild(sel);
+  linha.appendChild(qtd);
+  linha.appendChild(sub);
+  linha.appendChild(rm);
+  document.getElementById("itensCobranca").appendChild(linha);
+  calcularTotal();
+}
+
+function itensEscolhidos() {
+  var out = [];
+  document.querySelectorAll("#itensCobranca > div").forEach(function (linha) {
+    var sel = linha.querySelector("select"), qtd = linha.querySelector("input");
+    var p = dados.precos.find(function (x) { return String(x.id) === sel.value; });
+    var q = parseInt(qtd.value, 10) || 0;
+    linha.querySelector("span").textContent = p && q > 0 ? reais(p.valor_centavos * q) : "R$ 0,00";
+    if (p && q > 0) out.push({ preco_id: p.id, qtd: q, centavos: p.valor_centavos * q });
+  });
+  return out;
+}
+
+function calcularTotal() {
+  var total = itensEscolhidos().reduce(function (s, i) { return s + i.centavos; }, 0);
+  var v = document.getElementById("cobValor").value.trim().replace(/^R\$\s*/i, "");
+  if (v) {
+    var n = parseFloat(v.indexOf(",") > -1 ? v.replace(/\./g, "").replace(",", ".") : v);
+    if (n > 0) total += Math.round(n * 100);
+  }
+  document.getElementById("cobTotal").textContent = reais(total);
+}
+
+document.getElementById("btnItem").addEventListener("click", novaLinhaItem);
+document.getElementById("cobValor").addEventListener("input", calcularTotal);
+
+async function carregarCobrancas() {
+  var selCli = document.getElementById("cobCliente");
+  var antes = selCli.value;
+  selCli.innerHTML = "";
+  if (!dados.clientes.length) selCli.appendChild(new Option("Crie um cliente primeiro (passo 2)", ""));
+  dados.clientes.forEach(function (c) { selCli.appendChild(new Option(c.nome, c.id)); });
+  if (antes) selCli.value = antes;
+  preencherAlbunsCobranca();
+  aplicarModo(dados.portal && dados.portal.cobrar);
+
+  var r = await api("/api/portal/cobrancas");
+  dados.precos = r.dados.precos || [];
+  dados.unidades = r.dados.unidades || {};
+  desenharTabela();
+  var res = r.dados.resumo || { a_receber: 0, atrasado: 0, recebido_mes: 0 };
+  document.getElementById("resReceber").textContent = reais(res.a_receber);
+  document.getElementById("resAtrasado").textContent = reais(res.atrasado);
+  document.getElementById("resMes").textContent = reais(res.recebido_mes);
+
+  var lista = document.getElementById("listaCobrancas");
+  lista.innerHTML = "";
+  var cobs = r.dados.cobrancas || [];
+  if (!cobs.length) lista.appendChild(el("p", "text-sm text-slate-400", "Nenhuma cobrança ainda."));
+  var hoje = new Date().toISOString().slice(0, 10);
+  cobs.forEach(function (b) {
+    var atrasada = b.status === "pendente" && b.vencimento && b.vencimento < hoje;
+    var linha = el("div", "flex flex-wrap items-center justify-between gap-3 bg-slate-900/50 rounded-xl px-4 py-3" + (b.status === "cancelado" ? " opacity-50" : ""));
+    var info = el("div");
+    var topo = el("p", "font-semibold");
+    topo.appendChild(document.createTextNode(reais(b.valor_centavos) + " · " + b.descricao + " "));
+    var selo = b.status === "pago" ? ["Pago " + dataBr(b.pago_em), "text-emerald-200 bg-emerald-500/20"]
+      : b.status === "cancelado" ? ["Cancelada", "text-slate-300 bg-slate-500/20"]
+      : atrasada ? ["Atrasada", "text-red-200 bg-red-500/20"] : ["Pendente", "text-amber-200 bg-amber-500/20"];
+    topo.appendChild(el("span", "text-xs font-semibold px-2 py-0.5 rounded-full " + selo[1], selo[0]));
+    info.appendChild(topo);
+    var itens = [];
+    try { itens = b.itens ? JSON.parse(b.itens) : []; } catch (e) {}
+    if (itens.length) info.appendChild(el("p", "text-xs text-slate-300", itens.map(function (i) {
+      return (i.unidade === "avulso" ? "" : i.qtd + "x ") + i.nome + " " + reais(i.valor_centavos * i.qtd);
+    }).join(" · ")));
+    info.appendChild(el("p", "text-xs text-slate-400", b.cliente + (b.album ? " · " + b.album : "") +
+      (b.vencimento ? " · vence " + dataBr(b.vencimento) : "") + (b.bloqueia_album && b.status === "pendente" ? " · 🔒 álbum trancado" : "")));
+    linha.appendChild(info);
+
+    var acoes = el("div", "flex flex-wrap gap-4");
+    function botao(txt, classe, fn) {
+      var x = el("button", classe, txt);
+      x.type = "button";
+      x.addEventListener("click", fn);
+      acoes.appendChild(x);
+    }
+    async function mudar(status) {
+      var r2 = await api("/api/portal/cobrancas/status", { id: b.id, status: status });
+      if (!r2.ok) { avisar(r2.dados.error || "Não foi possível."); return; }
+      await carregarCobrancas();
+      carregarAlbuns();
+    }
+    if (b.status === "pendente") {
+      botao("Copiar mensagem", "link", function () {
+        var msg = "Olá, " + b.cliente.split(" ")[0] + "! Segue a cobrança de " + reais(b.valor_centavos) + " (" + b.descricao + ")" +
+          (b.vencimento ? ", com vencimento em " + dataBr(b.vencimento) : "") + ".\n" +
+          (b.link_pagamento ? "Pague por aqui: " + b.link_pagamento + "\n" : "") +
+          (dados.portal.instrucoes_pagamento ? dados.portal.instrucoes_pagamento + "\n" : "") +
+          "Você também vê tudo no seu portal: " + window.location.origin + "/p/" + dados.portal.slug;
+        navigator.clipboard.writeText(msg);
+        this.textContent = "Copiada!";
+      });
+      botao("✔ Marcar como pago", "link", async function () {
+        if (await confirmar("Confirmar o pagamento?", b.cliente + " pagou " + reais(b.valor_centavos) + "?" + (b.bloqueia_album ? "\nO álbum será liberado." : ""), "Sim, foi pago", false)) mudar("pago");
+      });
+      botao("Cancelar", "perigo", async function () { if (await confirmar("Cancelar esta cobrança?", "O cliente deixa de ver esta cobrança como pendente.", "Sim, cancelar")) mudar("cancelado"); });
+    } else if (b.status === "pago") {
+      botao("Desfazer pagamento", "perigo", async function () { if (await confirmar("Voltar para pendente?", "A cobrança volta a ficar em aberto.", "Sim, voltar")) mudar("pendente"); });
+    }
+    linha.appendChild(acoes);
+    lista.appendChild(linha);
+  });
+}
+
+document.getElementById("cobCliente").addEventListener("change", preencherAlbunsCobranca);
+document.getElementById("cobAlbum").addEventListener("change", function () {
+  mostrar("blocoTrancar", !!this.value);
+  if (!this.value) document.getElementById("cobTrancar").checked = false;
+});
+
+document.getElementById("btnInstrucoes").addEventListener("click", async function () {
+  var r = await api("/api/portal/pagamento", { instrucoes: document.getElementById("instrucoes").value });
+  if (!r.ok) { avisar(r.dados.error || "Não foi possível salvar."); return; }
+  var m = await api("/api/portal/marca", { emite_nota: document.getElementById("cfgNota").value === "1", link_pagamento: document.getElementById("cfgLinkPag").value });
+  if (!m.ok) { avisar(m.dados.error || "Não foi possível salvar o link."); return; }
+  dados.portal.instrucoes_pagamento = document.getElementById("instrucoes").value.trim();
+  dados.portal.link_pagamento = document.getElementById("cfgLinkPag").value.trim() || null;
+  atualizarChecklist();
+  if (!document.getElementById("recPasso").classList.contains("hidden")) {
+    mostrar("recPasso", false);
+    avisar("Cadastro completo! Agora é só criar o primeiro álbum ou evento em \"➕ Criar novo\".", "Tudo pronto 🎉");
+    mostrarTela("home");
+  }
+  mostrar("instrOk", true);
+  setTimeout(function () { mostrar("instrOk", false); }, 2000);
+});
+
+document.getElementById("btnCobranca").addEventListener("click", async function () {
+  var erro = document.getElementById("cobErro");
+  erro.textContent = "";
+  var r = await api("/api/portal/cobrancas/nova", {
+    cliente_id: document.getElementById("cobCliente").value,
+    album_id: document.getElementById("cobAlbum").value || null,
+    descricao: document.getElementById("cobDescricao").value,
+    itens: itensEscolhidos().map(function (i) { return { preco_id: i.preco_id, qtd: i.qtd }; }),
+    valor: document.getElementById("cobValor").value,
+    vencimento: document.getElementById("cobVenc").value,
+    link: document.getElementById("cobLink").value,
+    bloqueia_album: document.getElementById("cobTrancar").checked
+  });
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível criar."; return; }
+  ["cobDescricao", "cobValor", "cobVenc", "cobLink"].forEach(function (id) { document.getElementById(id).value = ""; });
+  document.getElementById("cobTrancar").checked = false;
+  document.getElementById("itensCobranca").innerHTML = "";
+  calcularTotal();
+  await carregarCobrancas();
+  carregarAlbuns();
+});
+
+// Clientes e álbuns: só os dados (a central de acesso mostra tudo).
+async function carregarClientes() {
+  var r = await api("/api/portal/clientes");
+  dados.clientes = r.dados.clientes || [];
+  var sel = document.getElementById("albCliente");
+  var antes = sel.value;
+  sel.innerHTML = "";
+  if (!dados.clientes.length) sel.appendChild(new Option("Você ainda não tem clientes", ""));
+  dados.clientes.forEach(function (c) { sel.appendChild(new Option(c.nome + " (" + c.email + ")", c.id)); });
+  if (antes) sel.value = antes;
+}
+
+async function carregarAlbuns() {
+  var r = await api("/api/portal/albuns");
+  dados.albuns = r.dados.albuns || [];
+  preencherAlbunsCobranca();
+  await carregarCentral();
+}
+/* ---------- ações ---------- */
+
+document.getElementById("cfgCor").addEventListener("input", function () {
+  document.getElementById("temas").style.setProperty("--cfgcor", this.value);
+});
+
+document.getElementById("cfgNome").addEventListener("input", function () {
+  if (!dados.portal) document.getElementById("cfgSlug").value = paraSlug(this.value);
+});
+
+document.getElementById("btnSalvar").addEventListener("click", async function () {
+  var erro = document.getElementById("cfgErro");
+  erro.textContent = "";
+  var r = await api("/api/portal/salvar", {
+    nome: document.getElementById("cfgNome").value,
+    slug: document.getElementById("cfgSlug").value,
+    cor: document.getElementById("cfgCor").value,
+    tema: (document.querySelector("input[name=tema]:checked") || {}).value
+  });
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
+  var primeiraVez = !dados.portal;
+  if (!primeiraVez) {
+    var m = await api("/api/portal/marca", { bio: document.getElementById("cfgBio").value });
+    if (!m.ok) { erro.textContent = m.dados.error || "Não foi possível salvar o texto."; return; }
+    dados.portal.bio = document.getElementById("cfgBio").value.trim() || null;
+  }
+  mostrar("cfgOk", true);
+  setTimeout(function () { mostrar("cfgOk", false); }, 2500);
+  await carregar();
+  if (primeiraVez) {
+    // Primeiro cadastro: continua na Minha página para a logo e o layout.
+    mostrarTela("config");
+    var p = document.getElementById("cfgPasso");
+    p.textContent = "Passo 2 de 3: agora coloque a sua logomarca, escreva sobre você e escolha o layout. Depois clique em Salvar e em \"Próximo\".";
+    mostrar("cfgPasso", true);
+    document.getElementById("blocoMarca").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+});
+
+document.getElementById("btnCopiar").addEventListener("click", function () {
+  navigator.clipboard.writeText(document.getElementById("cfgUrl").textContent);
+  this.textContent = "Copiado!";
+});
+
+document.getElementById("btnGerar").addEventListener("click", function () {
+  document.getElementById("cliSenha").value = gerarSenha();
+});
+
+/* ---------- regras de acesso e pedidos de edição ---------- */
+
+function dataHoraBr(t) {
+  var d = new Date(String(t).replace(" ", "T") + "Z");
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+// Resumo curto das regras (vazio quando está tudo liberado e sem prazo).
+function textoRegras(r) {
+  if (!r) return "";
+  var p = [];
+  if (r.vencido) p.push("⏳ acesso encerrado");
+  else if (r.acesso_ate) p.push("⏳ até " + dataHoraBr(r.acesso_ate));
+  if (!r.pode_baixar) p.push("sem download");
+  else {
+    if (r.limite_fotos) p.push("📸 " + r.limite_fotos + " foto(s)" + (r.preco_extra_centavos ? " + vende extras" : ""));
+    if (r.max_downloads) p.push("⬇️ " + r.max_downloads + "x por foto");
+  }
+  if (!r.pode_escolher) p.push("sem escolha");
+  else if (r.limite_escolha) p.push("❤️ até " + r.limite_escolha);
+  if (r.pode_editar) p.push("✏️ edição");
+  return p.join(" · ");
+}
+
+// Bloco "quantas fotos pode baixar" + "fotos a mais" (preço e desconto). Usado no assistente (wz) e na aba Regras (rg).
+function montarBlocoFotos(p) {
+  var caixa = document.getElementById(p + "BlocoFotos");
+  caixa.className = "bg-slate-900/50 rounded-xl p-3 space-y-2";
+  caixa.innerHTML =
+    '<label class="flex items-center gap-2 flex-wrap">📸 Até quantas fotos pode baixar? <input id="' + p + 'MaxFotos" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="todas"> foto(s)</label>' +
+    '<div id="' + p + 'Extras" class="hidden space-y-2 pl-1">' +
+      '<label class="flex items-center gap-2 flex-wrap">💰 Se quiser mais, cada foto a mais custa R$ <input id="' + p + 'PrecoExtra" class="campo" inputmode="decimal" style="max-width:100px;padding:6px 8px" placeholder="não vendo"></label>' +
+      '<div id="' + p + 'Faixas" class="hidden space-y-2 text-xs">' +
+        '<p class="text-slate-400">Desconto por quantidade (opcional):</p>' +
+        [0, 1].map(function (i) {
+          return '<label class="flex items-center gap-2 flex-wrap">a partir de <input id="' + p + 'FxQtd' + i + '" type="number" min="2" class="campo" style="max-width:70px;padding:4px 6px" value="' + (i ? 20 : 10) + '"> fotos, R$ <input id="' + p + 'FxPreco' + i + '" class="campo" inputmode="decimal" style="max-width:90px;padding:4px 6px" placeholder="sem desconto"> cada</label>';
+        }).join("") +
+      '</div>' +
+    '</div>' +
+    '<p class="text-xs text-slate-400">Vazio = pode baixar todas. Com limite, quando o cliente chegar nele, ele pede as fotos a mais e recebe a cobrança com o seu PIX ou link. Quando você marcar como pago, elas são liberadas.</p>';
+  function atualizar() {
+    var baixar = document.getElementById(p + "Baixar").checked;
+    caixa.classList.toggle("hidden", !baixar);
+    var temLimite = !!document.getElementById(p + "MaxFotos").value;
+    document.getElementById(p + "Extras").classList.toggle("hidden", !temLimite);
+    document.getElementById(p + "Faixas").classList.toggle("hidden", !temLimite || !document.getElementById(p + "PrecoExtra").value.trim());
+  }
+  [p + "Baixar", p + "MaxFotos", p + "PrecoExtra"].forEach(function (id) { document.getElementById(id).addEventListener("input", atualizar); document.getElementById(id).addEventListener("change", atualizar); });
+  caixa.atualizar = atualizar;
+  atualizar();
+}
+function lerBlocoFotos(p) {
+  var v = function (id) { return document.getElementById(p + id).value.trim(); };
+  return {
+    max_fotos: v("MaxFotos"),
+    preco_extra: v("PrecoExtra"),
+    faixas_extra: [0, 1].map(function (i) { return { a_partir: v("FxQtd" + i), preco: v("FxPreco" + i) }; })
+  };
+}
+function preencherBlocoFotos(p, r) {
+  var reaisCampo = function (c) { return c ? (c / 100).toFixed(2).replace(".", ",") : ""; };
+  document.getElementById(p + "MaxFotos").value = (r && r.max_fotos) || "";
+  document.getElementById(p + "PrecoExtra").value = reaisCampo(r && r.preco_extra_centavos);
+  var fx = (r && r.faixas_extra) || [];
+  [0, 1].forEach(function (i) {
+    document.getElementById(p + "FxQtd" + i).value = fx[i] ? fx[i].a_partir : (i ? 20 : 10);
+    document.getElementById(p + "FxPreco" + i).value = fx[i] ? reaisCampo(fx[i].preco_centavos) : "";
+  });
+  document.getElementById(p + "BlocoFotos").atualizar();
+}
+montarBlocoFotos("wz");
+montarBlocoFotos("rg");
+
+function preencherRegras(r) {
+  document.getElementById("rgPrazo").value = "";
+  document.getElementById("rgPrazoAtual").textContent = r.vencido ? "Agora: o acesso já terminou. Escolha um prazo novo para liberar." :
+    r.acesso_ate ? "Agora: vale até " + dataHoraBr(r.acesso_ate) + "." : "Agora: sem prazo.";
+  document.getElementById("rgEscolher").checked = r.pode_escolher;
+  document.getElementById("rgLimite").value = r.limite_escolha || "";
+  document.getElementById("rgEditar").checked = r.pode_editar;
+  document.getElementById("rgBaixar").checked = r.pode_baixar;
+  document.getElementById("rgMaxDown").value = r.max_downloads || "";
+  preencherBlocoFotos("rg", r);
+  var extra = document.getElementById("rgExtrasInfo");
+  if (!extra) { extra = el("p", "text-xs text-emerald-300"); extra.id = "rgExtrasInfo"; document.getElementById("rgBlocoFotos").appendChild(extra); }
+  extra.textContent = r.fotos_extras ? "✔ O cliente já pagou " + r.fotos_extras + " foto(s) a mais: o limite agora é " + r.limite_fotos + "." : "";
+  document.getElementById("resumoRegras").textContent = textoRegras(r) || "Tudo liberado, sem prazo";
+}
+
+function desenharEdicoes(lista) {
+  var caixa = document.getElementById("listaEdicoes");
+  caixa.innerHTML = "";
+  if (!lista.length) caixa.appendChild(el("p", "text-sm text-slate-400", "Nenhum pedido de edição."));
+  var abertas = lista.filter(function (e) { return e.status === "aberto"; }).length;
+  document.getElementById("abaCliente").textContent = "❤️ Escolhas e edições" + (abertas ? " 🔴" : "");
+  lista.forEach(function (e) {
+    var l = el("div", "flex flex-wrap items-start justify-between gap-2 bg-slate-900/60 rounded-xl px-3 py-2 text-sm" + (e.status === "feito" ? " opacity-60" : ""));
+    var t = el("div", "min-w-0");
+    t.appendChild(el("p", "font-semibold break-all", e.name + (e.status === "feito" ? " · ✔ feito" : "")));
+    t.appendChild(el("p", "text-slate-300 break-words", "“" + e.comentario + "”"));
+    l.appendChild(t);
+    var b = el("button", "link whitespace-nowrap", e.status === "feito" ? "Reabrir" : "✔ Marcar como feito");
+    b.type = "button";
+    b.addEventListener("click", async function () {
+      await api("/api/portal/edicoes/status", { id: e.id, status: e.status === "feito" ? "aberto" : "feito" });
+      document.getElementById("grade").innerHTML = "";
+      paginaAtual = 0;
+      carregarPagina();
+    });
+    l.appendChild(b);
+    caixa.appendChild(l);
+  });
+}
+
+document.getElementById("btnRegras").addEventListener("click", async function () {
+  var erro = document.getElementById("rgErro");
+  erro.textContent = "";
+  var r = await api("/api/portal/albuns/regras", {
+    id: aberto.id,
+    prazo_dias: document.getElementById("rgPrazo").value,
+    pode_escolher: document.getElementById("rgEscolher").checked,
+    limite_escolha: document.getElementById("rgLimite").value,
+    pode_editar: document.getElementById("rgEditar").checked,
+    pode_baixar: document.getElementById("rgBaixar").checked,
+    max_downloads: document.getElementById("rgMaxDown").value,
+    max_fotos: lerBlocoFotos("rg").max_fotos,
+    preco_extra: lerBlocoFotos("rg").preco_extra,
+    faixas_extra: lerBlocoFotos("rg").faixas_extra
+  });
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
+  mostrar("rgOk", true);
+  setTimeout(function () { mostrar("rgOk", false); }, 2500);
+  document.getElementById("grade").innerHTML = "";
+  paginaAtual = 0;
+  carregarPagina();
+  carregarAlbuns();
+});
+
+/* ---------- álbum aberto ---------- */
+
+async function abrirAlbum(a) {
+  aberto = a;
+  paginaAtual = 0;
+  document.getElementById("abTipo").textContent = a.tipo || "";
+  document.getElementById("abTitulo").textContent = a.titulo;
+  document.getElementById("abInfo").textContent = "Cliente: " + a.cliente;
+  document.getElementById("grade").innerHTML = "";
+  mostrar("caixaFavoritas", false);
+  mostrarTela("album");
+  abaAlbum("fotos");
+  preencherCliente();
+  await carregarPagina();
+}
+
+async function carregarPagina() {
+  var r = await api("/api/portal/album?id=" + aberto.id + "&pagina=" + paginaAtual);
+  if (!r.ok) return;
+  var d = r.dados;
+  document.getElementById("abInfo").textContent = "Cliente: " + d.album.cliente + " · " + d.total + " arquivo(s) · " + formatarBytes(d.bytes);
+  if (paginaAtual === 0) {
+    preencherRegras(d.album.regras);
+    if (capaNova === undefined) mostrarCapa(d.album.capa_url);
+    aberto.descricao = d.album.descricao;
+    document.getElementById("vsDescricao").value = d.album.descricao || "";
+    desenharEdicoes(d.edicoes || []);
+  }
+  var grade = document.getElementById("grade");
+  d.arquivos.forEach(function (f) {
+    var m = el("div", "miniatura");
+    m.title = f.nome;
+    if (f.previa) {
+      var img = el("img");
+      img.loading = "lazy";
+      img.src = f.previa;
+      img.alt = f.nome;
+      m.appendChild(img);
+    } else {
+      var icone = el("div", "w-full h-full flex flex-col items-center justify-center text-xs text-slate-400 p-2 text-center");
+      icone.appendChild(el("span", "text-2xl", f.tipo === "video" ? "🎬" : "📄"));
+      icone.appendChild(el("span", "break-all mt-1", f.nome));
+      m.appendChild(icone);
+    }
+    if (f.favorito) m.appendChild(el("span", "selo", "♥"));
+    if (f.edicao === "aberto") m.appendChild(el("span", "absolute left-1.5 top-1.5 text-xs bg-amber-400 text-slate-900 font-bold rounded-full px-2", "✏️"));
+    if (f.baixados) m.title += " · baixada " + f.baixados + "x";
+    grade.appendChild(m);
+  });
+  mostrar("btnMais", (d.pagina + 1) * d.por_pagina < d.total);
+}
+
+document.getElementById("btnMais").addEventListener("click", function () {
+  paginaAtual++;
+  carregarPagina();
+});
+
+document.getElementById("btnFechar").addEventListener("click", function () {
+  mostrarTela("home");
+  aberto = null;
+  carregarAlbuns();
+});
+
+document.getElementById("btnFavoritas").addEventListener("click", async function () {
+  var r = await api("/api/portal/album?id=" + aberto.id + "&favoritas=1");
+  var lista = r.dados.favoritas || [];
+  document.getElementById("favQtd").textContent = lista.length;
+  document.getElementById("favLista").value = lista.length ? lista.join("\n") : "O cliente ainda não escolheu nenhuma foto.";
+  mostrar("caixaFavoritas", true);
+});
+
+document.getElementById("btnCopiarFav").addEventListener("click", function () {
+  navigator.clipboard.writeText(document.getElementById("favLista").value);
+  this.textContent = "Copiado!";
+});
+
+document.getElementById("btnApagarAlbum").addEventListener("click", function () {
+  paraLixeira("/api/portal/lixeira", { tipo: "album", id: aberto.id }, "o álbum \"" + aberto.titulo + "\" e todas as fotos dele", "O cliente perde o acesso a este álbum na hora.");
+});
+document.getElementById("btnRemoverCliente").addEventListener("click", function () {
+  var c = clienteDoAlbum();
+  if (!c) return;
+  paraLixeira("/api/portal/lixeira", { tipo: "cliente", id: c.id }, "o cliente \"" + c.nome + "\" com TODOS os álbuns e fotos dele", "Ele perde o acesso ao portal na hora.");
+});
+/* ---------- envio de fotos para o álbum ---------- */
+
+function enviarParaB2(url, arquivo, aoProgredir) {
+  return new Promise(function (resolve, reject) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("PUT", url);
+    xhr.upload.onprogress = function (e) { if (e.lengthComputable) aoProgredir(e.loaded); };
+    xhr.onload = function () { xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error("O armazenamento recusou o envio (" + xhr.status + ")")); };
+    xhr.onerror = function () { reject(new Error("Falha de conexão no envio")); };
+    xhr.send(arquivo);
+  });
+}
+
+document.getElementById("btnEnviar").addEventListener("click", function () {
+  document.getElementById("arquivosEnviar").click();
+});
+
+// Versão leve da foto (lado maior de 1600 px, JPG): carrega rápido para o cliente e não é o original.
+async function criarPreviaLeve(arquivo) {
+  var img;
+  try { img = await createImageBitmap(arquivo, { imageOrientation: "from-image" }); }
+  catch (e) {
+    img = await new Promise(function (ok, falha) {
+      var i = new Image();
+      i.onload = function () { ok(i); };
+      i.onerror = falha;
+      i.src = URL.createObjectURL(arquivo);
+    });
+  }
+  var esc = Math.min(1, 1600 / Math.max(img.width, img.height));
+  var c = document.createElement("canvas");
+  c.width = Math.round(img.width * esc);
+  c.height = Math.round(img.height * esc);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return await new Promise(function (ok) { c.toBlob(ok, "image/jpeg", 0.8); });
+}
+
+document.getElementById("arquivosEnviar").addEventListener("change", async function () {
+  var lista = Array.from(this.files);
+  this.value = "";
+  if (!lista.length || !aberto) return;
+  var total = lista.reduce(function (s, f) { return s + f.size; }, 0);
+  var feito = 0, falhas = 0;
+  var texto = document.getElementById("progTexto");
+  var barra = document.getElementById("progBarra");
+  mostrar("progresso", true);
+  document.getElementById("btnEnviar").disabled = true;
+  for (var i = 0; i < lista.length; i++) {
+    var f = lista[i];
+    texto.textContent = "Enviando " + (i + 1) + " de " + lista.length + ": " + f.name;
+    try {
+      var p = await api("/api/files/upload-url", { name: f.name, size: f.size, album_id: aberto.id });
+      if (!p.ok) throw new Error(p.dados.error || "Não foi possível enviar");
+      await enviarParaB2(p.dados.url, f, function (n) {
+        barra.style.width = Math.round((feito + n) / total * 100) + "%";
+      });
+      var fim = await api("/api/files/complete", { id: p.dados.id });
+      if (!fim.ok) throw new Error(fim.dados.error || "Não foi possível finalizar");
+      // Prévia leve (o cliente vê esta; o original só sai se o download estiver liberado). Se falhar, a foto continua enviada.
+      if (/^image\/(jpeg|png|webp)$/.test(f.type)) {
+        try {
+          var previa = await criarPreviaLeve(f);
+          var pp = await api("/api/files/upload-url", { name: "previa-" + f.name.replace(/\.[^.]+$/, "") + ".jpg", size: previa.size, album_id: aberto.id, previa: true });
+          if (pp.ok) {
+            await enviarParaB2(pp.dados.url, previa);
+            var fp = await api("/api/files/complete", { id: pp.dados.id });
+            if (fp.ok) await api("/api/portal/previa", { original_id: p.dados.id, previa_id: pp.dados.id });
+          }
+        } catch (e2) {}
+      }
+    } catch (e) {
+      falhas++;
+      if (/Espaço insuficiente|plano/.test(e.message)) { avisar(e.message); break; }
+    }
+    feito += f.size;
+    barra.style.width = Math.round(feito / total * 100) + "%";
+  }
+  texto.textContent = falhas ? "Terminou com " + falhas + " erro(s). Tente enviar de novo os que faltaram." : "Pronto! " + lista.length + " arquivo(s) enviado(s).";
+  document.getElementById("btnEnviar").disabled = false;
+  document.getElementById("grade").innerHTML = "";
+  paginaAtual = 0;
+  carregarPagina();
+});
+
+var telaInicial = true;
+montarEventos();
+var abaPedida = new URLSearchParams(window.location.search).get("aba");
+if (abaPedida === "abertos") filtroAtual = "aberto";
+carregar().then(function () {
+  // Vindo do painel ("Cobre dos seus clientes sem taxa"): abre direto em "Como você recebe".
+  if (abaPedida !== "receber") return;
+  mostrarTela("receber");
+  if (dados.portal) document.getElementById("instrucoes").focus({ preventScroll: true });
+}).catch(function () {});
+</script>
+<script src="/avisos.js"></script>
+<script src="/eventos-painel.js"></script>
+<script src="/assistente.js" defer></script>
+</body>
+</html>

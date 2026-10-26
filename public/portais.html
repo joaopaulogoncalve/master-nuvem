@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Portal do Cliente (demonstração) - Master Nuvem</title>
+<link rel="icon" type="image/png" href="/marca/icone-64.png">
+<link rel="apple-touch-icon" href="/marca/icone-180.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
+.glass{background:linear-gradient(160deg,#0c1a3dcc,#07102acc);border:1px solid #1e40af88;box-shadow:0 0 50px #38bdf822;backdrop-filter:blur(10px)}
+.grad{background:linear-gradient(90deg,#38bdf8,#818cf8,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.chip{padding:8px 14px;border-radius:999px;border:1px solid #1e3a8a;color:#93c5fd;font-size:14px;font-weight:600;white-space:nowrap}
+.chip-on{background:linear-gradient(90deg,#0ea5e9,#6366f1);color:#fff;border-color:transparent}
+.sub{padding:6px 12px;border-radius:999px;border:1px solid #334155;color:#cbd5e1;font-size:13px;white-space:nowrap}
+.sub-on{background:#e2e8f0;color:#0f172a;border-color:#e2e8f0}
+/* "Portal" do assinante: tela clara, cor da marca em --marca */
+.portal{background:#f8fafc;color:#0f172a;border-radius:24px;overflow:hidden;box-shadow:0 30px 80px #000a}
+.portal .topo{background:var(--marca);color:#fff}
+.portal .btn{background:var(--marca);color:#fff;border-radius:10px;padding:8px 14px;font-weight:600;font-size:14px}
+.portal .btn2{border:1px solid var(--marca);color:var(--marca);border-radius:10px;padding:7px 13px;font-weight:600;font-size:14px;background:#fff}
+.portal .cartao{background:#fff;border:1px solid #e2e8f0;border-radius:16px}
+.foto{aspect-ratio:1/1;border-radius:10px;position:relative;overflow:hidden}
+.foto .coracao{position:absolute;right:6px;bottom:6px;width:28px;height:28px;border-radius:999px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;color:#94a3b8;cursor:pointer}
+.foto .coracao.on{color:#e11d48}
+.rolagem{scrollbar-width:thin}
+</style>
+</head>
+<body class="text-white font-sans antialiased min-h-screen">
+
+<nav class="border-b border-blue-900/50 bg-slate-950/60 backdrop-blur">
+  <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+    <a href="/" class="flex items-center gap-2 font-bold text-xl"><img src="/marca/mascote.svg" alt="" class="h-8 w-auto">Master<span class="grad">Nuvem</span></a>
+    <span class="text-xs font-semibold text-amber-300 border border-amber-400/40 rounded-full px-3 py-1">Demonstração</span>
+  </div>
+</nav>
+
+<main class="max-w-6xl mx-auto px-4 py-10 space-y-8">
+  <header class="max-w-3xl">
+    <h1 class="text-3xl md:text-4xl font-bold">Portal do Cliente <span class="grad">com a sua marca</span></h1>
+    <p class="text-slate-300 mt-3">Você guarda os arquivos na Master Nuvem e o <strong>seu cliente</strong> entra num portal com o seu nome, a sua cor e o seu logo. Ele não precisa de conta no Google nem de espaço próprio: só quem gasta espaço é você.</p>
+  </header>
+
+  <section>
+    <p class="text-sm text-slate-400 mb-3">Escolha o seu ramo:</p>
+    <div id="nichos" class="flex flex-wrap gap-2"></div>
+    <div id="blocoSub" class="hidden mt-4">
+      <p class="text-sm text-slate-400 mb-2">Tipo de trabalho:</p>
+      <div id="subnichos" class="flex flex-wrap gap-2"></div>
+    </div>
+  </section>
+
+  <section class="grid lg:grid-cols-5 gap-6 items-start">
+    <!-- O que o cliente final vê -->
+    <div class="lg:col-span-3">
+      <p class="text-sm text-slate-400 mb-3">👇 Assim o <strong class="text-white">seu cliente</strong> vê o portal:</p>
+      <div id="portal" class="portal"></div>
+    </div>
+
+    <!-- O que o assinante ganha -->
+    <aside class="lg:col-span-2 glass rounded-3xl p-6">
+      <h2 class="text-lg font-bold">O que você ganha</h2>
+      <ul id="recursos" class="mt-4 space-y-3 text-sm text-slate-300"></ul>
+      <div class="mt-6 border-t border-blue-900/60 pt-5 text-sm text-slate-400 space-y-2">
+        <p>✔ Endereço próprio: <span id="endereco" class="text-cyan-300 break-all"></span></p>
+        <p>✔ Cada cliente com login e senha, vendo <strong class="text-white">só a pasta dele</strong>.</p>
+        <p>✔ Você paga só pelo espaço que usa, a partir de 1 GB.</p>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<script>
+// Dados de exemplo (fictícios) de cada ramo.
+var NICHOS = [
+  {
+    id: "foto", nome: "📸 Fotografia e vídeo", empresa: "Estúdio Aurora", slug: "estudio-aurora", cor: "#be185d",
+    cliente: "Ana", tipo: "galeria",
+    subnichos: [
+      { nome: "Casamento", album: "Casamento Ana & Pedro", fotos: 620, videos: 2, cores: ["#fbcfe8", "#f9a8d4", "#fde68a", "#e9d5ff"] },
+      { nome: "Pré-wedding", album: "Ensaio pré-wedding Ana & Pedro", fotos: 180, videos: 1, cores: ["#fed7aa", "#fecdd3", "#bae6fd", "#fef3c7"] },
+      { nome: "15 anos", album: "15 anos da Júlia", fotos: 540, videos: 2, cores: ["#ddd6fe", "#fbcfe8", "#c7d2fe", "#fce7f3"] },
+      { nome: "Aniversário infantil", album: "Aniversário de 5 anos do Theo", fotos: 380, videos: 1, cores: ["#bfdbfe", "#fde68a", "#bbf7d0", "#fecaca"] },
+      { nome: "Aniversário adulto", album: "40 anos do Marcos", fotos: 310, videos: 1, cores: ["#fde68a", "#fed7aa", "#e2e8f0", "#fecaca"] },
+      { nome: "Smash the cake", album: "Smash the cake da Laura", fotos: 120, videos: 1, cores: ["#fbcfe8", "#fef9c3", "#bae6fd", "#ddd6fe"] },
+      { nome: "Chá revelação / chá de bebê", album: "Chá revelação da família Souza", fotos: 260, videos: 1, cores: ["#bfdbfe", "#fbcfe8", "#fef3c7", "#e0e7ff"] },
+      { nome: "Gestante", album: "Ensaio gestante da Carla", fotos: 90, videos: 0, cores: ["#fde68a", "#fecdd3", "#e7e5e4", "#fed7aa"] },
+      { nome: "Newborn", album: "Newborn do Miguel", fotos: 75, videos: 0, cores: ["#e0f2fe", "#fef3c7", "#f5f5f4", "#fce7f3"] },
+      { nome: "Ensaio de família", album: "Ensaio da família Oliveira", fotos: 140, videos: 0, cores: ["#bbf7d0", "#fde68a", "#bae6fd", "#fed7aa"] },
+      { nome: "Batizado", album: "Batizado da Sofia", fotos: 210, videos: 1, cores: ["#f5f5f4", "#e0f2fe", "#fef3c7", "#e9d5ff"] },
+      { nome: "Formatura", album: "Formatura Direito 2026", fotos: 900, videos: 2, cores: ["#c7d2fe", "#fde68a", "#e2e8f0", "#ddd6fe"] },
+      { nome: "Book / moda", album: "Book da Bianca", fotos: 85, videos: 0, cores: ["#e7e5e4", "#fecdd3", "#d6d3d1", "#fbcfe8"] },
+      { nome: "Corporativo e eventos", album: "Convenção de vendas 2026", fotos: 450, videos: 3, cores: ["#bfdbfe", "#e2e8f0", "#c7d2fe", "#bae6fd"] },
+      { nome: "Produto e gastronomia", album: "Cardápio novo do Restaurante Sabor", fotos: 60, videos: 2, cores: ["#fed7aa", "#fef3c7", "#fecaca", "#bbf7d0"] },
+      { nome: "Imóveis", album: "Apartamento 302 - Setor Bueno", fotos: 45, videos: 1, cores: ["#e2e8f0", "#bae6fd", "#f5f5f4", "#fef3c7"] },
+      { nome: "Shows e esportes", album: "Show de lançamento da banda", fotos: 330, videos: 4, cores: ["#c4b5fd", "#f0abfc", "#93c5fd", "#fda4af"] }
+    ],
+    recursos: [
+      "Galeria de fotos e vídeos por evento, com capa e prazo de entrega.",
+      "O cliente marca as <strong>favoritas</strong> com um coração para escolher as fotos do álbum.",
+      "Botão “Baixar tudo” e download foto a foto, em alta qualidade.",
+      "Marca d'água opcional na prévia até o pagamento final.",
+      "Serve para foto e para vídeo (videomaker): vídeos em alta qualidade para baixar."
+    ]
+  },
+  {
+    id: "grafica", nome: "🖨️ Gráfica e design", empresa: "Gráfica Ponto Final", slug: "grafica-ponto-final", cor: "#0f766e",
+    cliente: "Roberto", tipo: "aprovacao",
+    itens: [
+      { nome: "Cartão de visita - frente e verso", versao: "Versão 3", estado: "Aguardando sua aprovação" },
+      { nome: "Banner 2 x 1 m - inauguração", versao: "Versão 1", estado: "Aguardando sua aprovação" },
+      { nome: "Panfleto A5 - promoção de novembro", versao: "Versão 2", estado: "Aprovado ✔" }
+    ],
+    pastas: ["Envie seu logo e textos", "Arquivos finais para impressão", "Notas e orçamentos"],
+    recursos: [
+      "O cliente <strong>envia a arte</strong> e o logo direto no portal, sem WhatsApp travando arquivo grande.",
+      "Provas com número de versão e botões <strong>Aprovar</strong> ou <strong>Pedir ajuste</strong> com comentário.",
+      "Registro de quem aprovou e quando: fim da discussão “eu não aprovei isso”.",
+      "Arquivos finais (PDF, CDR, AI) guardados para o próximo pedido."
+    ]
+  },
+  {
+    id: "contador", nome: "📊 Contabilidade", empresa: "Contábil Horizonte", slug: "contabil-horizonte", cor: "#1d4ed8",
+    cliente: "Padaria Bom Dia", tipo: "meses",
+    meses: ["Outubro/2026", "Setembro/2026", "Agosto/2026"],
+    docs: [
+      { nome: "Guia DAS - vence 20/11", de: "Do contador", alerta: true },
+      { nome: "Folha de pagamento e holerites", de: "Do contador" },
+      { nome: "Notas fiscais de entrada", de: "Enviado por você" },
+      { nome: "Extratos bancários", de: "Pendente: envie até dia 5", pendente: true }
+    ],
+    recursos: [
+      "Uma pasta por cliente e por mês: tudo organizado sem e-mail perdido.",
+      "O cliente <strong>envia</strong> notas, extratos e recibos; você publica guias, folha e balanços.",
+      "Lista do que está <strong>pendente</strong> em cada mês.",
+      "Histórico de anos guardado com segurança, pronto para fiscalização."
+    ]
+  },
+  {
+    id: "advocacia", nome: "⚖️ Advocacia", empresa: "Rocha & Lima Advogados", slug: "rocha-lima", cor: "#7c2d12",
+    cliente: "Sr. Paulo", tipo: "pastas",
+    pastas: [
+      { nome: "Ação trabalhista nº 0012345", info: "8 documentos · atualizado ontem" },
+      { nome: "Inventário da família", info: "14 documentos · atualizado há 5 dias" },
+      { nome: "Envie seus documentos (RG, comprovantes)", info: "Pasta para você mandar arquivos" }
+    ],
+    recursos: [
+      "Uma pasta por processo, com peças, decisões e comprovantes.",
+      "O cliente envia documentos pessoais sem expor nada no WhatsApp.",
+      "Acesso só com login e senha, com sigilo entre clientes."
+    ]
+  },
+  {
+    id: "arquitetura", nome: "📐 Arquitetura e engenharia", empresa: "Traço Arquitetura", slug: "traco-arquitetura", cor: "#4d7c0f",
+    cliente: "Mariana", tipo: "aprovacao",
+    itens: [
+      { nome: "Planta baixa - casa térrea", versao: "Revisão 4", estado: "Aguardando sua aprovação" },
+      { nome: "Renders 3D - sala e cozinha", versao: "Revisão 2", estado: "Aguardando sua aprovação" },
+      { nome: "Projeto elétrico", versao: "Revisão 1", estado: "Aprovado ✔" }
+    ],
+    pastas: ["Projeto executivo (PDF e DWG)", "Fotos da obra", "Contratos e ART"],
+    recursos: [
+      "Projetos com revisões numeradas e aprovação do cliente.",
+      "Plantas e renders pesados sem limite de anexo de e-mail.",
+      "Pasta de fotos da obra para o cliente acompanhar."
+    ]
+  },
+  {
+    id: "agencia", nome: "📣 Agência e social media", empresa: "Agência Pulso", slug: "agencia-pulso", cor: "#7e22ce",
+    cliente: "Loja Bella", tipo: "aprovacao",
+    itens: [
+      { nome: "Posts de novembro (12 artes)", versao: "Calendário v2", estado: "Aguardando sua aprovação" },
+      { nome: "Vídeo Reels - Black Friday", versao: "Corte 1", estado: "Aguardando sua aprovação" },
+      { nome: "Relatório de resultados - outubro", versao: "PDF", estado: "Disponível" }
+    ],
+    pastas: ["Fotos dos produtos (envie aqui)", "Identidade visual", "Relatórios mensais"],
+    recursos: [
+      "Calendário de posts para o cliente aprovar de uma vez.",
+      "O cliente manda fotos e vídeos dos produtos em alta qualidade.",
+      "Relatórios mensais guardados num lugar só."
+    ]
+  },
+  {
+    id: "escola", nome: "🎓 Escolas e cursos", empresa: "Instituto Saber", slug: "instituto-saber", cor: "#b45309",
+    cliente: "Aluno(a)", tipo: "pastas",
+    pastas: [
+      { nome: "Aula 1 - Introdução", info: "Vídeo + apostila PDF" },
+      { nome: "Aula 2 - Prática", info: "Vídeo + exercícios" },
+      { nome: "Entregue seu trabalho final", info: "Pasta para você enviar" }
+    ],
+    recursos: [
+      "Materiais por turma ou por curso: vídeos, apostilas e exercícios.",
+      "Cada aluno com o próprio acesso.",
+      "Entrega de trabalhos direto no portal."
+    ]
+  },
+  {
+    id: "imobiliaria", nome: "🏠 Imobiliária", empresa: "Lar Ideal Imóveis", slug: "lar-ideal", cor: "#0e7490",
+    cliente: "Família Costa", tipo: "pastas",
+    pastas: [
+      { nome: "Apartamento 1204 - documentos para o contrato", info: "Pendente: comprovante de renda" },
+      { nome: "Fotos e vídeo do imóvel", info: "42 fotos · 1 vídeo" },
+      { nome: "Contrato assinado e laudo de vistoria", info: "3 arquivos" }
+    ],
+    recursos: [
+      "Uma pasta por negociação, com tudo o que o banco e o cartório pedem.",
+      "Cliente envia documentos com segurança, sem WhatsApp.",
+      "Fotos e vídeos do imóvel para mostrar a interessados."
+    ]
+  }
+];
+
+var atual = NICHOS[0];
+var subAtual = 0;
+
+function el(tag, classe, html) {
+  var e = document.createElement(tag);
+  if (classe) e.className = classe;
+  if (html !== undefined) e.innerHTML = html;
+  return e;
+}
+
+function iniciais(nome) {
+  return nome.split(" ").filter(function (p) { return p.length > 2; }).slice(0, 2).map(function (p) { return p[0]; }).join("").toUpperCase();
+}
+
+function topoPortal(n) {
+  return "<div class=\"topo px-5 py-4 flex items-center justify-between\">" +
+    "<div class=\"flex items-center gap-3\"><div class=\"w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center font-bold\">" + iniciais(n.empresa) + "</div>" +
+    "<div><p class=\"font-bold leading-tight\">" + n.empresa + "</p><p class=\"text-xs opacity-80\">Área do cliente</p></div></div>" +
+    "<p class=\"text-sm opacity-90\">Olá, " + n.cliente + " · Sair</p></div>";
+}
+
+function portalGaleria(n) {
+  var s = n.subnichos[subAtual];
+  var fotos = "";
+  for (var i = 0; i < 8; i++) {
+    var c1 = s.cores[i % 4], c2 = s.cores[(i + 1) % 4];
+    var video = i === 2 && s.videos > 0;
+    fotos += "<div class=\"foto\" style=\"background:linear-gradient(135deg," + c1 + "," + c2 + ")\">" +
+      (video ? "<div class=\"absolute inset-0 flex items-center justify-center text-3xl text-white/90\">&#9654;&#xFE0E;</div>" : "") +
+      "<span class=\"coracao" + (i === 1 || i === 4 ? " on" : "") + "\" onclick=\"this.classList.toggle('on')\">♥</span></div>";
+  }
+  return topoPortal(n) +
+    "<div class=\"p-5 space-y-4\">" +
+    "<div class=\"cartao p-4 flex flex-wrap items-center justify-between gap-3\">" +
+    "<div><p class=\"text-xs uppercase tracking-wider text-slate-500\">" + s.nome + "</p><p class=\"text-lg font-bold\">" + s.album + "</p>" +
+    "<p class=\"text-sm text-slate-500\">" + s.fotos + " fotos" + (s.videos ? " · " + s.videos + " vídeo(s)" : "") + " · entregue em 18/10/2026</p></div>" +
+    "<div class=\"flex gap-2\"><button class=\"btn2\">♥ Minhas favoritas (2)</button><button class=\"btn\">⬇ Baixar tudo</button></div></div>" +
+    "<div class=\"grid grid-cols-3 sm:grid-cols-4 gap-2\">" + fotos + "</div>" +
+    "<p class=\"text-xs text-slate-500 text-center\">Toque no ♥ para escolher as fotos do seu álbum.</p></div>";
+}
+
+function portalAprovacao(n) {
+  var itens = n.itens.map(function (it) {
+    var aguardando = it.estado.indexOf("Aguardando") === 0;
+    return "<div class=\"cartao p-4 flex flex-wrap items-center justify-between gap-3\">" +
+      "<div class=\"flex items-center gap-3\"><div class=\"w-14 h-14 rounded-lg\" style=\"background:linear-gradient(135deg,#e2e8f0,#cbd5e1)\"></div>" +
+      "<div><p class=\"font-semibold\">" + it.nome + "</p><p class=\"text-sm text-slate-500\">" + it.versao + " · <span class=\"" + (aguardando ? "text-amber-600" : "text-emerald-600") + "\">" + it.estado + "</span></p></div></div>" +
+      (aguardando ? "<div class=\"flex gap-2\"><button class=\"btn2\">Pedir ajuste</button><button class=\"btn\">Aprovar</button></div>" : "<button class=\"btn2\">⬇ Baixar</button>") +
+      "</div>";
+  }).join("");
+  var pastas = n.pastas.map(function (p) {
+    return "<div class=\"cartao p-3 flex items-center gap-3\"><span class=\"text-2xl\">📁</span><span class=\"text-sm font-medium\">" + p + "</span></div>";
+  }).join("");
+  return topoPortal(n) +
+    "<div class=\"p-5 space-y-4\"><p class=\"font-bold\">Para aprovar</p>" + itens +
+    "<p class=\"font-bold pt-2\">Pastas</p><div class=\"grid sm:grid-cols-3 gap-2\">" + pastas + "</div></div>";
+}
+
+function portalMeses(n) {
+  var abas = n.meses.map(function (m, i) {
+    return "<span class=\"" + (i === 0 ? "btn" : "btn2") + "\">" + m + "</span>";
+  }).join("");
+  var docs = n.docs.map(function (d) {
+    return "<div class=\"cartao p-4 flex flex-wrap items-center justify-between gap-3\">" +
+      "<div class=\"flex items-center gap-3\"><span class=\"text-2xl\">" + (d.pendente ? "⏳" : "📄") + "</span>" +
+      "<div><p class=\"font-semibold\">" + d.nome + "</p><p class=\"text-sm " + (d.pendente ? "text-amber-600" : d.alerta ? "text-red-600" : "text-slate-500") + "\">" + d.de + "</p></div></div>" +
+      (d.pendente ? "<button class=\"btn\">⬆ Enviar arquivo</button>" : "<button class=\"btn2\">⬇ Baixar</button>") + "</div>";
+  }).join("");
+  return topoPortal(n) +
+    "<div class=\"p-5 space-y-4\"><div class=\"flex gap-2 overflow-x-auto rolagem pb-1\">" + abas + "</div>" + docs + "</div>";
+}
+
+function portalPastas(n) {
+  var pastas = n.pastas.map(function (p) {
+    var envio = p.nome.indexOf("Envie") === 0 || p.nome.indexOf("Entregue") === 0;
+    return "<div class=\"cartao p-4 flex flex-wrap items-center justify-between gap-3\">" +
+      "<div class=\"flex items-center gap-3\"><span class=\"text-2xl\">" + (envio ? "📤" : "📁") + "</span>" +
+      "<div><p class=\"font-semibold\">" + p.nome + "</p><p class=\"text-sm text-slate-500\">" + p.info + "</p></div></div>" +
+      "<button class=\"" + (envio ? "btn" : "btn2") + "\">" + (envio ? "⬆ Enviar" : "Abrir") + "</button></div>";
+  }).join("");
+  return topoPortal(n) + "<div class=\"p-5 space-y-3\">" + pastas + "</div>";
+}
+
+function desenhar() {
+  var n = atual;
+  // botões de ramo
+  var caixa = document.getElementById("nichos");
+  caixa.innerHTML = "";
+  NICHOS.forEach(function (x) {
+    var b = el("button", "chip" + (x === n ? " chip-on" : ""), x.nome);
+    b.type = "button";
+    b.addEventListener("click", function () { atual = x; subAtual = 0; desenhar(); });
+    caixa.appendChild(b);
+  });
+  // subnichos (só fotografia)
+  var blocoSub = document.getElementById("blocoSub");
+  blocoSub.classList.toggle("hidden", !n.subnichos);
+  if (n.subnichos) {
+    var subs = document.getElementById("subnichos");
+    subs.innerHTML = "";
+    n.subnichos.forEach(function (s, i) {
+      var b = el("button", "sub" + (i === subAtual ? " sub-on" : ""), s.nome);
+      b.type = "button";
+      b.addEventListener("click", function () { subAtual = i; desenhar(); });
+      subs.appendChild(b);
+    });
+  }
+  // portal
+  var portal = document.getElementById("portal");
+  portal.style.setProperty("--marca", n.cor);
+  if (n.tipo === "galeria") portal.innerHTML = portalGaleria(n);
+  else if (n.tipo === "aprovacao") portal.innerHTML = portalAprovacao(n);
+  else if (n.tipo === "meses") portal.innerHTML = portalMeses(n);
+  else portal.innerHTML = portalPastas(n);
+  // recursos
+  document.getElementById("recursos").innerHTML = n.recursos.map(function (r) {
+    return "<li class=\"flex gap-2\"><span class=\"text-cyan-300\">✔</span><span>" + r + "</span></li>";
+  }).join("");
+  document.getElementById("endereco").textContent = "masternuvem.com.br/p/" + n.slug;
+}
+
+desenhar();
+</script>
+<script src="/assistente.js" defer></script>
+</body>
+</html>

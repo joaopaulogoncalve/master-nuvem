@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Entrar - Master Nuvem</title>
+<link rel="icon" type="image/png" href="/marca/icone-64.png">
+<link rel="apple-touch-icon" href="/marca/icone-180.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
@@ -18,14 +20,18 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
 .aba-on{background:linear-gradient(90deg,#0ea5e9,#6366f1);color:#fff}
 .olho{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:600;color:#93c5fd;padding:6px 8px}
 .olho:hover{color:#fff}
+.mascote-entrar{animation:flutuar 5s ease-in-out infinite;filter:drop-shadow(0 0 24px #38bdf855)}
+@keyframes flutuar{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@media (prefers-reduced-motion:reduce){.mascote-entrar{animation:none}}
 </style>
 </head>
 <body class="text-white font-sans antialiased min-h-screen flex items-center justify-center px-4">
 
 <main class="glass w-full max-w-md rounded-3xl p-8">
-  <a href="/" class="block text-center font-bold text-2xl mb-6">Master<span class="grad">Nuvem</span></a>
+  <a href="/" class="block text-center mb-6"><img src="/marca/mascote.svg" alt="" class="h-20 w-auto mx-auto mascote-entrar"><span class="font-bold text-2xl">Master<span class="grad">Nuvem</span></span></a>
 
   <div id="etapaSenha">
+    <p id="avisoVolta" class="hidden text-sm text-cyan-300 text-center mb-4">Entre ou crie sua conta para contratar o plano.</p>
     <div class="flex gap-2 mb-6">
       <button type="button" id="abaEntrar" class="aba aba-on">Entrar</button>
       <button type="button" id="abaCriar" class="aba">Criar conta</button>
@@ -48,8 +54,24 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         </div>
         <p id="dicaSenha" class="hidden text-xs text-slate-400 mt-1">Use pelo menos 8 caracteres.</p>
       </div>
+      <label id="blocoAceite" class="hidden flex items-start gap-2 text-sm text-slate-300">
+        <input id="aceite" type="checkbox" class="mt-1">
+        <span>Li e aceito os <a href="/termos" target="_blank" class="text-cyan-300 underline">Termos de uso</a> e a <a href="/privacidade" target="_blank" class="text-cyan-300 underline">Política de privacidade</a>.</span>
+      </label>
       <p id="erro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
       <button type="submit" id="botao" class="cta w-full font-bold py-3 rounded-xl transition">Entrar</button>
+      <button type="button" id="linkEsqueci" class="block mx-auto text-sm text-blue-300 hover:text-white">Esqueci minha senha</button>
+    </form>
+  </div>
+
+  <div id="etapaEsqueci" class="hidden">
+    <h2 class="text-lg font-bold text-center mb-2">Esqueci minha senha</h2>
+    <p class="text-sm text-slate-400 text-center mb-5">Digite o e-mail da sua conta. Vamos mandar um link para você criar uma senha nova.</p>
+    <form id="formEsqueci" class="space-y-4">
+      <input id="emailEsqueci" type="email" class="campo" autocomplete="email" placeholder="seu@email.com" required>
+      <p id="msgEsqueci" class="text-sm min-h-[1.25rem]"></p>
+      <button type="submit" id="botaoEsqueci" class="cta w-full font-bold py-3 rounded-xl transition">Enviar link</button>
+      <button type="button" id="voltarLogin" class="block mx-auto text-sm text-blue-300 hover:text-white">Voltar para o login</button>
     </form>
   </div>
 
@@ -74,7 +96,9 @@ function definirModo(novo) {
   document.getElementById("abaCriar").className = "aba" + (criar ? " aba-on" : "");
   document.getElementById("blocoNome").classList.toggle("hidden", !criar);
   document.getElementById("dicaSenha").classList.toggle("hidden", !criar);
+  document.getElementById("blocoAceite").classList.toggle("hidden", !criar);
   document.getElementById("botao").textContent = criar ? "Criar minha conta" : "Entrar";
+  document.getElementById("linkEsqueci").classList.toggle("hidden", criar);
   document.getElementById("senha").setAttribute("autocomplete", criar ? "new-password" : "current-password");
   document.getElementById("erro").textContent = "";
 }
@@ -98,8 +122,14 @@ async function enviar(ev) {
   var dados = {
     email: document.getElementById("email").value,
     senha: document.getElementById("senha").value,
-    nome: document.getElementById("nome").value
+    nome: document.getElementById("nome").value,
+    aceite: document.getElementById("aceite").checked
   };
+  if (modo === "criar" && !dados.aceite) {
+    erro.textContent = "Para criar a conta, aceite os Termos de uso e a Política de privacidade.";
+    botao.disabled = false;
+    return;
+  }
 
   try {
     var resp = await fetch(rota, {
@@ -115,7 +145,8 @@ async function enviar(ev) {
       return;
     }
     if (resp.ok) {
-      window.location.href = "/painel";
+      // Conta nova: o painel mostra a dica de ativar a verificação em duas etapas.
+      window.location.href = modo === "criar" && destino() === "/painel" ? "/painel?bemvindo=1" : destino();
       return;
     }
     erro.textContent = json.error || "Não foi possível continuar.";
@@ -140,7 +171,7 @@ async function enviar2fa(ev) {
     });
     var json = await resp.json();
     if (resp.ok) {
-      window.location.href = "/painel";
+      window.location.href = destino();
       return;
     }
     erro.textContent = json.error || "Código incorreto.";
@@ -159,9 +190,63 @@ document.getElementById("olho").addEventListener("click", alternarSenha);
 document.getElementById("formulario").addEventListener("submit", enviar);
 document.getElementById("formulario2fa").addEventListener("submit", enviar2fa);
 
+function mostrarEsqueci(sim) {
+  document.getElementById("etapaSenha").classList.toggle("hidden", sim);
+  document.getElementById("etapaEsqueci").classList.toggle("hidden", !sim);
+  if (sim) {
+    document.getElementById("emailEsqueci").value = document.getElementById("email").value;
+    document.getElementById("msgEsqueci").textContent = "";
+    document.getElementById("emailEsqueci").focus();
+  }
+}
+
+async function enviarEsqueci(ev) {
+  ev.preventDefault();
+  var botao = document.getElementById("botaoEsqueci");
+  var msg = document.getElementById("msgEsqueci");
+  msg.textContent = "";
+  botao.disabled = true;
+  try {
+    var resp = await fetch("/api/senha/esqueci", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: document.getElementById("emailEsqueci").value })
+    });
+    if (!resp.ok) throw new Error();
+    msg.className = "text-sm text-emerald-300 min-h-[1.25rem]";
+    msg.textContent = "Pronto! Se esse e-mail tiver conta, o link chega em alguns minutos. Olhe também o Spam.";
+  } catch (e) {
+    msg.className = "text-sm text-red-400 min-h-[1.25rem]";
+    msg.textContent = "Erro de conexão. Tente novamente.";
+  }
+  botao.disabled = false;
+}
+
+document.getElementById("linkEsqueci").addEventListener("click", function () { mostrarEsqueci(true); });
+document.getElementById("voltarLogin").addEventListener("click", function () { mostrarEsqueci(false); });
+document.getElementById("formEsqueci").addEventListener("submit", enviarEsqueci);
+
+// Para onde ir depois do login: só caminhos deste site (ex.: voltar para a contratação).
+function destino() {
+  var volta = new URLSearchParams(window.location.search).get("volta") || "";
+  // O navegador ignora tabs e quebras de linha no endereço ("/\t/golpe.com" vira "//golpe.com"):
+  // por isso confere o endereço já montado, e não só o começo do texto.
+  if (volta.charAt(0) !== "/") return "/painel";
+  try {
+    var alvo = new URL(volta, window.location.origin);
+    if (alvo.origin === window.location.origin) return alvo.pathname + alvo.search + alvo.hash;
+  } catch (e) {}
+  return "/painel";
+}
+
+if (new URLSearchParams(window.location.search).get("volta")) {
+  document.getElementById("avisoVolta").classList.remove("hidden");
+}
+
 fetch("/api/me").then(function (r) {
-  if (r.ok) window.location.href = "/painel";
+  if (r.ok) window.location.href = destino();
 });
 </script>
+<script src="/assistente.js" defer></script>
 </body>
 </html>

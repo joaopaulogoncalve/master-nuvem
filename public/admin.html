@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Painel admin - Master Nuvem</title>
+<link rel="icon" type="image/png" href="/marca/icone-64.png">
+<link rel="apple-touch-icon" href="/marca/icone-180.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="/avisos.js"></script>
+<style>
+body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
+.glass{background:linear-gradient(160deg,#0c1a3dcc,#07102acc);border:1px solid #1e40af88;box-shadow:0 0 50px #38bdf822;backdrop-filter:blur(10px)}
+.grad{background:linear-gradient(90deg,#38bdf8,#818cf8,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+.cta{background:linear-gradient(90deg,#0ea5e9,#6366f1);box-shadow:0 0 30px #38bdf866}
+.cta:hover{filter:brightness(1.15)}
+.cta:disabled{opacity:.6}
+.campo{width:100%;padding:10px 12px;border-radius:12px;background:#0a1633;border:1px solid #1e3a8a;color:#fff;outline:none}
+.campo:focus{border-color:#38bdf8}
+.barra{height:6px;border-radius:9px;background:#1e293b;overflow:hidden}
+.barra i{display:block;height:100%;background:linear-gradient(90deg,#38bdf8,#818cf8)}
+</style>
+</head>
+<body class="text-white font-sans antialiased min-h-screen">
+
+<nav class="border-b border-blue-900/50 bg-slate-950/60 backdrop-blur">
+  <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+    <a href="/" class="flex items-center gap-2 font-bold text-xl"><img src="/marca/mascote.svg" alt="" class="h-8 w-auto">Master<span class="grad">Nuvem</span> <span class="text-sm text-violet-300 font-semibold">admin</span></a>
+    <div class="flex gap-5 text-sm font-semibold text-blue-300">
+      <a href="/painel" class="hover:text-white">Painel</a>
+      <button type="button" id="sair" class="hover:text-white">Sair</button>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-5xl mx-auto px-4 py-10 space-y-6">
+  <p id="carregando" class="text-slate-400">Carregando...</p>
+
+  <div id="conteudo" class="hidden space-y-6">
+    <div id="adInicio">
+      <h1 class="text-2xl font-bold mb-1">Painel <span class="grad">admin</span></h1>
+      <p class="text-sm text-slate-400 mb-4">🔴 = precisa de você. Toque num quadrado para abrir.</p>
+      <div id="adHome" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div>
+    </div>
+    <button type="button" id="adVoltar" class="hidden text-sm font-semibold text-cyan-300 hover:text-white">← Voltar ao início</button>
+
+    <div id="secSentinela" class="adSec hidden glass rounded-3xl p-6 space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-lg font-bold">🛡️ Sentinela <span class="text-sm font-normal text-slate-400">vigia de segurança a cada 20 minutos</span></h2>
+        <button type="button" id="btnVistos" class="text-sm font-semibold text-cyan-300 hover:text-white">Marcar alertas como vistos</button>
+      </div>
+      <div id="senResumo" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm"></div>
+      <div id="senTrancadas" class="space-y-2"></div>
+      <details id="senDetalhes">
+        <summary class="cursor-pointer font-semibold">Alertas (<span id="senQtd">0</span>) <span id="senNovos" class="text-amber-300"></span></summary>
+        <div id="senAlertas" class="space-y-1 mt-2"></div>
+      </details>
+      <details class="text-xs text-slate-500"><summary class="cursor-pointer">Como a sentinela funciona?</summary><p class="mt-1">A sentinela tranca a conta quando: alguém acerta a senha mas erra o código de 2 etapas várias vezes, ou a mesma conta entra de muitas conexões diferentes em 1 hora.
+        A pessoa recebe e-mail e volta criando uma senha nova. Também avisa por e-mail: muitas senhas erradas, muitos downloads de uma vez, conta de administrador nova e cada entrada no admin.</p></details>
+    </div>
+
+    <div id="secBancos" class="adSec hidden glass rounded-3xl p-6 space-y-3">
+      <h2 class="text-lg font-bold">🏦 Bancos <span class="text-sm font-normal text-slate-400">links oficiais do "Como recebo" e da Nuvenzinha</span></h2>
+      <div id="bcPedidos" class="space-y-2"></div>
+      <button type="button" id="bcNovo" class="text-sm font-semibold text-cyan-300 hover:text-white">➕ Adicionar banco</button>
+      <div id="bcForm" class="hidden bg-slate-900/50 rounded-2xl p-4 space-y-2 text-sm">
+        <p id="bcTitulo" class="font-semibold">Adicionar banco</p>
+        <p id="bcAviso" class="hidden text-xs text-amber-300"></p>
+        <div class="grid md:grid-cols-2 gap-2">
+          <input id="bcNome" class="campo" maxlength="60" placeholder="Nome (ex.: Banrisul)">
+          <input id="bcPalavras" class="campo" maxlength="300" placeholder="Palavras para a Nuvenzinha achar (ex.: banrisul,banco do rio grande)">
+          <input id="bcPix" class="campo" maxlength="300" placeholder="Link oficial: cadastrar chave PIX (https://...)">
+          <input id="bcPag" class="campo" maxlength="300" placeholder="Link oficial: criar link de pagamento (opcional)">
+        </div>
+        <label class="flex items-center gap-2"><input id="bcApi" type="checkbox"> Tem API de pagamentos (confirmação automática possível no futuro)</label>
+        <p class="text-xs text-slate-500">Use só links do site oficial do banco (confira o endereço). Peça ao Claude para achar o link certo, se precisar.</p>
+        <p id="bcErro" class="text-red-400 min-h-[1.25rem]"></p>
+        <div class="flex gap-3"><button type="button" id="bcSalvar" class="cta font-bold px-4 py-2 rounded-xl">Salvar</button><button type="button" id="bcCancelar" class="hidden text-slate-400 hover:text-white">Cancelar</button></div>
+      </div>
+      <div id="bcLista" class="space-y-1"></div>
+    </div>
+
+    <div id="secBlog" class="adSec hidden glass rounded-3xl p-6 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-lg font-bold">📝 Blog <span class="text-sm font-normal text-slate-400">agenda de publicação</span></h2>
+        <a href="/blog" target="_blank" class="text-sm font-semibold text-cyan-300 hover:text-white">Abrir o blog →</a>
+      </div>
+      <p class="text-xs text-slate-500">Os posts agendados entram no ar sozinhos na data (horário de Brasília), sem precisar fazer nada. Para incluir posts novos, peça ao Claude: eles ficam em src/blog-posts.js.</p>
+      <div id="listaBlog" class="space-y-1"></div>
+    </div>
+
+    <div id="secB2" class="adSec hidden glass rounded-3xl p-6">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <h2 class="text-lg font-bold">💾 Backblaze B2 <span class="text-sm font-normal text-slate-400">armazenamento e custo</span></h2>
+        <button type="button" id="btnB2" class="text-sm font-semibold text-cyan-300 hover:text-white">Atualizar</button>
+      </div>
+      <p id="b2Carregando" class="text-sm text-slate-400">Consultando o Backblaze...</p>
+      <div id="b2Dados" class="hidden">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div><p class="text-xs text-slate-400 uppercase tracking-wider">Guardado no B2</p><p id="b2Guardado" class="text-2xl font-bold mt-1">-</p><p id="b2Objetos" class="text-xs text-slate-500 mt-1"></p></div>
+          <div><p class="text-xs text-slate-400 uppercase tracking-wider">Custo B2 / mês</p><p id="b2Custo" class="text-2xl font-bold mt-1 text-amber-300">-</p><p id="b2CustoUsd" class="text-xs text-slate-500 mt-1"></p></div>
+          <div><p class="text-xs text-slate-400 uppercase tracking-wider">Espaço vendido</p><p id="b2Vendido" class="text-2xl font-bold mt-1">-</p><p id="b2VendidoCusto" class="text-xs text-slate-500 mt-1"></p></div>
+          <div><p class="text-xs text-slate-400 uppercase tracking-wider">Lucro / mês</p><p id="b2Lucro" class="text-2xl font-bold mt-1">-</p><p class="text-xs text-slate-500 mt-1">receita − custo B2, antes das taxas do Mercado Pago</p></div>
+        </div>
+        <p id="b2Aviso" class="hidden text-sm text-amber-300 mt-4"></p>
+        <p id="b2Rodape" class="text-xs text-slate-500 mt-4"></p>
+      </div>
+      <p id="b2Erro" class="hidden text-sm text-red-400"></p>
+    </div>
+
+    <div id="secCupons" class="adSec hidden glass rounded-3xl p-6">
+      <h2 class="text-lg font-bold">🎟️ Cupons</h2>
+      <p class="text-sm text-slate-400 mt-1">A pessoa cria a conta e digita o cupom no Painel. Cada conta usa só 1 cupom. Link pronto: <span class="text-cyan-300">masternuvem.com.br/painel?cupom=CODIGO</span></p>
+      <button type="button" id="cupNovo" class="text-sm font-semibold text-cyan-300 hover:text-white mt-3">➕ Novo cupom</button>
+      <div id="cupForm" class="hidden">
+      <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mt-4 items-end">
+        <label class="text-xs text-slate-400 md:col-span-2">Código<input id="cupCodigo" class="campo mt-1 uppercase" maxlength="30" placeholder="NUVEM1DIA"></label>
+        <label class="text-xs text-slate-400">Espaço (MB)<input id="cupMb" type="number" min="1" class="campo mt-1" value="20"></label>
+        <label class="text-xs text-slate-400">Duração (horas)<input id="cupHoras" type="number" min="1" class="campo mt-1" value="24"></label>
+        <label class="text-xs text-slate-400">Máx. de usos<input id="cupMax" type="number" min="1" class="campo mt-1" placeholder="sem limite"></label>
+        <label class="text-xs text-slate-400">Válido até<input id="cupAte" type="date" class="campo mt-1"></label>
+        <label class="text-xs text-slate-400 md:col-span-2">Preço fixo (R$, opcional)<input id="cupPreco" class="campo mt-1" inputmode="decimal" placeholder="vazio = teste grátis"></label>
+        <label class="text-xs text-slate-400 md:col-span-3">Só para a conta (e-mail, opcional)<input id="cupEmail" type="email" class="campo mt-1" placeholder="vazio = qualquer conta"></label>
+      </div>
+      <p class="text-xs text-slate-500 mt-2">Com preço fixo, o cupom leva ao pagamento do espaço escolhido por esse valor, por 30 dias (ex.: 1000 MB por R$ 1,00 para testar o PIX).</p>
+      <p id="cupErro" class="text-sm text-red-400 mt-2 min-h-[1.25rem]"></p>
+      <button type="button" id="btnCupomSalvar" class="cta font-bold px-4 py-2.5 rounded-xl text-sm">Salvar cupom</button>
+      </div>
+      <div id="listaCupons" class="mt-4 space-y-2"></div>
+    </div>
+
+    <div id="secAssistente" class="adSec hidden glass rounded-3xl p-6 space-y-5">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-lg font-bold">☁️ Assistente (chat da nuvem)</h2>
+        <p id="assResumo" class="text-sm text-slate-400"></p>
+      </div>
+
+      <div>
+        <p class="font-semibold">Chamados</p>
+        <div id="listaChamados" class="space-y-2 mt-2"></div>
+      </div>
+
+      <div>
+        <p class="font-semibold">Perguntas que a nuvem não soube responder <span class="text-xs text-slate-400 font-normal">(últimos 30 dias)</span></p>
+        <div id="listaSemResposta" class="space-y-1 mt-2"></div>
+      </div>
+
+      <button type="button" id="faqNovo" class="text-sm font-semibold text-cyan-300 hover:text-white">➕ Ensinar uma resposta nova</button>
+      <div id="formFaq" class="hidden bg-slate-900/50 rounded-2xl p-4 space-y-2">
+        <p class="font-semibold" id="faqTitulo">Ensinar uma resposta nova</p>
+        <input id="faqPergunta" class="campo" maxlength="150" placeholder="Pergunta (ex.: Vocês emitem nota fiscal?)">
+        <input id="faqPalavras" class="campo" maxlength="600" placeholder="Palavras-chave separadas por vírgula (ex.: nota fiscal, nf, nfe, recibo)">
+        <textarea id="faqResposta" class="campo h-24" maxlength="1500" placeholder="Resposta. Para link: [texto](/painel) ou [e-mail](mailto:contato@masternuvem.com.br)"></textarea>
+        <p id="faqErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
+        <div class="flex gap-4 items-center">
+          <button type="button" id="btnFaqSalvar" class="cta font-bold px-4 py-2.5 rounded-xl text-sm">Salvar resposta</button>
+          <button type="button" id="btnFaqCancelar" class="hidden text-sm text-slate-400 hover:text-white">Cancelar edição</button>
+        </div>
+      </div>
+
+      <details>
+        <summary class="cursor-pointer font-semibold">Respostas cadastradas (<span id="faqQtd">0</span>)</summary>
+        <div id="listaFaq" class="space-y-2 mt-3"></div>
+      </details>
+    </div>
+
+    <div id="secClientes" class="adSec hidden space-y-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="glass rounded-2xl p-5"><p class="text-xs text-slate-400 uppercase tracking-wider">Clientes</p><p id="totClientes" class="text-2xl font-bold mt-1">-</p></div>
+      <div class="glass rounded-2xl p-5"><p class="text-xs text-slate-400 uppercase tracking-wider">Planos ativos</p><p id="totPlanos" class="text-2xl font-bold mt-1">-</p></div>
+      <div class="glass rounded-2xl p-5"><p class="text-xs text-slate-400 uppercase tracking-wider">Espaço usado</p><p id="totUso" class="text-2xl font-bold mt-1">-</p></div>
+      <div class="glass rounded-2xl p-5"><p class="text-xs text-slate-400 uppercase tracking-wider">Receita mensal</p><p id="totReceita" class="text-2xl font-bold mt-1 text-emerald-300">-</p><p class="text-xs text-slate-500 mt-1">estimada, sem planos manuais</p></div>
+    </div>
+
+    <input id="busca" type="search" placeholder="Buscar por nome ou e-mail" class="campo">
+
+    <div id="lista" class="space-y-4"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+var clientes = [];
+var receitaMensal = null;
+var modoTeste = true;
+var dadosB2 = null;
+
+function reais(v) {
+  return "R$ " + v.toFixed(2).replace(".", ",");
+}
+
+async function postar(rota, corpo) {
+  var resp = await fetch(rota, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(corpo || {})
+  });
+  var dados = {};
+  try { dados = await resp.json(); } catch (e) {}
+  return { ok: resp.ok, dados: dados };
+}
+
+function formatarBytes(b) {
+  if (b >= 1e12) return (b / 1e12).toFixed(2) + " TB";
+  if (b >= 1e9) return (b / 1e9).toFixed(2) + " GB";
+  if (b >= 1e6) return (b / 1e6).toFixed(1) + " MB";
+  if (b >= 1e3) return (b / 1e3).toFixed(0) + " KB";
+  return b + " B";
+}
+
+function formatarEspaco(gb) {
+  if (gb < 1) return Math.round(gb * 1000) + " MB";
+  if (gb >= 1000) return String(+(gb / 1000).toFixed(2)) + " TB";
+  return gb + " GB";
+}
+
+function formatarData(txt) {
+  if (!txt) return "-";
+  var d = txt.slice(0, 10).split("-");
+  return d[2] + "/" + d[1] + "/" + d[0];
+}
+
+function el(tag, classe, texto) {
+  var e = document.createElement(tag);
+  if (classe) e.className = classe;
+  if (texto !== undefined) e.textContent = texto;
+  return e;
+}
+
+function selo(texto, cor) {
+  return el("span", "text-xs font-semibold px-2.5 py-0.5 rounded-full " + cor, texto);
+}
+
+function cartao(c) {
+  var caixa = el("div", "glass rounded-2xl p-5");
+
+  var topo = el("div", "flex flex-wrap items-center gap-2");
+  topo.appendChild(el("p", "font-bold text-lg", c.nome || "(sem nome)"));
+  if (c.role === "admin") topo.appendChild(selo("Administrador", "text-violet-200 bg-violet-500/20"));
+  if (c.totp) topo.appendChild(selo("2FA", "text-emerald-200 bg-emerald-500/20"));
+  if (c.travada_em) topo.appendChild(selo("🔒 Trancada pela sentinela", "text-red-200 bg-red-500/20"));
+  caixa.appendChild(topo);
+  caixa.appendChild(el("p", "text-sm text-slate-400 break-all", c.email));
+  caixa.appendChild(el("p", "text-xs text-slate-500", "Cliente desde " + formatarData(c.criado)));
+
+  var plano = el("p", "mt-3 text-sm");
+  if (c.plano) {
+    plano.appendChild(el("span", "text-emerald-300 font-semibold", formatarEspaco(c.plano.quota_gb)));
+    plano.appendChild(document.createTextNode(" até " + formatarData(c.plano.paid_until) + (c.plano.manual ? " (manual)" : " (pago)")));
+  } else {
+    plano.appendChild(el("span", "text-amber-300", "Sem plano ativo"));
+    if (c.fim_plano) plano.appendChild(document.createTextNode(" · terminou em " + formatarData(c.fim_plano)));
+  }
+  caixa.appendChild(plano);
+  if (!c.plano && c.apaga_em && c.arquivos > 0) {
+    caixa.appendChild(el("p", "text-sm text-red-300 mt-1",
+      "Arquivos serão apagados a partir de " + formatarData(c.apaga_em) + (modoTeste ? " (limpeza em modo teste: nada é apagado ainda)" : "")));
+  }
+
+  var cota = c.plano ? c.plano.quota_gb * 1e9 : 0;
+  caixa.appendChild(el("p", "text-sm text-slate-400 mt-1",
+    formatarBytes(c.usado_bytes) + " usados em " + c.arquivos + " arquivo(s)" + (cota ? " de " + formatarEspaco(c.plano.quota_gb) : "")));
+  if (cota) {
+    var barra = el("div", "barra mt-2");
+    var i = el("i");
+    i.style.width = Math.min(100, c.usado_bytes / cota * 100) + "%";
+    barra.appendChild(i);
+    caixa.appendChild(barra);
+  }
+
+  // Ações: dar plano manual / remover plano
+  var acoes = el("div", "mt-4 flex flex-wrap items-end gap-3");
+  var campoGb = el("input", "campo");
+  campoGb.type = "number"; campoGb.min = 1; campoGb.max = 5000;
+  campoGb.value = c.plano ? c.plano.quota_gb : 10;
+  campoGb.style.maxWidth = "110px";
+  var campoDias = el("input", "campo");
+  campoDias.type = "number"; campoDias.min = 1; campoDias.max = 3650; campoDias.value = 30;
+  campoDias.style.maxWidth = "110px";
+
+  var blocoGb = el("label", "text-xs text-slate-400 space-y-1");
+  blocoGb.appendChild(el("span", "block", "GB"));
+  blocoGb.appendChild(campoGb);
+  var blocoDias = el("label", "text-xs text-slate-400 space-y-1");
+  blocoDias.appendChild(el("span", "block", "Dias"));
+  blocoDias.appendChild(campoDias);
+
+  var btnDar = el("button", "cta font-bold px-4 py-2.5 rounded-xl text-sm transition", c.plano ? "Trocar plano" : "Dar plano");
+  btnDar.type = "button";
+  var erro = el("p", "text-sm text-red-400 w-full min-h-[1.25rem]");
+
+  btnDar.addEventListener("click", async function () {
+    var gb = parseInt(campoGb.value, 10);
+    var dias = parseInt(campoDias.value, 10);
+    if (!await confirmar("Confirmar", "Dar " + formatarEspaco(gb) + " por " + dias + " dias para " + c.email + "?\nO plano atual dele (se houver) será substituído.")) return;
+    btnDar.disabled = true;
+    var r = await postar("/api/admin/plano", { user_id: c.id, gb: gb, dias: dias });
+    btnDar.disabled = false;
+    if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível."; return; }
+    carregar();
+  });
+
+  acoes.appendChild(blocoGb);
+  acoes.appendChild(blocoDias);
+  acoes.appendChild(btnDar);
+
+  if (c.plano) {
+    var btnRemover = el("button", "font-semibold text-sm text-red-300 border border-red-400/40 px-4 py-2.5 rounded-xl hover:bg-red-500/10", "Remover plano");
+    btnRemover.type = "button";
+    btnRemover.addEventListener("click", async function () {
+      if (!await confirmar("Confirmar", "Remover o plano de " + c.email + "?\nEle não vai mais conseguir enviar arquivos (os arquivos atuais continuam guardados).")) return;
+      btnRemover.disabled = true;
+      var r = await postar("/api/admin/plano/remover", { user_id: c.id });
+      btnRemover.disabled = false;
+      if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível."; return; }
+      carregar();
+    });
+    acoes.appendChild(btnRemover);
+  }
+  if (c.role !== "admin") {
+    var btnTrancar = el("button", "font-semibold text-sm px-4 py-2.5 rounded-xl border " +
+      (c.travada_em ? "text-emerald-300 border-emerald-400/40 hover:bg-emerald-500/10" : "text-slate-300 border-slate-500/40 hover:bg-slate-500/10"),
+      c.travada_em ? "🔓 Destravar" : "🔒 Trancar conta");
+    btnTrancar.type = "button";
+    btnTrancar.addEventListener("click", async function () {
+      var msg = c.travada_em ? "Destravar a conta de " + c.email + "?" :
+        "Trancar a conta de " + c.email + "?\nEla é desconectada na hora e só volta criando uma senha nova (ou quando você destravar).";
+      if (!await confirmar("Confirmar", msg)) return;
+      btnTrancar.disabled = true;
+      var r = await postar(c.travada_em ? "/api/admin/sentinela/destravar" : "/api/admin/sentinela/trancar", { user_id: c.id });
+      btnTrancar.disabled = false;
+      if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível."; return; }
+      carregar();
+      carregarSentinela();
+    });
+    acoes.appendChild(btnTrancar);
+  }
+  acoes.appendChild(erro);
+  caixa.appendChild(acoes);
+  return caixa;
+}
+
+function desenhar() {
+  var termo = document.getElementById("busca").value.trim().toLowerCase();
+  var lista = document.getElementById("lista");
+  lista.innerHTML = "";
+  var filtrados = clientes.filter(function (c) {
+    return !termo || (c.email + " " + (c.nome || "")).toLowerCase().indexOf(termo) > -1;
+  });
+  if (!filtrados.length) lista.appendChild(el("p", "text-slate-400", "Nenhum cliente encontrado."));
+  filtrados.forEach(function (c) { lista.appendChild(cartao(c)); });
+}
+
+async function carregar() {
+  var resp = await fetch("/api/admin/clientes");
+  if (resp.status === 401) { window.location.href = "/entrar?volta=" + encodeURIComponent("/admin"); return; }
+  if (resp.status === 403) { window.location.href = "/painel"; return; }
+  var d = await resp.json();
+  clientes = d.clientes || [];
+  modoTeste = !d.apagar_arquivos;
+
+  var planos = 0, uso = 0;
+  clientes.forEach(function (c) { if (c.plano) planos++; uso += c.usado_bytes; });
+  document.getElementById("totClientes").textContent = clientes.length;
+  document.getElementById("totPlanos").textContent = planos;
+  document.getElementById("totUso").textContent = formatarBytes(uso);
+  document.getElementById("totReceita").textContent = reais(d.receita_mensal);
+  receitaMensal = d.receita_mensal;
+
+  document.getElementById("carregando").classList.add("hidden");
+  document.getElementById("conteudo").classList.remove("hidden");
+  desenhar();
+  mostrarLucro();
+}
+
+function mostrarLucro() {
+  if (receitaMensal === null || !dadosB2) return;
+  var lucro = receitaMensal - dadosB2.custo_brl;
+  var campo = document.getElementById("b2Lucro");
+  campo.textContent = reais(lucro);
+  campo.className = "text-2xl font-bold mt-1 " + (lucro >= 0 ? "text-emerald-300" : "text-red-300");
+}
+
+async function carregarB2() {
+  var btn = document.getElementById("btnB2");
+  btn.disabled = true;
+  document.getElementById("b2Carregando").classList.remove("hidden");
+  document.getElementById("b2Erro").classList.add("hidden");
+  try {
+    var resp = await fetch("/api/admin/backblaze");
+    var d = await resp.json();
+    if (!resp.ok) throw new Error(d.error || "Erro ao consultar o Backblaze");
+    dadosB2 = d;
+
+    document.getElementById("b2Guardado").textContent = formatarBytes(d.bucket_bytes);
+    document.getElementById("b2Objetos").textContent = d.bucket_objetos + " arquivo(s)" + (d.bucket_completo ? "" : " (contagem parcial)");
+    document.getElementById("b2Custo").textContent = reais(d.custo_brl);
+    document.getElementById("b2CustoUsd").textContent = "US$ " + d.custo_usd.toFixed(2) +
+      (d.bucket_bytes <= d.gratis_bytes ? " · dentro dos 10 GB grátis" : "");
+    document.getElementById("b2Vendido").textContent = formatarEspaco(d.vendido_gb);
+    document.getElementById("b2VendidoCusto").textContent = "se lotar, o B2 custaria " + reais(d.custo_vendido_brl) + "/mês";
+
+    // Diferença entre o bucket e o que o site registrou = envios que ficaram pela metade (objetos órfãos).
+    var sobra = d.bucket_bytes - d.site_bytes;
+    var aviso = document.getElementById("b2Aviso");
+    if (sobra > 1e6) {
+      aviso.textContent = formatarBytes(sobra) + " no B2 não aparecem em nenhum cliente (envios que ficaram pela metade). Ocupam espaço e custam, mas ninguém usa.";
+      aviso.classList.remove("hidden");
+    } else {
+      aviso.classList.add("hidden");
+    }
+
+    document.getElementById("b2Rodape").textContent = "Preço B2: US$ " + d.preco_tb_usd.toFixed(2) + " por TB/mês (primeiros 10 GB grátis). " +
+      "Dólar: R$ " + d.dolar.toFixed(2).replace(".", ",") + (d.dolar_ao_vivo ? " (cotação de agora)" : " (valor aproximado)") + ".";
+
+    document.getElementById("b2Carregando").classList.add("hidden");
+    document.getElementById("b2Dados").classList.remove("hidden");
+    mostrarLucro();
+  } catch (e) {
+    document.getElementById("b2Carregando").classList.add("hidden");
+    var erro = document.getElementById("b2Erro");
+    erro.textContent = e.message;
+    erro.classList.remove("hidden");
+  }
+  btn.disabled = false;
+}
+
+async function carregarCupons() {
+  var resp = await fetch("/api/admin/cupons");
+  if (!resp.ok) return;
+  var d = await resp.json();
+  var lista = document.getElementById("listaCupons");
+  lista.innerHTML = "";
+  if (!d.cupons.length) lista.appendChild(el("p", "text-sm text-slate-400", "Nenhum cupom ainda."));
+  d.cupons.forEach(function (c) {
+    var linha = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/50 rounded-xl px-4 py-3" + (c.ativo ? "" : " opacity-50"));
+    var info = el("div");
+    info.appendChild(el("p", "font-mono font-bold", c.codigo + (c.ativo ? "" : " (pausado)")));
+    info.appendChild(el("p", "text-xs text-slate-400",
+      (c.preco_centavos !== null ? c.quota_mb + " MB por R$ " + (c.preco_centavos / 100).toFixed(2).replace(".", ",") + " (30 dias)" : c.quota_mb + " MB grátis por " + c.horas + " h") +
+      " · usado " + c.usos + (c.max_usos ? " de " + c.max_usos : "") + " vez(es)" +
+      (c.valido_ate ? " · válido até " + formatarData(c.valido_ate) : "") + (c.so_email ? " · só para " + c.so_email : "")));
+    linha.appendChild(info);
+    var b = el("button", c.ativo ? "text-sm font-semibold text-red-300" : "text-sm font-semibold text-cyan-300", c.ativo ? "Pausar" : "Reativar");
+    b.type = "button";
+    b.addEventListener("click", async function () {
+      await postar("/api/admin/cupons/ativo", { codigo: c.codigo, ativo: !c.ativo });
+      carregarCupons();
+    });
+    linha.appendChild(b);
+    lista.appendChild(linha);
+  });
+}
+
+/* ---------- sentinela ---------- */
+
+function dataHora(txt) {
+  // O banco grava em UTC; mostra no horário de Brasília (UTC−3).
+  if (!txt) return "-";
+  var d = new Date(txt.replace(" ", "T") + "Z");
+  return d.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+async function carregarSentinela() {
+  var resp = await fetch("/api/admin/sentinela");
+  if (!resp.ok) return;
+  var d = await resp.json();
+  var r = d.resumo_24h || {};
+  var res = document.getElementById("senResumo");
+  res.innerHTML = "";
+  [["Entradas (24 h)", r.entradas, ""], ["Senhas erradas (24 h)", r.senhas_erradas, r.senhas_erradas > 20 ? "text-amber-300" : ""],
+   ["Códigos 2FA errados (24 h)", r.codigos_errados, r.codigos_errados > 0 ? "text-amber-300" : ""], ["Downloads (24 h)", r.downloads, ""]].forEach(function (x) {
+    var c = el("div", "bg-slate-900/50 rounded-xl px-3 py-2");
+    c.appendChild(el("p", "text-xs text-slate-400", x[0]));
+    c.appendChild(el("p", "text-xl font-bold " + x[2], String(x[1] || 0)));
+    res.appendChild(c);
+  });
+
+  var tr = document.getElementById("senTrancadas");
+  tr.innerHTML = "";
+  var trancadas = d.contas.map(function (c) { return { tipo: "user_id", id: c.id, txt: c.email + " · conta do site", quando: c.travada_em }; })
+    .concat(d.clientes.map(function (c) { return { tipo: "cliente_id", id: c.id, txt: c.email + " · cliente do portal " + c.portal, quando: c.travada_em }; }));
+  if (!trancadas.length) tr.appendChild(el("p", "text-sm text-emerald-300", "✅ Nenhuma conta trancada."));
+  trancadas.forEach(function (t) {
+    var linha = el("div", "flex flex-wrap items-center justify-between gap-2 bg-red-500/10 border border-red-400/30 rounded-xl px-4 py-2 text-sm");
+    linha.appendChild(el("span", "break-all", "🔒 " + t.txt + " · desde " + dataHora(t.quando)));
+    var b = el("button", "font-semibold text-emerald-300", "Destravar");
+    b.type = "button";
+    b.addEventListener("click", async function () {
+      if (!await confirmar("Confirmar", "Destravar " + t.txt + "?")) return;
+      var corpo = {};
+      corpo[t.tipo] = t.id;
+      await postar("/api/admin/sentinela/destravar", corpo);
+      carregarSentinela();
+      carregar();
+    });
+    linha.appendChild(b);
+    tr.appendChild(linha);
+  });
+
+  var la = document.getElementById("senAlertas");
+  la.innerHTML = "";
+  var novos = d.alertas.filter(function (a) { return !a.visto; }).length;
+  document.getElementById("senQtd").textContent = d.alertas.length;
+  document.getElementById("senNovos").textContent = novos ? "· " + novos + " novo(s)" : "";
+  if (novos) document.getElementById("senDetalhes").open = true;
+  if (!d.alertas.length) la.appendChild(el("p", "text-sm text-slate-400", "Nenhum alerta. Tudo tranquilo."));
+  d.alertas.forEach(function (a) {
+    var cor = a.nivel === "trancou" ? "text-red-300" : "text-amber-200";
+    la.appendChild(el("p", "text-sm break-words " + cor + (a.visto ? " opacity-60" : " font-semibold"),
+      dataHora(a.created_at) + " · " + (a.nivel === "trancou" ? "🔒 " : "⚠️ ") + a.mensagem));
+  });
+}
+
+async function carregarBlog() {
+  var resp = await fetch("/api/admin/blog");
+  if (!resp.ok) return;
+  var d = await resp.json();
+  var lista = document.getElementById("listaBlog");
+  lista.innerHTML = "";
+  d.posts.forEach(function (p) {
+    var linha = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/40 rounded-lg px-3 py-2 text-sm");
+    var esq = el("span", "break-words");
+    esq.appendChild(el("span", p.publicado ? "text-emerald-300 font-semibold" : "text-amber-300 font-semibold", (p.publicado ? "✔ No ar" : "⏰ " + formatarData(p.publicar)) + " · "));
+    esq.appendChild(document.createTextNode(p.titulo));
+    linha.appendChild(esq);
+    if (p.publicado) {
+      var a = el("a", "text-cyan-300 font-semibold", "Ver");
+      a.href = "/blog/" + p.slug;
+      a.target = "_blank";
+      linha.appendChild(a);
+    } else {
+      linha.appendChild(el("span", "text-xs text-slate-500", p.categoria));
+    }
+    lista.appendChild(linha);
+  });
+}
+
+document.getElementById("btnVistos").addEventListener("click", async function () {
+  await postar("/api/admin/sentinela/vistos");
+  carregarSentinela();
+});
+
+/* ---------- bancos ---------- */
+
+var bcEditando = 0, bcPedido = 0;
+function bcLimpar() {
+  bcEditando = 0; bcPedido = 0;
+  ["bcNome", "bcPalavras", "bcPix", "bcPag"].forEach(function (id) { document.getElementById(id).value = ""; });
+  document.getElementById("bcApi").checked = false;
+  document.getElementById("bcTitulo").textContent = "Adicionar banco";
+  document.getElementById("bcAviso").classList.add("hidden");
+  document.getElementById("bcCancelar").classList.add("hidden");
+  document.getElementById("bcErro").textContent = "";
+  document.getElementById("bcForm").classList.add("hidden");
+}
+function bcEditar(b, pedido) {
+  bcLimpar();
+  if (b) {
+    bcEditando = b.id;
+    document.getElementById("bcNome").value = b.nome;
+    document.getElementById("bcPalavras").value = b.palavras || "";
+    document.getElementById("bcPix").value = b.link_pix || "";
+    document.getElementById("bcPag").value = b.link_pagamento || "";
+    document.getElementById("bcApi").checked = !!b.tem_api;
+    document.getElementById("bcTitulo").textContent = "Editando " + b.nome;
+  }
+  if (pedido) {
+    bcPedido = pedido.id;
+    document.getElementById("bcNome").value = pedido.banco;
+    document.getElementById("bcTitulo").textContent = "Aprovar pedido: " + pedido.banco;
+    var av = document.getElementById("bcAviso");
+    av.textContent = "Ao salvar, " + pedido.email + " recebe os links por e-mail na hora.";
+    av.classList.remove("hidden");
+  }
+  document.getElementById("bcCancelar").classList.remove("hidden");
+  document.getElementById("bcForm").classList.remove("hidden");
+  document.getElementById("bcForm").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+async function carregarBancos() {
+  var resp = await fetch("/api/admin/bancos");
+  if (!resp.ok) return;
+  var d = await resp.json();
+  var ped = document.getElementById("bcPedidos");
+  ped.innerHTML = "";
+  d.pedidos.forEach(function (p) {
+    var l = el("div", "flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm border border-amber-400/50");
+    l.appendChild(el("span", "", "🔴 Pedido nº " + p.id + ": " + p.banco + " · " + p.email + " · " + formatarData(p.created_at)));
+    var acoes = el("span", "flex gap-3");
+    var ap = el("button", "text-emerald-300 font-semibold", "Aprovar (colar links)");
+    ap.type = "button";
+    ap.addEventListener("click", function () { bcEditar(null, p); });
+    var ds = el("button", "text-slate-400", "Descartar");
+    ds.type = "button";
+    ds.addEventListener("click", async function () {
+      if (!(await confirmar("Descartar o pedido?", "A pessoa não recebe resposta automática.", "Descartar"))) return;
+      await postar("/api/admin/bancos/pedido-descartar", { id: p.id });
+      carregarBancos();
+    });
+    acoes.appendChild(ap); acoes.appendChild(ds);
+    l.appendChild(acoes);
+    ped.appendChild(l);
+  });
+  var lista = document.getElementById("bcLista");
+  lista.innerHTML = "";
+  d.bancos.forEach(function (b) {
+    var quebrado = !b.link_pix_ok || !b.link_pagamento_ok;
+    var l = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/40 rounded-lg px-3 py-2 text-sm");
+    l.appendChild(el("span", "", (quebrado ? "❌ " : "✅ ") + b.nome + (b.tem_api ? " · 🤖 API" : " · ✋ manual") + (quebrado ? " · link quebrado, troque!" : "") + (b.checado_em ? " · conferido " + formatarData(b.checado_em) : "")));
+    var acoes = el("span", "flex gap-3");
+    var ed = el("button", "text-cyan-300 font-semibold", "Editar");
+    ed.type = "button";
+    ed.addEventListener("click", function () { bcEditar(b); });
+    var rm = el("button", "text-red-300", "Remover");
+    rm.type = "button";
+    rm.addEventListener("click", async function () {
+      if (!(await confirmar("Remover " + b.nome + "?", "Sai do \"Como recebo\" e da Nuvenzinha.", "Remover"))) return;
+      await postar("/api/admin/bancos/remover", { id: b.id });
+      carregarBancos();
+    });
+    acoes.appendChild(ed); acoes.appendChild(rm);
+    l.appendChild(acoes);
+    lista.appendChild(l);
+  });
+}
+document.getElementById("bcCancelar").addEventListener("click", bcLimpar);
+document.getElementById("bcSalvar").addEventListener("click", async function () {
+  var r = await postar("/api/admin/bancos/salvar", {
+    id: bcEditando, pedido_id: bcPedido,
+    nome: document.getElementById("bcNome").value, palavras: document.getElementById("bcPalavras").value,
+    link_pix: document.getElementById("bcPix").value, link_pagamento: document.getElementById("bcPag").value,
+    tem_api: document.getElementById("bcApi").checked
+  });
+  if (!r.ok) { document.getElementById("bcErro").textContent = r.dados.error || "Não foi possível salvar."; return; }
+  if (r.dados.avisado) avisar("Salvo! " + r.dados.avisado + " recebeu os links por e-mail.", "Pedido aprovado ✅");
+  bcLimpar();
+  carregarBancos();
+});
+
+/* ---------- assistente ---------- */
+
+var faqEditando = 0;
+
+function limparFormFaq() {
+  faqEditando = 0;
+  ["faqPergunta", "faqPalavras", "faqResposta"].forEach(function (id) { document.getElementById(id).value = ""; });
+  document.getElementById("faqTitulo").textContent = "Ensinar uma resposta nova";
+  document.getElementById("btnFaqCancelar").classList.add("hidden");
+  document.getElementById("faqErro").textContent = "";
+}
+
+function editarFaq(f) {
+  faqEditando = f.id;
+  document.getElementById("faqPergunta").value = f.pergunta;
+  document.getElementById("faqPalavras").value = f.palavras;
+  document.getElementById("faqResposta").value = f.resposta;
+  document.getElementById("faqTitulo").textContent = "Editando a resposta";
+  document.getElementById("btnFaqCancelar").classList.remove("hidden");
+  document.getElementById("formFaq").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+async function carregarAssistente() {
+  var resp = await fetch("/api/admin/assistente");
+  if (!resp.ok) return;
+  var d = await resp.json();
+  var abertos = d.chamados.filter(function (c) { return c.status === "aberto"; }).length;
+  var t = d.total || { perguntas: 0, respondidas: 0 };
+  document.getElementById("assResumo").textContent = t.perguntas + " pergunta(s) em 30 dias · " +
+    (t.perguntas ? Math.round(t.respondidas / t.perguntas * 100) : 0) + "% respondidas · " + abertos + " chamado(s) aberto(s)";
+
+  var lc = document.getElementById("listaChamados");
+  lc.innerHTML = "";
+  if (!d.chamados.length) lc.appendChild(el("p", "text-sm text-slate-400", "Nenhum chamado ainda."));
+  d.chamados.forEach(function (c) {
+    var caixa = el("div", "bg-slate-900/50 rounded-xl px-4 py-3" + (c.status === "resolvido" ? " opacity-60" : ""));
+    var topo = el("div", "flex flex-wrap items-center justify-between gap-2");
+    topo.appendChild(el("p", "font-semibold text-sm", "Nº " + c.id + " · " + c.nome + " · " + formatarData(c.created_at) +
+      (c.status === "aberto" ? " · ABERTO" : " · resolvido")));
+    var acoes = el("div", "flex gap-4 text-sm font-semibold");
+    var responder = el("a", "text-cyan-300", "Responder por e-mail");
+    responder.href = "mailto:" + encodeURIComponent(c.email) + "?subject=" + encodeURIComponent("Re: Chamado nº " + c.id + " - Master Nuvem");
+    acoes.appendChild(responder);
+    var mudar = el("button", c.status === "aberto" ? "text-emerald-300" : "text-slate-300", c.status === "aberto" ? "✔ Resolvido" : "Reabrir");
+    mudar.type = "button";
+    mudar.addEventListener("click", async function () {
+      await postar("/api/admin/chamados/status", { id: c.id, status: c.status === "aberto" ? "resolvido" : "aberto" });
+      carregarAssistente();
+    });
+    acoes.appendChild(mudar);
+    topo.appendChild(acoes);
+    caixa.appendChild(topo);
+    caixa.appendChild(el("p", "text-xs text-slate-400 break-all", c.email + (c.pagina ? " · página " + c.pagina : "")));
+    caixa.appendChild(el("p", "text-sm text-slate-200 mt-1 whitespace-pre-line break-words", c.mensagem));
+    lc.appendChild(caixa);
+  });
+
+  var ls = document.getElementById("listaSemResposta");
+  ls.innerHTML = "";
+  if (!d.sem_resposta.length) ls.appendChild(el("p", "text-sm text-slate-400", "Nenhuma — a nuvem respondeu tudo! 🎉"));
+  d.sem_resposta.forEach(function (p) {
+    var linha = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/40 rounded-lg px-3 py-2 text-sm");
+    linha.appendChild(el("span", "break-words", "“" + p.texto + "”" + (p.vezes > 1 ? " · " + p.vezes + "x" : "")));
+    var ens = el("button", "text-cyan-300 font-semibold", "Ensinar resposta");
+    ens.type = "button";
+    ens.addEventListener("click", function () {
+      limparFormFaq();
+      document.getElementById("faqPergunta").value = p.texto.charAt(0).toUpperCase() + p.texto.slice(1);
+      document.getElementById("faqPalavras").value = p.texto;
+      document.getElementById("faqResposta").focus();
+      document.getElementById("formFaq").scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    linha.appendChild(ens);
+    ls.appendChild(linha);
+  });
+
+  var lf = document.getElementById("listaFaq");
+  lf.innerHTML = "";
+  document.getElementById("faqQtd").textContent = d.faq.length;
+  d.faq.forEach(function (f) {
+    var caixa = el("div", "bg-slate-900/40 rounded-xl px-4 py-3" + (f.ativo ? "" : " opacity-50"));
+    var topo = el("div", "flex flex-wrap items-center justify-between gap-2");
+    topo.appendChild(el("p", "font-semibold text-sm", f.pergunta + (f.ativo ? "" : " (desligada)") + " · usada " + f.usos_30d + "x em 30 dias"));
+    var acoes = el("div", "flex gap-4 text-sm font-semibold");
+    var ed = el("button", "text-cyan-300", "Editar");
+    ed.type = "button";
+    ed.addEventListener("click", function () { editarFaq(f); });
+    var liga = el("button", "text-slate-300", f.ativo ? "Desligar" : "Ligar");
+    liga.type = "button";
+    liga.addEventListener("click", async function () {
+      await postar("/api/admin/faq/salvar", { id: f.id, pergunta: f.pergunta, palavras: f.palavras, resposta: f.resposta, ordem: f.ordem, ativo: !f.ativo });
+      carregarAssistente();
+    });
+    var rm = el("button", "text-red-300", "Apagar");
+    rm.type = "button";
+    rm.addEventListener("click", async function () {
+      if (!await confirmar("Confirmar", "Apagar a resposta \"" + f.pergunta + "\"?")) return;
+      await postar("/api/admin/faq/remover", { id: f.id });
+      carregarAssistente();
+    });
+    [ed, liga, rm].forEach(function (b) { acoes.appendChild(b); });
+    topo.appendChild(acoes);
+    caixa.appendChild(topo);
+    caixa.appendChild(el("p", "text-xs text-slate-500 mt-1 break-words", "Palavras: " + f.palavras));
+    caixa.appendChild(el("p", "text-sm text-slate-300 mt-1 break-words", f.resposta));
+    lf.appendChild(caixa);
+  });
+}
+
+document.getElementById("btnFaqSalvar").addEventListener("click", async function () {
+  var erro = document.getElementById("faqErro");
+  erro.textContent = "";
+  var r = await postar("/api/admin/faq/salvar", {
+    id: faqEditando || undefined,
+    pergunta: document.getElementById("faqPergunta").value,
+    palavras: document.getElementById("faqPalavras").value,
+    resposta: document.getElementById("faqResposta").value
+  });
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
+  limparFormFaq();
+  carregarAssistente();
+});
+document.getElementById("btnFaqCancelar").addEventListener("click", limparFormFaq);
+
+document.getElementById("btnCupomSalvar").addEventListener("click", async function () {
+  var erro = document.getElementById("cupErro");
+  erro.textContent = "";
+  var r = await postar("/api/admin/cupons/salvar", {
+    codigo: document.getElementById("cupCodigo").value,
+    quota_mb: document.getElementById("cupMb").value,
+    horas: document.getElementById("cupHoras").value,
+    max_usos: document.getElementById("cupMax").value,
+    valido_ate: document.getElementById("cupAte").value,
+    preco: document.getElementById("cupPreco").value,
+    so_email: document.getElementById("cupEmail").value
+  });
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
+  document.getElementById("cupCodigo").value = "";
+  carregarCupons();
+});
+
+/* ---------- tela inicial: quadradinhos com resumo e ponto vermelho ---------- */
+
+var SECOES = [
+  ["Clientes", "👥 Clientes"], ["Assistente", "☁️ Assistente"], ["Sentinela", "🛡️ Sentinela"],
+  ["Bancos", "🏦 Bancos"], ["Blog", "📝 Blog"], ["B2", "💾 Backblaze"], ["Cupons", "🎟️ Cupons"]
+];
+var resumoTile = {};
+
+function abrirSecao(nome) {
+  document.getElementById("adInicio").classList.toggle("hidden", !!nome);
+  document.getElementById("adVoltar").classList.toggle("hidden", !nome);
+  document.querySelectorAll(".adSec").forEach(function (s) { s.classList.toggle("hidden", s.id !== "sec" + nome); });
+  window.scrollTo(0, 0);
+}
+document.getElementById("adVoltar").addEventListener("click", function () { abrirSecao(""); atualizarTiles(); });
+
+function contarTexto(id, re) {
+  var m = (document.getElementById(id).textContent || "").match(re);
+  return m ? parseInt(m[1], 10) : 0;
+}
+
+function atualizarTiles() {
+  var trancadas = document.querySelectorAll("#senTrancadas .bg-red-500\\/10").length;
+  var novos = contarTexto("senNovos", /(\d+) novo/);
+  var chamados = contarTexto("assResumo", /(\d+) chamado/);
+  var semResp = Array.prototype.filter.call(document.getElementById("listaSemResposta").children, function (x) { return x.tagName !== "P"; }).length;
+  var pedidos = document.getElementById("bcPedidos").children.length;
+  var quebrados = (document.getElementById("bcLista").textContent.match(/❌/g) || []).length;
+  var noAr = (document.getElementById("listaBlog").textContent.match(/No ar/g) || []).length;
+  var agendados = (document.getElementById("listaBlog").textContent.match(/⏰/g) || []).length;
+  var r = {
+    Clientes: [document.getElementById("totClientes").textContent + " cliente(s) · " + document.getElementById("totPlanos").textContent + " plano(s) · " + document.getElementById("totReceita").textContent + "/mês", 0],
+    Assistente: [chamados ? chamados + " chamado(s) esperando resposta" : (semResp ? semResp + " pergunta(s) sem resposta" : "Tudo respondido"), chamados],
+    Sentinela: [trancadas ? trancadas + " conta(s) trancada(s)" : (novos ? novos + " alerta(s) novo(s)" : "Tudo tranquilo"), trancadas + novos],
+    Bancos: [pedidos ? pedidos + " pedido(s) de banco" : (quebrados ? quebrados + " link(s) quebrado(s)" : document.getElementById("bcLista").children.length + " bancos · links ok"), pedidos + quebrados],
+    Blog: [noAr + " no ar · " + agendados + " agendado(s)", 0],
+    B2: ["Lucro: " + document.getElementById("b2Lucro").textContent + "/mês", document.getElementById("b2Aviso").classList.contains("hidden") ? 0 : 1],
+    Cupons: [document.getElementById("listaCupons").children.length + " cupom(ns)", 0]
+  };
+  var home = document.getElementById("adHome");
+  home.innerHTML = "";
+  var totalAlertas = 0;
+  SECOES.forEach(function (s) {
+    var x = r[s[0]], alerta = x[1] > 0;
+    totalAlertas += alerta ? 1 : 0;
+    var b = el("button", "glass rounded-2xl p-4 text-left hover:border-cyan-400 relative" + (alerta ? " border-red-400" : ""));
+    b.type = "button";
+    b.style.borderColor = alerta ? "#f87171" : "";
+    var topo = el("p", "font-bold flex items-center gap-2", s[1]);
+    if (alerta) topo.appendChild(el("span", "inline-block w-3 h-3 rounded-full bg-red-500 animate-pulse", ""));
+    b.appendChild(topo);
+    b.appendChild(el("p", "text-sm mt-1 " + (alerta ? "text-red-300 font-semibold" : "text-slate-400"), x[0]));
+    b.addEventListener("click", function () { abrirSecao(s[0]); });
+    home.appendChild(b);
+  });
+  document.title = (totalAlertas ? "(" + totalAlertas + ") " : "") + "Painel admin - Master Nuvem";
+}
+
+// Listas longas: mostra os primeiros itens e um botão "Ver todos".
+function limitarLista(id, n) {
+  var lista = document.getElementById(id);
+  if (!lista) return;
+  var antigo = lista.parentNode.querySelector("[data-ver-mais='" + id + "']");
+  if (antigo) antigo.remove();
+  var itens = Array.prototype.slice.call(lista.children);
+  if (itens.length <= n) return;
+  itens.forEach(function (x, i) { x.classList.toggle("hidden", i >= n); });
+  var b = el("button", "text-sm font-semibold text-cyan-300 hover:text-white mt-1", "Ver todos (" + itens.length + ") ▾");
+  b.type = "button";
+  b.setAttribute("data-ver-mais", id);
+  b.addEventListener("click", function () { itens.forEach(function (x) { x.classList.remove("hidden"); }); b.remove(); });
+  lista.insertAdjacentElement("afterend", b);
+}
+
+// Depois de cada carregamento: encurta as listas e atualiza os quadradinhos.
+[["carregar", []], ["carregarB2", []], ["carregarCupons", [["listaCupons", 4]]], ["carregarAssistente", [["listaSemResposta", 5]]],
+ ["carregarSentinela", [["senAlertas", 8]]], ["carregarBlog", [["listaBlog", 6]]], ["carregarBancos", [["bcLista", 6]]]].forEach(function (x) {
+  var original = window[x[0]];
+  window[x[0]] = async function () {
+    var r = await original.apply(this, arguments);
+    x[1].forEach(function (l) { limitarLista(l[0], l[1]); });
+    atualizarTiles();
+    return r;
+  };
+});
+
+document.getElementById("bcNovo").addEventListener("click", function () { bcLimpar(); document.getElementById("bcForm").classList.remove("hidden"); document.getElementById("bcCancelar").classList.remove("hidden"); });
+document.getElementById("cupNovo").addEventListener("click", function () { document.getElementById("cupForm").classList.toggle("hidden"); });
+document.getElementById("faqNovo").addEventListener("click", function () { limparFormFaq(); document.getElementById("formFaq").classList.remove("hidden"); });
+// "Ensinar" e "Editar" nas listas do assistente também abrem o formulário.
+["listaSemResposta", "listaFaq"].forEach(function (id) {
+  document.getElementById(id).addEventListener("click", function (e) { if (e.target.tagName === "BUTTON") document.getElementById("formFaq").classList.remove("hidden"); }, true);
+});
+
+document.getElementById("busca").addEventListener("input", desenhar);
+document.getElementById("btnB2").addEventListener("click", carregarB2);
+carregarB2();
+carregarCupons();
+carregarAssistente();
+carregarSentinela();
+carregarBlog();
+carregarBancos();
+document.getElementById("sair").addEventListener("click", function () {
+  postar("/api/logout").then(function () { window.location.href = "/entrar"; });
+});
+carregar();
+</script>
+</body>
+</html>

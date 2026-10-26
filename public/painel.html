@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Meu painel - Master Nuvem</title>
+<link rel="icon" type="image/png" href="/marca/icone-64.png">
+<link rel="apple-touch-icon" href="/marca/icone-180.png">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="/avisos.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),radial-gradient(800px 500px at 100% 10%,#6d28d933,transparent),#030a1c}
@@ -15,6 +18,12 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
 .cta:disabled{opacity:.6}
 .campo{width:100%;padding:12px 14px;border-radius:12px;background:#0a1633;border:1px solid #1e3a8a;color:#fff;outline:none}
 .campo:focus{border-color:#38bdf8}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:9999px;outline:none;cursor:pointer;background:linear-gradient(90deg,#38bdf8 var(--p,0%),#12224a var(--p,0%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;border:5px solid #38bdf8;box-shadow:0 0 20px #38bdf8}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:5px solid #38bdf8;box-shadow:0 0 20px #38bdf8}
+.chip{padding:6px 14px;border-radius:9999px;border:1px solid #1e40af;background:#0c1a3d;color:#93c5fd;font-size:13px;font-weight:600;transition:.2s}
+.chip:hover{border-color:#38bdf8;color:#fff}
+.chip-on{background:linear-gradient(90deg,#0ea5e9,#6366f1);border-color:transparent;color:#fff;box-shadow:0 0 16px #38bdf866}
 #qr{display:inline-block;padding:10px;background:#fff;border-radius:12px}
 </style>
 </head>
@@ -22,50 +31,195 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
 
 <nav class="border-b border-blue-900/50 bg-slate-950/60 backdrop-blur">
   <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-    <a href="/" class="font-bold text-xl">Master<span class="grad">Nuvem</span></a>
+    <a href="/" class="flex items-center gap-2 font-bold text-xl"><img src="/marca/mascote.svg" alt="" class="h-8 w-auto">Master<span class="grad">Nuvem</span></a>
     <button type="button" id="sair" class="text-sm font-semibold text-blue-300 hover:text-white">Sair</button>
   </div>
 </nav>
 
 <main class="max-w-4xl mx-auto px-4 py-10 space-y-6">
-  <div class="glass rounded-3xl p-8">
+  <div id="avisoPagamento" class="hidden glass rounded-2xl p-5 text-sm"></div>
+
+  <!-- 1. Quem é + segurança -->
+  <div class="glass rounded-3xl p-6 sm:p-8">
     <div class="flex items-center gap-3 flex-wrap">
       <h1 id="ola" class="text-2xl font-bold">Carregando...</h1>
       <span id="papel" class="hidden text-xs font-semibold text-violet-200 bg-violet-500/20 px-3 py-1 rounded-full">Administrador</span>
     </div>
-    <p id="email" class="text-slate-400 mt-1"></p>
-    <a href="/arquivos" class="cta inline-block mt-6 font-bold px-6 py-3 rounded-xl transition">Meus arquivos</a>  </div>
+    <p id="email" class="text-slate-400 mt-1 break-all"></p>
 
-  <div class="glass rounded-3xl p-8">
-    <h2 class="text-xl font-bold mb-1">Segurança</h2>
-    <p class="text-sm text-slate-400 mb-5">Verificação em duas etapas com aplicativo autenticador.</p>
-
-    <div id="blocoAtivar" class="hidden">
-      <p class="text-slate-300 mb-4">Desativada. Ative para proteger a sua conta com um código extra a cada login.</p>
-      <button type="button" id="btnAtivar" class="cta font-bold px-6 py-3 rounded-xl transition">Ativar verificação em duas etapas</button>
+    <div class="mt-4">
+      <button type="button" id="btnSeguranca" class="hidden text-sm font-semibold text-red-300 border border-red-400/50 bg-red-500/10 hover:bg-red-500/20 px-4 py-2 rounded-xl">🔒 Quero mais segurança: ativar a verificação em duas etapas</button>
+      <p id="dicaSeguranca" class="hidden text-xs text-slate-400 mt-2">Recomendado: com ela, além da senha, a sua conta pede um código do celular para entrar. É opcional; a escolha é sua.</p>
+      <button type="button" id="seloSeguranca" class="hidden text-sm font-semibold text-emerald-300">✔ Conta protegida com verificação em duas etapas <span class="text-slate-400 font-normal underline">gerenciar</span></button>
     </div>
 
-    <div id="blocoSetup" class="hidden space-y-4">
-      <p class="text-slate-300">1. No celular, abra o Google Authenticator (ou Microsoft Authenticator) e escaneie o QR code:</p>
+    <!-- Ativar (passo a passo) -->
+    <div id="blocoSetup" class="hidden mt-5 space-y-4 bg-slate-900/50 rounded-2xl p-5">
+      <p class="text-slate-300">1. No celular, abra o <strong>Google Authenticator</strong> (grátis) e toque em <strong>+</strong> → <strong>Ler código QR</strong>:</p>
       <div id="qr"></div>
-      <p class="text-sm text-slate-400">Se não conseguir escanear, digite esta chave no aplicativo:</p>
+      <p class="text-sm text-slate-400">Se não conseguir escanear, digite esta chave no aplicativo (guarde-a num lugar seguro):</p>
       <p id="chave" class="font-mono text-cyan-300 break-all"></p>
-      <p class="text-slate-300">2. Digite o código de 6 dígitos que o aplicativo mostrar:</p>
+      <p class="text-slate-300">2. Digite o código de 6 números que aparecer no aplicativo:</p>
       <input id="codigoAtivar" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" class="campo text-center text-xl tracking-widest" style="max-width:220px">
       <p id="erroAtivar" class="text-sm text-red-400 min-h-[1.25rem]"></p>
-      <button type="button" id="btnConfirmar" class="cta font-bold px-6 py-3 rounded-xl transition">Confirmar e ativar</button>
+      <div class="flex flex-wrap gap-4 items-center">
+        <button type="button" id="btnConfirmar" class="cta font-bold px-6 py-3 rounded-xl transition">Confirmar e ativar</button>
+        <button type="button" id="btnCancelarSetup" class="text-sm text-slate-400 hover:text-white">Agora não</button>
+      </div>
     </div>
 
-    <div id="blocoAtivo" class="hidden space-y-4">
-      <p class="text-emerald-300 font-semibold">Verificação em duas etapas ativada.</p>
+    <!-- Desativar -->
+    <div id="blocoAtivo" class="hidden mt-5 space-y-4 bg-slate-900/50 rounded-2xl p-5">
       <p class="text-sm text-slate-400">Para desativar, confirme a sua senha e um código do aplicativo.</p>
-      <input id="senhaDesativar" type="password" placeholder="Sua senha" autocomplete="current-password" class="campo" style="max-width:320px">
-      <input id="codigoDesativar" type="text" inputmode="numeric" maxlength="6" placeholder="Código de 6 dígitos" autocomplete="one-time-code" class="campo" style="max-width:320px">
+      <div class="relative" style="max-width:320px">
+        <input id="senhaDesativar" type="password" placeholder="Sua senha" autocomplete="current-password" class="campo" style="padding-right:84px">
+        <button type="button" id="olhoDesativar" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-300 hover:text-white px-2 py-1">Mostrar</button>
+      </div>
+      <input id="codigoDesativar" type="text" inputmode="numeric" maxlength="6" placeholder="Código de 6 números" autocomplete="one-time-code" class="campo" style="max-width:320px">
       <p id="erroDesativar" class="text-sm text-red-400 min-h-[1.25rem]"></p>
       <button type="button" id="btnDesativar" class="font-semibold text-red-300 border border-red-400/40 px-5 py-2.5 rounded-xl hover:bg-red-500/10">Desativar</button>
     </div>
+
+    <div class="flex flex-wrap gap-3 mt-6">
+      <a href="/arquivos" class="cta inline-block font-bold px-6 py-3 rounded-xl transition">Meus arquivos</a>
+      <a href="/meu-portal" class="inline-block font-semibold text-cyan-200 border border-cyan-400/40 px-6 py-3 rounded-xl hover:bg-cyan-500/10">📸 Meu portal de clientes</a>
+      <a href="/meu-portal?aba=abertos" class="inline-block font-semibold text-emerald-200 border border-emerald-400/40 px-6 py-3 rounded-xl hover:bg-emerald-500/10">🏃 Vender fotos de eventos</a>
+      <a id="linkAdmin" href="/admin" class="hidden inline-block font-semibold text-violet-200 border border-violet-400/40 px-6 py-3 rounded-xl hover:bg-violet-500/10">Painel admin</a>
+    </div>
+  </div>
+
+  <!-- 2. Plano -->
+  <div class="glass rounded-3xl p-6 sm:p-8">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <p class="text-sm text-slate-400">Seu plano</p>
+        <p id="planoTamanho" class="text-3xl font-extrabold">…</p>
+        <p id="planoDetalhe" class="text-sm text-slate-400 mt-1"></p>
+      </div>
+      <button type="button" id="btnContratar" class="cta font-bold px-8 py-3.5 rounded-xl transition">Contratar</button>
+    </div>
+
+    <!-- Sem plano: escolher entre testar ou contratar -->
+    <div id="blocoOpcoes" class="hidden mt-6 pt-6 border-t border-blue-900/60">
+      <div class="grid sm:grid-cols-2 gap-3">
+        <button type="button" id="btnTesteGratis" class="text-left bg-slate-900/50 hover:bg-slate-900 border border-cyan-400/40 rounded-2xl p-4">
+          <span class="block font-bold text-cyan-200">🎁 Testar grátis por 24 horas</span>
+          <span class="block text-xs text-slate-400 mt-1">Sem cartão: 20 MB para testar o envio de fotos e o portal de clientes.</span>
+        </button>
+        <button type="button" id="btnQueroContratar" class="text-left bg-slate-900/50 hover:bg-slate-900 border border-indigo-400/40 rounded-2xl p-4">
+          <span class="block font-bold text-indigo-200">💳 Quero contratar já</span>
+          <span class="block text-xs text-slate-400 mt-1">Escolha os GB e pague por PIX ou cartão. Ativa na hora.</span>
+        </button>
+      </div>
+      <button type="button" id="linkCupom" class="text-xs text-slate-400 hover:text-white underline mt-3">Tenho um cupom</button>
+      <div id="blocoCupom" class="hidden mt-3 flex flex-wrap gap-2" style="max-width:420px">
+        <input id="cupom" class="campo flex-1 uppercase" maxlength="30" placeholder="Digite o cupom" autocomplete="off">
+        <button type="button" id="btnCupom" class="cta font-bold px-5 py-2.5 rounded-xl text-sm">Ativar</button>
+      </div>
+      <p id="erroCupom" class="text-sm text-red-400 mt-2 min-h-[1.25rem]"></p>
+    </div>
+
+    <!-- Calculadora (usa o /app.js da página inicial) -->
+    <div id="blocoCalculadora" class="hidden mt-6 pt-6 border-t border-blue-900/60">
+      <div class="flex justify-between items-center mb-4">
+        <label for="gbSlider" class="text-sm font-semibold text-slate-200">Quanto espaço você precisa?</label>
+        <span id="gbDisplay" class="text-2xl font-extrabold grad">50 GB</span>
+      </div>
+      <input type="range" id="gbSlider" min="1" max="5000" step="1" value="50">
+      <div class="flex flex-wrap gap-2 mt-5">
+        <button type="button" class="chip" data-gb="1">1 GB</button>
+        <button type="button" class="chip" data-gb="50">50 GB</button>
+        <button type="button" class="chip" data-gb="200">200 GB</button>
+        <button type="button" class="chip" data-gb="500">500 GB</button>
+        <button type="button" class="chip" data-gb="1000">1 TB</button>
+        <button type="button" class="chip" data-gb="2000">2 TB</button>
+        <button type="button" class="chip" data-gb="5000">5 TB</button>
+      </div>
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-5 mt-6">
+        <div>
+          <span class="text-xs text-slate-400 uppercase tracking-wider block">Valor mensal</span>
+          <div class="flex items-baseline gap-1">
+            <span class="text-sm font-semibold text-slate-300">R$</span>
+            <span id="priceDisplay" class="text-3xl font-extrabold">-</span>
+            <span class="text-xs text-slate-400">/mês</span>
+          </div>
+        </div>
+        <div class="flex flex-col items-stretch sm:items-end gap-2 w-full sm:w-auto">
+          <button type="button" id="checkoutBtn" class="cta font-bold px-8 py-3.5 rounded-xl transition active:scale-95">⚡ Pagar com PIX</button>
+          <button type="button" id="cartaoBtn" class="text-sm font-semibold text-slate-300 hover:text-white underline">Prefiro cartão de crédito</button>
+        </div>
+      </div>
+      <!-- Já tem plano e escolheu um tamanho maior: renovar (+30 dias) ou aumentar agora (paga só os dias que faltam). -->
+      <div id="blocoAumento" class="hidden mt-5 grid sm:grid-cols-2 gap-3">
+        <label class="cursor-pointer bg-slate-900/50 rounded-2xl p-4 border-2 border-transparent has-[:checked]:border-cyan-400 flex gap-3">
+          <input type="radio" name="modoPag" value="" class="mt-1" checked>
+          <span><span class="font-bold block">🔁 Renovar</span><span id="txtRenovar" class="text-sm text-slate-400"></span></span>
+        </label>
+        <label class="cursor-pointer bg-slate-900/50 rounded-2xl p-4 border-2 border-transparent has-[:checked]:border-cyan-400 flex gap-3">
+          <input type="radio" name="modoPag" value="aumentar" class="mt-1">
+          <span><span class="font-bold block">⚡ Aumentar agora</span><span id="txtAumentar" class="text-sm text-slate-400"></span></span>
+        </label>
+      </div>
+      <div class="flex flex-wrap items-center justify-end gap-2 mt-4">
+        <span class="text-sm text-slate-400">Tem cupom?</span>
+        <input id="cupomCalc" class="campo uppercase" style="max-width:190px;padding:9px 12px" maxlength="30" placeholder="Digite o cupom" autocomplete="off">
+        <button type="button" id="btnCupomCalc" class="font-semibold text-sm text-cyan-200 border border-cyan-400/50 px-4 py-2.5 rounded-xl hover:bg-cyan-500/10">Aplicar</button>
+      </div>
+      <p id="erroCupomCalc" class="text-sm text-red-400 text-right min-h-[1.25rem]"></p>
+      <p class="text-xs text-slate-500 mt-4">PIX aqui mesmo, na Master Nuvem; cartão pela página segura do Mercado Pago. O plano ativa sozinho assim que o pagamento é aprovado.</p>
+    </div>
+  </div>
+
+  <!-- 3. Receber dos clientes (fotógrafos, contadores...) sem taxa -->
+  <div class="glass rounded-3xl p-6 sm:p-8" style="border-color:#10b98166">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="max-w-xl">
+        <p class="text-xl font-bold text-emerald-200">💸 Cobre dos seus clientes sem pagar taxa</p>
+        <p class="text-sm text-slate-300 mt-2">Coloque o seu PIX e, se quiser, o seu link de pagamento (Mercado Pago, InfinitePay...). Os seus clientes pagam <strong>direto para você</strong>.</p>
+        <p class="text-sm text-slate-400 mt-1">A Master Nuvem não cobra comissão nem taxa sobre o que você recebe. Só cobramos o armazenamento.</p>
+        <p id="recebeStatus" class="text-sm mt-3 text-slate-400"></p>
+      </div>
+      <a href="/meu-portal?aba=receber" id="btnRecebe" class="inline-block font-bold text-white px-6 py-3 rounded-xl" style="background:linear-gradient(90deg,#059669,#10b981)">Configurar como recebo</a>
+    </div>
   </div>
 </main>
+
+<!-- Tela do PIX (QR code gerado pelo Mercado Pago, mostrado aqui com a nossa marca) -->
+<div id="pixTela" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-sm overflow-y-auto" style="z-index:2147483600">
+  <div class="min-h-full flex items-center justify-center p-4">
+    <div class="glass rounded-3xl p-6 sm:p-8 w-full max-w-md text-center">
+      <div id="pixAguardando">
+        <img src="/marca/mascote.svg" alt="" class="h-14 mx-auto">
+        <p class="text-sm text-slate-400 mt-3">Master <span class="grad font-bold">Nuvem</span> · <span id="pixPlano"></span></p>
+        <h2 class="text-2xl font-extrabold mt-1">Pague <span id="pixValor"></span> com PIX</h2>
+        <p class="text-sm text-slate-400 mt-1">Abra o app do seu banco e escaneie o código:</p>
+        <div class="mt-4 inline-block bg-white rounded-2xl p-3"><img id="pixQr" alt="QR code do PIX" class="w-56 h-56"></div>
+        <p class="text-sm text-slate-300 mt-4">Ou use o <strong>PIX Copia e Cola</strong>:</p>
+        <div class="flex gap-2 mt-2">
+          <input id="pixCodigo" readonly class="campo text-xs font-mono" style="padding:10px">
+          <button type="button" id="pixCopiar" class="cta font-bold px-4 rounded-xl text-sm whitespace-nowrap">Copiar</button>
+        </div>
+        <p class="flex items-center justify-center gap-2 text-sm text-cyan-200 mt-5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-cyan-300 animate-pulse"></span> Aguardando o pagamento… esta tela muda sozinha.</p>
+        <p id="pixTempo" class="text-xs text-slate-500 mt-1"></p>
+        <p class="text-xs text-slate-500 mt-4">🔒 Pagamento processado com segurança pelo Mercado Pago. No app do banco, o recebedor aparece com o nome do titular da Master Nuvem.</p>
+        <button type="button" id="pixFechar" class="text-sm text-slate-400 hover:text-white mt-4">Cancelar e voltar</button>
+      </div>
+      <div id="pixPago" class="hidden">
+        <img src="/marca/mascote.svg" alt="" class="h-20 mx-auto">
+        <h2 class="text-2xl font-extrabold mt-3 text-emerald-300">Pagamento confirmado! 🎉</h2>
+        <p id="pixPagoTexto" class="text-slate-300 mt-2"></p>
+        <a href="/arquivos" class="cta inline-block font-bold px-6 py-3 rounded-xl mt-6">Enviar meus arquivos</a>
+        <button type="button" id="pixOk" class="block mx-auto text-sm text-slate-400 hover:text-white mt-4">Voltar ao painel</button>
+      </div>
+      <div id="pixExpirou" class="hidden">
+        <img src="/marca/mascote.svg" alt="" class="h-14 mx-auto">
+        <h2 class="text-xl font-bold mt-3">O código PIX expirou</h2>
+        <p class="text-slate-400 mt-2">Nenhum valor foi cobrado. Gere um novo código para pagar.</p>
+        <button type="button" id="pixDeNovo" class="cta font-bold px-6 py-3 rounded-xl mt-6">Gerar outro PIX</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 async function postar(rota, corpo) {
@@ -83,19 +237,26 @@ function mostrar(id, sim) {
   document.getElementById(id).classList.toggle("hidden", !sim);
 }
 
+var parametros = new URLSearchParams(window.location.search);
+var usuario = null;
+var planoAtual = null;
+
+/* ---------- segurança (2 etapas) ---------- */
+
 function estadoSeguranca(ativo) {
-  mostrar("blocoAtivar", !ativo);
+  mostrar("btnSeguranca", !ativo);
+  mostrar("dicaSeguranca", !ativo && parametros.get("bemvindo") === "1");
+  mostrar("seloSeguranca", ativo);
   mostrar("blocoSetup", false);
-  mostrar("blocoAtivo", ativo);
+  mostrar("blocoAtivo", false);
 }
 
 async function iniciarSetup() {
   var r = await postar("/api/2fa/setup");
   if (!r.ok) {
-    alert(r.dados.error || "Não foi possível iniciar.");
+    avisar(r.dados.error || "Não foi possível iniciar.");
     return;
   }
-  mostrar("blocoAtivar", false);
   mostrar("blocoSetup", true);
   document.getElementById("chave").textContent = r.dados.secret;
   var caixa = document.getElementById("qr");
@@ -105,6 +266,7 @@ async function iniciarSetup() {
   } else {
     caixa.textContent = "QR code indisponível. Use a chave abaixo.";
   }
+  document.getElementById("blocoSetup").scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 async function confirmarSetup() {
@@ -112,7 +274,7 @@ async function confirmarSetup() {
   erro.textContent = "";
   var r = await postar("/api/2fa/enable", { codigo: document.getElementById("codigoAtivar").value });
   if (r.ok) {
-    window.location.reload();
+    window.location.href = "/painel";
     return;
   }
   erro.textContent = r.dados.error || "Código incorreto.";
@@ -132,30 +294,271 @@ async function desativar() {
   erro.textContent = r.dados.error || "Não foi possível desativar.";
 }
 
+/* ---------- plano ---------- */
+
+function formatarEspaco(gb) {
+  if (gb < 1) return Math.round(gb * 1000) + " MB";
+  if (gb >= 1000) return String(+(gb / 1000).toFixed(2)) + " TB";
+  return gb + " GB";
+}
+
+function mostrarPlano(plano) {
+  planoAtual = plano;
+  var tamanho = document.getElementById("planoTamanho");
+  var detalhe = document.getElementById("planoDetalhe");
+  var botao = document.getElementById("btnContratar");
+  if (plano && plano.teste) {
+    // Teste grátis por cupom (paid_until vem em UTC).
+    var fim = new Date(plano.paid_until.replace(" ", "T") + "Z");
+    var horas = Math.max(0, Math.round((fim - Date.now()) / 3600000));
+    tamanho.textContent = formatarEspaco(plano.quota_gb);
+    tamanho.className = "text-3xl font-extrabold text-amber-300";
+    detalhe.textContent = "Teste grátis · termina em cerca de " + horas + " hora(s), às " +
+      fim.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) + " de " + fim.toLocaleDateString("pt-BR") + ".";
+    botao.textContent = "Contratar plano";
+  } else if (plano) {
+    var d = plano.paid_until.slice(0, 10).split("-");
+    tamanho.textContent = formatarEspaco(plano.quota_gb);
+    tamanho.className = "text-3xl font-extrabold text-emerald-300";
+    detalhe.textContent = "Ativo até " + d[2] + "/" + d[1] + "/" + d[0] + ".";
+    botao.textContent = "Renovar ou aumentar";
+  } else {
+    tamanho.textContent = "0 GB";
+    tamanho.className = "text-3xl font-extrabold";
+    detalhe.textContent = "Você ainda não tem espaço contratado.";
+    botao.textContent = "Contratar";
+  }
+}
+
+function abrirCalculadora() {
+  mostrar("blocoOpcoes", false);
+  mostrar("blocoCalculadora", true);
+  setTimeout(conferirAumento, 50);
+  document.getElementById("blocoCalculadora").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+// "Contratar": sem plano, pergunta se quer testar ou contratar; com plano (pago ou teste), vai direto para a calculadora.
+document.getElementById("btnContratar").addEventListener("click", function () {
+  if (planoAtual) { abrirCalculadora(); return; }
+  mostrar("blocoCalculadora", false);
+  mostrar("blocoOpcoes", true);
+});
+document.getElementById("btnQueroContratar").addEventListener("click", abrirCalculadora);
+document.getElementById("linkCupom").addEventListener("click", function () {
+  mostrar("blocoCupom", true);
+  document.getElementById("cupom").focus();
+});
+
+async function usarCupom(codigo, botao, idErro) {
+  var erro = document.getElementById(idErro || "erroCupom");
+  erro.textContent = "";
+  botao.disabled = true;
+  var r = await postar("/api/cupom", { codigo: codigo, metodo: "pix" });
+  botao.disabled = false;
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível ativar."; return; }
+  // Cupom de preço: abre a tela do PIX com o valor do cupom.
+  if (r.dados.pix) { mostrarPix(r.dados.pix); return; }
+  if (r.dados.init_point) { window.location.href = r.dados.init_point; return; }
+  window.location.href = "/painel";
+}
+
+/* ---------- aumentar espaço no meio do plano ---------- */
+
+var esperaAumento = null;
+function reaisTxt(c) { return "R$ " + (c / 100).toFixed(2).replace(".", ","); }
+
+async function conferirAumento() {
+  var gb = parseInt(document.getElementById("gbSlider").value, 10);
+  var bloco = document.getElementById("blocoAumento");
+  window.modoPagamento = "";
+  if (!planoAtual || planoAtual.teste || gb <= planoAtual.quota_gb) { bloco.classList.add("hidden"); return; }
+  var r = await fetch("/api/plano/aumento?gb=" + gb);
+  var d = r.ok ? await r.json() : {};
+  if (!d.pode) { bloco.classList.add("hidden"); return; }
+  var ate = d.ate.slice(0, 10).split("-");
+  document.getElementById("txtRenovar").textContent = formatarEspaco(gb) + " por 30 dias, a partir de hoje: " + document.getElementById("priceDisplay").textContent.replace(/^/, "R$ ") + ".";
+  document.getElementById("txtAumentar").textContent = "Fica com " + formatarEspaco(gb) + " já, até " + ate[2] + "/" + ate[1] + " (o vencimento não muda). Paga só os " + d.dias + " dia(s) que faltam: " + reaisTxt(d.valor_centavos) + ".";
+  bloco.classList.remove("hidden");
+  window.modoPagamento = (document.querySelector("input[name=modoPag]:checked") || {}).value || "";
+}
+document.querySelectorAll("input[name=modoPag]").forEach(function (x) {
+  x.addEventListener("change", function () { window.modoPagamento = this.value; });
+});
+document.getElementById("gbSlider").addEventListener("input", function () {
+  clearTimeout(esperaAumento);
+  esperaAumento = setTimeout(conferirAumento, 350);
+});
+document.querySelectorAll("[data-gb]").forEach(function (b) { b.addEventListener("click", function () { setTimeout(conferirAumento, 50); }); });
+
+/* ---------- PIX dentro do site ---------- */
+
+var pixAtual = null;
+var pixRelogio = null;
+var pixConsulta = null;
+
+function pararPix() {
+  clearInterval(pixRelogio);
+  clearTimeout(pixConsulta);
+  pixRelogio = null;
+  pixConsulta = null;
+}
+
+function telaPix(qual) {
+  ["pixAguardando", "pixPago", "pixExpirou"].forEach(function (id) { mostrar(id, id === qual); });
+}
+
+window.mostrarPix = function (pix) {
+  pararPix();
+  pixAtual = pix;
+  document.getElementById("pixPlano").textContent = formatarEspaco(pix.gb) + " por 30 dias";
+  document.getElementById("pixValor").textContent = "R$ " + (pix.valor_centavos / 100).toFixed(2).replace(".", ",");
+  document.getElementById("pixCodigo").value = pix.qr_code;
+  var img = document.getElementById("pixQr");
+  if (pix.qr_code_base64) {
+    img.src = "data:image/png;base64," + pix.qr_code_base64;
+  } else if (typeof QRCode !== "undefined") {
+    // Sem imagem do Mercado Pago: desenha o QR aqui mesmo a partir do código.
+    var tmp = document.createElement("div");
+    new QRCode(tmp, { text: pix.qr_code, width: 224, height: 224 });
+    var c = tmp.querySelector("canvas");
+    if (c) img.src = c.toDataURL();
+  }
+  telaPix("pixAguardando");
+  mostrar("pixTela", true);
+  document.body.style.overflow = "hidden";
+
+  // Contagem regressiva até o código expirar.
+  var fim = pix.expira_em ? new Date(pix.expira_em).getTime() : Date.now() + (pix.minutos || 30) * 60000;
+  function relogio() {
+    var s = Math.max(0, Math.round((fim - Date.now()) / 1000));
+    document.getElementById("pixTempo").textContent = "O código vale por mais " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+    if (s === 0) { pararPix(); telaPix("pixExpirou"); }
+  }
+  relogio();
+  pixRelogio = setInterval(relogio, 1000);
+  consultarPix();
+};
+
+async function consultarPix() {
+  if (!pixAtual) return;
+  try {
+    var r = await fetch("/api/pagamento/status?pedido=" + pixAtual.pedido);
+    var d = await r.json();
+    if (d.situacao === "pago") {
+      pararPix();
+      document.getElementById("pixPagoTexto").textContent = "Seu plano de " + formatarEspaco(d.quota_gb) + " já está ativo. Pode começar a enviar seus arquivos.";
+      telaPix("pixPago");
+      return;
+    }
+    if (d.situacao === "expirado" || d.situacao === "cancelado") { pararPix(); telaPix("pixExpirou"); return; }
+  } catch (e) {}
+  if (pixRelogio) pixConsulta = setTimeout(consultarPix, 4000);
+}
+
+function fecharPix() {
+  pararPix();
+  pixAtual = null;
+  mostrar("pixTela", false);
+  document.body.style.overflow = "";
+}
+
+document.getElementById("pixCopiar").addEventListener("click", function () {
+  var campo = document.getElementById("pixCodigo");
+  var botao = this;
+  function feito() { botao.textContent = "Copiado!"; setTimeout(function () { botao.textContent = "Copiar"; }, 2500); }
+  if (navigator.clipboard) navigator.clipboard.writeText(campo.value).then(feito, function () { campo.select(); document.execCommand("copy"); feito(); });
+  else { campo.select(); document.execCommand("copy"); feito(); }
+});
+document.getElementById("pixFechar").addEventListener("click", fecharPix);
+document.getElementById("pixOk").addEventListener("click", function () { window.location.href = "/painel"; });
+document.getElementById("pixDeNovo").addEventListener("click", function () { fecharPix(); document.getElementById("checkoutBtn").click(); });
+document.getElementById("btnTesteGratis").addEventListener("click", function () { usarCupom("NUVEM1DIA", this); });
+document.getElementById("btnCupom").addEventListener("click", function () { usarCupom(document.getElementById("cupom").value, this); });
+// Cupom ao lado do botão de pagar: cupom de preço vai para o pagamento; cupom de teste ativa o teste.
+document.getElementById("btnCupomCalc").addEventListener("click", function () { usarCupom(document.getElementById("cupomCalc").value, this, "erroCupomCalc"); });
+document.getElementById("cupomCalc").addEventListener("keydown", function (e) { if (e.key === "Enter") document.getElementById("btnCupomCalc").click(); });
+
+/* ---------- carregar ---------- */
+
+// Link de divulgação: /painel?cupom=CODIGO já abre as opções com o cupom preenchido (passando pelo login, se precisar).
+var cupomUrl = parametros.get("cupom");
+
 fetch("/api/me").then(function (r) {
   if (!r.ok) {
-    window.location.href = "/entrar";
+    // Depois do login volta para cá com o mesmo pedido (cupom ou tamanho escolhido na página inicial).
+    window.location.href = "/entrar" + (window.location.search ? "?volta=" + encodeURIComponent("/painel" + window.location.search) : "");
     return null;
   }
   return r.json();
 }).then(function (u) {
   if (!u) return;
+  usuario = u;
   document.getElementById("ola").textContent = "Olá, " + (u.nome || "cliente") + "!";
   document.getElementById("email").textContent = u.email;
   if (u.role === "admin") {
-    document.getElementById("papel").classList.remove("hidden");
+    mostrar("papel", true);
+    mostrar("linkAdmin", true);
   }
   estadoSeguranca(u.totp);
+  mostrarPlano(u.plano);
+  if (cupomUrl && !u.plano) {
+    mostrar("blocoOpcoes", true);
+    mostrar("blocoCupom", true);
+    document.getElementById("cupom").value = cupomUrl.toUpperCase();
+  }
+  // Veio do "Contratar" da página inicial: já abre a calculadora com o tamanho escolhido.
+  if (parametros.get("contratar") === "1") abrirCalculadora();
 });
 
-document.getElementById("btnAtivar").addEventListener("click", iniciarSetup);
+// Volta do Mercado Pago: o plano é ativado pelo aviso (webhook), que pode levar alguns segundos.
+(function () {
+  var pg = parametros.get("pagamento");
+  var caixa = document.getElementById("avisoPagamento");
+  if (!pg) return;
+  var textos = {
+    ok: ["text-emerald-300", "Pagamento aprovado! Seu plano é ativado em instantes. Se ainda não aparecer abaixo, atualize a página em alguns segundos."],
+    pendente: ["text-amber-300", "Pagamento em análise. Assim que o Mercado Pago confirmar (no PIX costuma ser rápido), seu plano é ativado sozinho."],
+    erro: ["text-red-300", "O pagamento não foi concluído. Nenhum valor foi cobrado. Você pode tentar de novo."]
+  };
+  var t = textos[pg];
+  if (!t) return;
+  caixa.classList.add(t[0]);
+  caixa.textContent = t[1];
+  caixa.classList.remove("hidden");
+})();
+
+document.getElementById("btnSeguranca").addEventListener("click", iniciarSetup);
+document.getElementById("btnCancelarSetup").addEventListener("click", function () { mostrar("blocoSetup", false); });
+document.getElementById("seloSeguranca").addEventListener("click", function () {
+  mostrar("blocoAtivo", document.getElementById("blocoAtivo").classList.contains("hidden"));
+});
 document.getElementById("btnConfirmar").addEventListener("click", confirmarSetup);
 document.getElementById("btnDesativar").addEventListener("click", desativar);
+document.getElementById("olhoDesativar").addEventListener("click", function () {
+  var campo = document.getElementById("senhaDesativar");
+  var visivel = campo.type === "text";
+  campo.type = visivel ? "password" : "text";
+  this.textContent = visivel ? "Mostrar" : "Ocultar";
+});
 document.getElementById("sair").addEventListener("click", function () {
   postar("/api/logout").then(function () {
     window.location.href = "/entrar";
   });
 });
+
+// Cartão "Cobre sem taxa": mostra se a forma de recebimento já está configurada.
+fetch("/api/portal").then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+  var p = d && d.portal, st = document.getElementById("recebeStatus");
+  if (p && (p.instrucoes_pagamento || p.link_pagamento)) {
+    st.textContent = "✅ Configurado: " + (p.instrucoes_pagamento ? "PIX" : "") + (p.instrucoes_pagamento && p.link_pagamento ? " + " : "") + (p.link_pagamento ? "link de pagamento" : "");
+    st.className = "text-sm mt-3 text-emerald-300";
+    document.getElementById("btnRecebe").textContent = "Ver ou trocar";
+  } else {
+    st.textContent = "Ainda não configurado. Leva 1 minuto.";
+  }
+}).catch(function () {});
 </script>
+<script src="/app.js"></script>
+<script src="/assistente.js" defer></script>
 </body>
 </html>

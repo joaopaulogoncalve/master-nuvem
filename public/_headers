@@ -1,0 +1,8 @@
+# Cabeçalhos de proteção das páginas (a Cloudflare aplica direto nos arquivos de /public).
+# O site não abre dentro de outro site, o navegador não "adivinha" tipo de arquivo e só usa HTTPS.
+/*
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

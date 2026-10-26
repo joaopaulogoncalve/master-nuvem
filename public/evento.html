@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fotos do evento</title>
+<link rel="icon" type="image/png" href="/marca/icone-64.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="/avisos.js"></script>
+<style>
+:root{--cor:#0ea5e9}
+body{background:#f8fafc}
+.btn{background:var(--cor);color:#fff;font-weight:700;border-radius:12px;padding:12px 20px}
+.btn:disabled{opacity:.6}
+.btn2{border:1px solid var(--cor);color:var(--cor);font-weight:600;border-radius:12px;padding:8px 14px}
+.campo{width:100%;padding:11px 13px;border-radius:12px;border:1px solid #cbd5e1;background:#fff;outline:none}
+.campo:focus{border-color:var(--cor)}
+.foto{position:relative;border-radius:12px;overflow:hidden;background:#e2e8f0;cursor:pointer;user-select:none}
+.foto img{width:100%;aspect-ratio:1/1;object-fit:cover;pointer-events:none}
+.foto .marca{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:999px;background:#fff9;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff}
+.foto.on{outline:4px solid var(--cor);outline-offset:-4px}
+.foto.on .marca{background:var(--cor)}
+.foto .lupa{position:absolute;bottom:8px;right:8px;background:#0009;color:#fff;border-radius:999px;width:30px;height:30px;font-size:14px;display:flex;align-items:center;justify-content:center}
+/* Layouts do estúdio (os mesmos da área do cliente). O clássico é o padrão acima. */
+body.tema-escuro{background:#0a0a0a;color:#e5e5e5}
+body.tema-escuro #topo{background:#0a0a0a!important;border-bottom:1px solid #262626}
+body.tema-escuro .bg-white,body.tema-escuro #barra{background:#141414!important;border-color:#262626!important}
+body.tema-escuro .bg-slate-50{background:#1c1c1c!important}
+body.tema-escuro .text-slate-500,body.tema-escuro .text-slate-600,body.tema-escuro .text-slate-700,body.tema-escuro .text-slate-400{color:#a3a3a3!important}
+body.tema-escuro .campo{background:#141414;border-color:#333;color:#eee}
+body.tema-escuro .foto{background:#1f1f1f;border-radius:6px}
+body.tema-escuro #telaPedido>div>div{background:#141414!important;color:#e5e5e5}
+body.tema-minimalista{background:#fff;color:#111}
+body.tema-minimalista #topo{background:#fff!important;color:#111!important;border-bottom:1px solid #ececec;text-align:center}
+body.tema-minimalista #topo h1,body.tema-delicado #topo h1{font-family:Georgia,"Times New Roman",serif;font-weight:700}
+body.tema-minimalista #precos{background:#f4f4f4!important}
+body.tema-minimalista .bg-white{box-shadow:none!important;border:1px solid #ececec}
+body.tema-minimalista .foto{border-radius:2px;aspect-ratio:4/5}
+body.tema-minimalista .foto img{aspect-ratio:4/5}
+body.tema-delicado{background:#fdf6f0;color:#4a3b3b}
+body.tema-delicado #topo{background:linear-gradient(135deg,#f3d9d0,#ead7f3)!important;color:#4a3b3b!important}
+body.tema-delicado #precos{background:#ffffff99!important}
+body.tema-delicado .bg-white{border-radius:22px}
+body.tema-delicado .foto{border-radius:18px}
+/* Com foto de capa no topo: texto sempre branco e legível, em qualquer layout. */
+body.com-capa #topo h1{color:#fff!important;text-shadow:0 2px 12px #0008}
+body.com-capa #precos{background:rgba(255,255,255,.22)!important;color:#fff}
+/* Temáticos */
+body.tema-casamento{background:#fbf8f3;color:#3b3226}
+body.tema-casamento #topo{background:#fffdf9!important;color:#3b3226!important;border-bottom:1px solid #b08d57;text-align:center}
+body.tema-casamento #topo h1{font-family:"Great Vibes",cursive;font-weight:400;font-size:46px;color:#b08d57}
+body.tema-casamento #precos{background:#f5ede0!important}
+body.tema-casamento .btn{background:#b08d57}
+body.tema-casamento .btn2{border-color:#b08d57;color:#8a6a3b}
+body.tema-casamento .foto{border-radius:2px}
+body.tema-quinze{background:#fff5f8;color:#4a2b3a}
+body.tema-quinze #topo{background:linear-gradient(135deg,#f9d3df,#efc3e3 55%,#f6e3c3)!important;color:#4a2b3a!important}
+body.tema-quinze #topo h1{font-family:"Great Vibes",cursive;font-weight:400;font-size:42px}
+body.tema-quinze #precos{background:#ffffffaa!important}
+body.tema-quinze .btn{background:linear-gradient(90deg,#d9779a,#c9a24f)}
+body.tema-quinze .bg-white{border-radius:20px}
+body.tema-quinze .foto{border-radius:16px;border:3px solid #fff;box-shadow:0 4px 14px #d9779a33}
+body.tema-infantil{background:#fffbea;color:#27364a}
+body.tema-infantil #topo{background:linear-gradient(90deg,#60a5fa,#a78bfa,#f472b6,#fbbf24)!important}
+body.tema-infantil #topo h1{font-family:"Baloo 2",sans-serif;font-weight:800}
+body.tema-infantil .btn{background:#f472b6;border-radius:999px}
+body.tema-infantil .bg-white{border-radius:26px}
+body.tema-infantil .foto{border-radius:22px;border:4px solid #60a5fa}
+body.tema-infantil .foto:nth-child(4n+2){border-color:#f472b6}
+body.tema-infantil .foto:nth-child(4n+3){border-color:#fbbf24}
+body.tema-infantil .foto:nth-child(4n+4){border-color:#34d399}
+body.tema-festa{background:#140d2b;color:#f5f3ff}
+body.tema-festa #topo{background:linear-gradient(120deg,#7c3aed,#db2777 60%,#f59e0b)!important}
+body.tema-festa #topo h1{font-family:"Poppins",sans-serif;font-weight:800}
+body.tema-festa .bg-white,body.tema-festa #barra{background:#1f1742!important;border-color:#3a2d6e!important}
+body.tema-festa .bg-slate-50{background:#2a2056!important}
+body.tema-festa .text-slate-500,body.tema-festa .text-slate-600,body.tema-festa .text-slate-700,body.tema-festa .text-slate-400{color:#c4b5fd!important}
+body.tema-festa .campo{background:#1f1742;border-color:#3a2d6e;color:#fff}
+body.tema-festa .btn{background:linear-gradient(90deg,#f59e0b,#db2777)}
+body.tema-festa .foto{border-radius:12px;box-shadow:0 0 0 2px #7c3aed66}
+body.tema-festa #telaPedido>div>div{background:#1f1742!important;color:#f5f3ff}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Great+Vibes&family=Playfair+Display:wght@500;700&family=Poppins:wght@600;800&display=swap" rel="stylesheet">
+</head>
+<body class="text-slate-800 font-sans antialiased min-h-screen pb-28">
+
+<header id="topo" class="text-white" style="background:var(--cor)">
+  <div class="max-w-5xl mx-auto px-4 py-8">
+    <div class="flex items-center gap-3"><img id="logoEv" class="hidden h-12 w-auto max-w-[140px] object-contain rounded-lg bg-white/80 p-1" alt=""><p id="estudio" class="text-sm opacity-90 font-semibold"></p></div>
+    <h1 id="titulo" class="text-2xl md:text-3xl font-extrabold mt-1">Carregando...</h1>
+    <p id="detalhes" class="text-sm opacity-90 mt-1"></p>
+    <p id="evDesc" class="hidden text-sm opacity-95 mt-3 max-w-2xl whitespace-pre-line"></p>
+    <p id="precos" class="text-sm font-semibold mt-3 bg-white/20 inline-block rounded-xl px-3 py-1.5"></p>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 py-6 space-y-5">
+  <p id="naoEncontrado" class="hidden text-center text-slate-500 py-16">Evento não encontrado. Confira o link com o fotógrafo.</p>
+
+  <!-- Galeria -->
+  <section id="secGaleria" class="hidden space-y-4">
+    <div class="bg-white rounded-2xl p-4 shadow-sm flex flex-wrap gap-3 items-center">
+      <p class="text-sm text-slate-600 flex-1 min-w-[200px]">Toque nas fotos em que você aparece para escolher. <span id="total" class="font-semibold"></span></p>
+      <div class="flex gap-2 w-full sm:w-auto">
+        <input id="busca" class="campo" style="max-width:200px" placeholder="Nº de peito / camisa" inputmode="numeric">
+        <button type="button" id="btnBuscar" class="btn2">Buscar</button>
+      </div>
+    </div>
+    <p id="avisoBusca" class="hidden text-sm text-slate-600"></p>
+    <div id="grade" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"></div>
+    <div class="text-center"><button type="button" id="btnMais" class="hidden btn2">Carregar mais fotos</button></div>
+    <p class="text-xs text-slate-500 text-center">As fotos aqui são prévias com marca d'água. Depois do pagamento você baixa os originais, sem marca, na qualidade máxima.</p>
+  </section>
+
+  <!-- Pedido -->
+  <section id="secPedido" class="hidden space-y-4">
+    <div class="bg-white rounded-2xl p-6 shadow-sm space-y-3">
+      <p id="pedStatus" class="text-sm font-bold"></p>
+      <h2 id="pedTitulo" class="text-xl font-extrabold"></h2>
+      <p id="pedResumo" class="text-slate-600"></p>
+      <div id="pedPagar" class="hidden bg-slate-50 rounded-xl p-4 space-y-2">
+        <p class="font-semibold">Como pagar (direto para o fotógrafo):</p>
+        <p id="pedInstrucoes" class="whitespace-pre-line break-words text-slate-700"></p>
+        <div class="flex flex-wrap gap-2"><button type="button" id="btnCopiarPix" class="btn2">Copiar dados do PIX</button><a id="btnPagarLink" target="_blank" rel="noopener noreferrer" class="hidden btn">💳 Pagar com cartão ou PIX</a></div>
+        <p class="text-sm text-slate-500">Depois de pagar, o fotógrafo confere e libera as fotos. Você recebe um e-mail e esta página mostra os botões de download. <strong>Guarde este link.</strong></p>
+      </div>
+      <div id="pedBaixar" class="hidden">
+        <button type="button" id="btnBaixarTodas" class="btn">⬇ Baixar todas as fotos</button>
+        <p class="text-xs text-slate-500 mt-2">Se o navegador perguntar, permita baixar vários arquivos. Também dá para baixar uma por uma abaixo.</p>
+      </div>
+    </div>
+    <div id="pedFotos" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"></div>
+    <p class="text-center"><a id="voltarGaleria" class="text-sm font-semibold" style="color:var(--cor)">← Ver todas as fotos do evento</a></p>
+  </section>
+</main>
+
+<!-- Barra de compra -->
+<div id="barra" class="hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 shadow-2xl">
+  <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+    <div>
+      <p id="barraQtd" class="font-bold"></p>
+      <p id="barraValor" class="text-sm text-slate-600"></p>
+    </div>
+    <div class="flex gap-2 items-center">
+      <button type="button" id="btnLimpar" class="text-sm text-slate-500">Limpar</button>
+      <button type="button" id="btnContinuar" class="btn">Comprar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Finalizar pedido -->
+<div id="telaPedido" class="hidden fixed inset-0 bg-slate-900/60 overflow-y-auto" style="z-index:2147483600">
+  <div class="min-h-full flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 w-full max-w-md space-y-3">
+      <h2 class="text-xl font-extrabold">Finalizar pedido</h2>
+      <p id="fimResumo" class="text-slate-600"></p>
+      <label class="block text-sm">Seu nome<input id="fimNome" class="campo mt-1" maxlength="80" autocomplete="name"></label>
+      <label class="block text-sm">Seu e-mail (as fotos chegam por ele)<input id="fimEmail" type="email" class="campo mt-1" maxlength="120" autocomplete="email"></label>
+      <label class="block text-sm">WhatsApp (opcional)<input id="fimZap" class="campo mt-1" maxlength="20" inputmode="tel" autocomplete="tel"></label>
+      <div id="blocoNota" class="hidden text-sm space-y-2">
+        <label class="flex items-center gap-2"><input id="fimNota" type="checkbox"> Preciso de nota fiscal</label>
+        <input id="fimDoc" class="campo hidden" maxlength="20" inputmode="numeric" placeholder="CPF ou CNPJ (só números)">
+      </div>
+      <p id="fimErro" class="text-sm text-red-600 min-h-[1.25rem]"></p>
+      <button type="button" id="btnFinalizar" class="btn w-full">Fazer pedido e ver o PIX</button>
+      <button type="button" id="btnVoltar" class="block mx-auto text-sm text-slate-500">Voltar</button>
+      <p class="text-xs text-slate-400">O pagamento vai direto para o fotógrafo. A Master Nuvem guarda as fotos e organiza o pedido. Veja a <a href="/privacidade" class="underline">Política de privacidade</a>.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Ver foto maior -->
+<div id="zoom" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center p-4" style="z-index:2147483600">
+  <img id="zoomImg" class="max-h-full max-w-full rounded-lg" alt="">
+  <button type="button" id="zoomFechar" class="absolute top-4 right-4 text-white text-3xl font-bold">×</button>
+  <button type="button" id="zoomEscolher" class="absolute bottom-6 left-1/2 -translate-x-1/2 btn"></button>
+</div>
+
+<footer class="text-center text-xs text-slate-400 py-6">Galeria hospedada na <a href="/" class="underline">Master Nuvem</a> · 0% de comissão para o fotógrafo</footer>
+
+<script>
+var slug = (window.location.pathname.match(/^\/e\/([a-z0-9-]+)/) || [])[1] || "";
+var params = new URLSearchParams(window.location.search);
+var evento = null;
+var fotos = [];
+var pagina = 0;
+var numero = "";
+var escolhidas = {};
+var zoomFoto = null;
+var CHAVE = "mn-escolhidas-" + slug;
+
+function el(tag, classe, texto) {
+  var e = document.createElement(tag);
+  if (classe) e.className = classe;
+  if (texto !== undefined) e.textContent = texto;
+  return e;
+}
+function mostrar(id, sim) { document.getElementById(id).classList.toggle("hidden", !sim); }
+function reais(c) { return "R$ " + (c / 100).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+function dataBr(t) { if (!t) return ""; var d = t.slice(0, 10).split("-"); return d[2] + "/" + d[1] + "/" + d[0]; }
+
+// Mesma conta do servidor (o servidor confere de novo no pedido).
+function conta(qtd) {
+  var unit = evento.preco_centavos;
+  (evento.faixas || []).forEach(function (f) { if (qtd >= f.a_partir && f.preco_centavos < unit) unit = f.preco_centavos; });
+  return { unit: unit, total: unit * qtd };
+}
+
+function guardar() {
+  try { localStorage.setItem(CHAVE, JSON.stringify(Object.keys(escolhidas))); } catch (e) {}
+}
+function lembrar() {
+  try { (JSON.parse(localStorage.getItem(CHAVE) || "[]")).forEach(function (id) { escolhidas[id] = true; }); } catch (e) {}
+}
+
+// Logo do estúdio, texto do evento e foto de capa no topo.
+function aplicarVisual(e) {
+  if (e.logo) { var l = document.getElementById("logoEv"); l.src = e.logo; l.classList.remove("hidden"); }
+  var d = document.getElementById("evDesc");
+  if (d && e.descricao) { d.textContent = e.descricao; d.classList.remove("hidden"); }
+  if (e.capa) {
+    var topo = document.getElementById("topo");
+    // "important" para a capa ganhar das cores do layout escolhido.
+    topo.style.setProperty("background", "linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.65)), url(\"" + e.capa + "\") center / cover", "important");
+    topo.style.setProperty("color", "#fff", "important");
+    document.body.classList.add("com-capa");
+    topo.querySelector("div").style.paddingTop = "64px";
+  }
+}
+
+function aplicarCor(cor, tema) {
+  if (/^#[0-9a-fA-F]{6}$/.test(cor || "")) document.documentElement.style.setProperty("--cor", cor);
+  if (["escuro", "minimalista", "delicado", "casamento", "quinze", "infantil", "festa"].indexOf(tema) > -1) document.body.classList.add("tema-" + tema);
+}
+
+async function carregarEvento() {
+  var r = await fetch("/api/e/info?slug=" + encodeURIComponent(slug));
+  if (!r.ok) { document.getElementById("titulo").textContent = "Evento não encontrado"; mostrar("naoEncontrado", true); return false; }
+  evento = await r.json();
+  aplicarCor(evento.cor, evento.tema);
+  document.title = evento.titulo + " - fotos por " + evento.estudio;
+  document.getElementById("estudio").textContent = "📸 " + evento.estudio;
+  document.getElementById("titulo").textContent = evento.titulo;
+  document.getElementById("detalhes").textContent = [evento.tipo, dataBr(evento.data), evento.local].filter(Boolean).join(" · ");
+  var p = "1 foto: " + reais(evento.preco_centavos);
+  evento.faixas.forEach(function (f) { p += " · a partir de " + f.a_partir + ": " + reais(f.preco_centavos) + " cada"; });
+  document.getElementById("precos").textContent = p;
+  aplicarVisual(evento);
+  mostrar("blocoNota", !!evento.emite_nota);
+  return true;
+}
+
+/* ---------- galeria ---------- */
+
+async function carregarFotos() {
+  var r = await fetch("/api/e/fotos?slug=" + encodeURIComponent(slug) + "&pagina=" + pagina + (numero ? "&numero=" + encodeURIComponent(numero) : ""));
+  if (!r.ok) return;
+  var d = await r.json();
+  fotos = fotos.concat(d.fotos);
+  document.getElementById("total").textContent = d.total + " foto(s)" + (numero ? " com o número " + numero : " no evento");
+  mostrar("avisoBusca", !!numero && !d.total);
+  document.getElementById("avisoBusca").textContent = "Nenhuma foto marcada com o número " + numero + ". O fotógrafo pode não ter marcado todas: veja a galeria completa.";
+  desenhar();
+  mostrar("btnMais", (d.pagina + 1) * d.por_pagina < d.total);
+}
+
+function desenhar() {
+  var grade = document.getElementById("grade");
+  grade.innerHTML = "";
+  fotos.forEach(function (f) {
+    var c = el("div", "foto" + (escolhidas[f.id] ? " on" : ""));
+    var img = el("img");
+    img.loading = "lazy";
+    img.src = f.previa;
+    img.alt = "Foto " + f.id;
+    c.appendChild(img);
+    c.appendChild(el("span", "marca", escolhidas[f.id] ? "✓" : ""));
+    var lupa = el("span", "lupa", "🔍");
+    lupa.addEventListener("click", function (e) { e.stopPropagation(); abrirZoom(f); });
+    c.appendChild(lupa);
+    c.addEventListener("click", function () { alternar(f.id); });
+    c.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+    grade.appendChild(c);
+  });
+  atualizarBarra();
+}
+
+function alternar(id) {
+  if (escolhidas[id]) delete escolhidas[id]; else escolhidas[id] = true;
+  guardar();
+  desenhar();
+}
+
+function atualizarBarra() {
+  var qtd = Object.keys(escolhidas).length;
+  mostrar("barra", qtd > 0);
+  if (!qtd || !evento) return;
+  var c = conta(qtd);
+  document.getElementById("barraQtd").textContent = qtd + " foto(s) escolhida(s)";
+  document.getElementById("barraValor").textContent = reais(c.total) + (c.unit < evento.preco_centavos ? " (" + reais(c.unit) + " cada, com desconto)" : "");
+  // Dica: quanto falta para o próximo desconto.
+  var prox = (evento.faixas || []).filter(function (f) { return f.a_partir > qtd; })[0];
+  if (prox) document.getElementById("barraValor").textContent += " · com " + prox.a_partir + " fotos, " + reais(prox.preco_centavos) + " cada";
+}
+
+function abrirZoom(f) {
+  zoomFoto = f;
+  document.getElementById("zoomImg").src = f.previa;
+  document.getElementById("zoomEscolher").textContent = escolhidas[f.id] ? "✓ Escolhida (tocar para tirar)" : "Escolher esta foto";
+  mostrar("zoom", true);
+}
+document.getElementById("zoomFechar").addEventListener("click", function () { mostrar("zoom", false); });
+document.getElementById("zoomEscolher").addEventListener("click", function () { alternar(zoomFoto.id); abrirZoom(zoomFoto); });
+document.getElementById("zoomImg").addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+document.getElementById("btnBuscar").addEventListener("click", function () {
+  numero = document.getElementById("busca").value.replace(/[^0-9a-zA-Z]/g, "").toUpperCase();
+  fotos = [];
+  pagina = 0;
+  carregarFotos();
+});
+document.getElementById("busca").addEventListener("keydown", function (e) { if (e.key === "Enter") document.getElementById("btnBuscar").click(); });
+document.getElementById("btnMais").addEventListener("click", function () { pagina++; carregarFotos(); });
+document.getElementById("btnLimpar").addEventListener("click", function () { escolhidas = {}; guardar(); desenhar(); });
+
+document.getElementById("btnContinuar").addEventListener("click", function () {
+  var qtd = Object.keys(escolhidas).length;
+  document.getElementById("fimResumo").textContent = qtd + " foto(s) · total " + reais(conta(qtd).total);
+  document.getElementById("fimErro").textContent = "";
+  mostrar("telaPedido", true);
+  document.getElementById("fimNome").focus();
+});
+document.getElementById("btnVoltar").addEventListener("click", function () { mostrar("telaPedido", false); });
+
+document.getElementById("btnFinalizar").addEventListener("click", async function () {
+  var botao = this;
+  var erro = document.getElementById("fimErro");
+  erro.textContent = "";
+  botao.disabled = true;
+  try {
+    var r = await fetch("/api/e/pedido", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        slug: slug,
+        fotos: Object.keys(escolhidas).map(Number),
+        nome: document.getElementById("fimNome").value,
+        email: document.getElementById("fimEmail").value,
+        whatsapp: document.getElementById("fimZap").value,
+        nota_doc: document.getElementById("fimNota").checked ? document.getElementById("fimDoc").value : ""
+      })
+    });
+    var d = await r.json();
+    if (!r.ok) { erro.textContent = d.error || "Não foi possível fazer o pedido."; botao.disabled = false; return; }
+    escolhidas = {};
+    guardar();
+    window.location.href = "/e/" + slug + "?pedido=" + d.token;
+  } catch (e) {
+    erro.textContent = "Erro de conexão. Tente de novo.";
+    botao.disabled = false;
+  }
+});
+
+/* ---------- pedido ---------- */
+
+var pedidoToken = params.get("pedido");
+var pedidoDados = null;
+var pedidoRelogio = null;
+
+async function carregarPedido() {
+  var r = await fetch("/api/e/pedido?token=" + encodeURIComponent(pedidoToken));
+  if (!r.ok) { document.getElementById("titulo").textContent = "Pedido não encontrado"; mostrar("naoEncontrado", true); return; }
+  var d = await r.json();
+  pedidoDados = d;
+  aplicarCor(d.evento.cor, d.evento.tema);
+  document.getElementById("estudio").textContent = "📸 " + d.evento.estudio;
+  document.getElementById("titulo").textContent = d.evento.titulo;
+  document.getElementById("detalhes").textContent = "Pedido de " + d.pedido.nome;
+  mostrar("precos", false);
+  mostrar("secPedido", true);
+  var st = document.getElementById("pedStatus");
+  var pago = d.pedido.status === "pago";
+  st.textContent = pago ? "✅ PAGAMENTO CONFIRMADO" : d.pedido.status === "cancelado" ? "❌ PEDIDO CANCELADO" : "⏳ ESPERANDO O PAGAMENTO";
+  st.style.color = pago ? "#059669" : d.pedido.status === "cancelado" ? "#dc2626" : "#d97706";
+  document.getElementById("pedTitulo").textContent = pago ? "Suas fotos estão liberadas!" : d.pedido.status === "cancelado" ? "Este pedido foi cancelado" : "Falta só pagar " + reais(d.pedido.valor_centavos);
+  document.getElementById("pedResumo").textContent = d.pedido.qtd + " foto(s) · " + reais(d.pedido.valor_centavos);
+  mostrar("pedPagar", d.pedido.status === "pendente" && !!d.instrucoes_pagamento);
+  document.getElementById("pedInstrucoes").textContent = d.instrucoes_pagamento || "";
+  var pagar = document.getElementById("btnPagarLink");
+  if (d.link_pagamento) pagar.href = d.link_pagamento;
+  pagar.classList.toggle("hidden", !d.link_pagamento);
+  if (d.evento.logo) { var l = document.getElementById("logoEv"); l.src = d.evento.logo; l.classList.remove("hidden"); }
+  mostrar("pedBaixar", pago);
+  var grade = document.getElementById("pedFotos");
+  grade.innerHTML = "";
+  d.fotos.forEach(function (f) {
+    var c = el("div", "foto");
+    var img = el("img");
+    img.src = f.previa;
+    img.alt = "Foto " + f.id;
+    c.appendChild(img);
+    if (pago) {
+      var b = el("button", "btn absolute bottom-2 left-2 right-2 text-sm", "⬇ Baixar original");
+      b.style.padding = "8px";
+      b.type = "button";
+      b.addEventListener("click", function (e) { e.stopPropagation(); baixar(f.id); });
+      c.appendChild(b);
+    }
+    grade.appendChild(c);
+  });
+  // Enquanto espera o PIX, confere sozinho a cada 20 segundos.
+  clearTimeout(pedidoRelogio);
+  if (d.pedido.status === "pendente") pedidoRelogio = setTimeout(carregarPedido, 20000);
+}
+
+async function linkOriginal(id) {
+  var r = await fetch("/api/e/baixar?token=" + encodeURIComponent(pedidoToken) + "&foto=" + id);
+  var d = await r.json();
+  if (!r.ok) throw new Error(d.error || "Não foi possível baixar");
+  return d.url;
+}
+
+async function baixar(id) {
+  try { window.location.href = await linkOriginal(id); } catch (e) { avisar(e.message); }
+}
+
+document.getElementById("btnBaixarTodas").addEventListener("click", async function () {
+  var botao = this;
+  botao.disabled = true;
+  var lista = pedidoDados.fotos;
+  for (var i = 0; i < lista.length; i++) {
+    botao.textContent = "Baixando " + (i + 1) + " de " + lista.length + "...";
+    try {
+      var a = document.createElement("a");
+      a.href = await linkOriginal(lista[i].id);
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (e) {}
+    await new Promise(function (ok) { setTimeout(ok, 1200); });
+  }
+  botao.textContent = "⬇ Baixar todas as fotos";
+  botao.disabled = false;
+});
+
+document.getElementById("btnCopiarPix").addEventListener("click", function () {
+  navigator.clipboard.writeText(pedidoDados.instrucoes_pagamento || "");
+  this.textContent = "Copiado!";
+});
+document.getElementById("voltarGaleria").href = "/e/" + slug;
+document.getElementById("fimNota").addEventListener("change", function () { document.getElementById("fimDoc").classList.toggle("hidden", !this.checked); });
+
+(async function () {
+  if (pedidoToken) { await carregarPedido(); return; }
+  if (!(await carregarEvento())) return;
+  lembrar();
+  mostrar("secGaleria", true);
+  carregarFotos();
+})();
+</script>
+</body>
+</html>
