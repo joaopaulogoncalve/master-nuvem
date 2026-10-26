@@ -128,6 +128,8 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
           <label class="text-sm text-slate-300 block">Senha
             <div class="flex gap-2 mt-1"><input id="cliSenha" class="campo" maxlength="100" placeholder="mín. 8 caracteres" autocomplete="new-password"><button type="button" id="btnGerar" class="link whitespace-nowrap">Gerar</button></div>
           </label>
+          <label class="flex items-start gap-2 text-sm text-slate-300 bg-slate-900/50 rounded-xl p-3"><input id="cliEnviarAcesso" type="checkbox" class="mt-1" checked>
+            <span>✉️ <strong>Mandar o acesso por e-mail</strong> para o cliente: ele recebe o link e o login, e cria a senha dele num botão. A senha nunca vai escrita no e-mail.</span></label>
           <label class="text-sm text-slate-300 block">🎨 Layout da área deste cliente<select id="cliTema" class="campo mt-1"><option value="">Igual ao do estúdio</option><option value="classico">Clássico</option><option value="escuro">Galeria escura</option><option value="minimalista">Minimalista</option><option value="delicado">Delicado</option><option value="casamento">💍 Casamento</option><option value="quinze">👑 15 anos</option><option value="infantil">🎈 Infantil</option><option value="festa">🎉 Festa / aniversário</option></select></label>
         </div>
         <label id="wzCliExistente" class="hidden text-sm text-slate-300 block">Escolha o cliente<select id="albCliente" class="campo mt-1"></select></label>
@@ -145,21 +147,42 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
 
       <div id="wzF3" class="wz hidden space-y-4 text-sm text-slate-300">
         <h2 class="text-xl font-bold text-white">O que o cliente pode fazer?</h2>
-        <label class="block">⏳ Por quanto tempo ele acessa
-          <select id="wzPrazo" class="campo mt-1">
-            <option value="0">Sem prazo</option><option value="2">2 dias</option><option value="3">3 dias</option><option value="4">4 dias</option>
-            <option value="7" selected>7 dias</option><option value="15">15 dias</option><option value="30">30 dias</option>
-          </select>
-        </label>
-        <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="wzEscolher" type="checkbox" checked> ❤️ Escolher fotos, até
-          <input id="wzLimite" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"></label>
-        <label class="flex items-center gap-2 bg-slate-900/50 rounded-xl p-3"><input id="wzEditar" type="checkbox"> ✏️ Pedir edição de fotos</label>
-        <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="wzBaixar" type="checkbox" checked> ⬇️ Pode baixar as fotos originais · cada foto até
-          <input id="wzMaxDown" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> vez(es)</label>
-        <div id="wzBlocoFotos"></div>
-        <p class="text-xs text-slate-500">Dá para mudar depois, no álbum.</p>
+        <p class="text-xs text-slate-400">Responda uma pergunta por vez: a próxima aparece logo abaixo.</p>
+        <!-- As respostas sim/não ligam as caixinhas escondidas (wzEscolher, wzEditar, wzBaixar, wzContrato), que o resto do código lê. -->
+        <input id="wzEscolher" type="checkbox" class="hidden"><input id="wzEditar" type="checkbox" class="hidden"><input id="wzBaixar" type="checkbox" class="hidden"><input id="wzContrato" type="checkbox" class="hidden">
+        <div class="wzEtapa bg-slate-900/50 rounded-xl p-3 space-y-2" data-etapa="prazo">
+          <label class="block font-semibold text-white">⏳ 1. Por quanto tempo o cliente pode acessar o álbum?
+            <select id="wzPrazo" class="campo mt-2 font-normal">
+              <option value="" selected disabled>Escolha o prazo...</option>
+              <option value="2">2 dias</option><option value="3">3 dias</option><option value="4">4 dias</option><option value="7">7 dias</option>
+              <option value="15">15 dias</option><option value="30">30 dias</option><option value="60">60 dias</option><option value="90">90 dias</option>
+              <option value="outro">Outro (digitar os dias)</option><option value="0">Sem prazo (fica sempre aberto)</option>
+            </select>
+          </label>
+          <label id="wzPrazoOutroLinha" class="hidden flex items-center gap-2">Quantos dias? <input id="wzPrazoOutro" type="number" min="1" max="365" class="campo" style="max-width:100px;padding:6px 8px" placeholder="ex.: 45"></label>
+        </div>
+        <div class="wzEtapa hidden bg-slate-900/50 rounded-xl p-3 space-y-2" data-etapa="escolher">
+          <div class="flex items-center gap-3 flex-wrap"><span class="font-semibold text-white">❤️ 2. O cliente pode escolher as fotos favoritas?</span><label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wzSnEscolher" value="sim"> Sim</label><label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wzSnEscolher" value="nao"> Não</label></div>
+          <label data-se-sim="wzSnEscolher" class="hidden flex items-center gap-2 flex-wrap">Até <input id="wzLimite" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> fotos <span class="text-xs text-slate-500">(vazio = quantas quiser)</span></label>
+        </div>
+        <div class="wzEtapa hidden bg-slate-900/50 rounded-xl p-3 space-y-2" data-etapa="editar">
+          <div class="flex items-center gap-3 flex-wrap"><span class="font-semibold text-white">✏️ 3. O cliente pode pedir edição de fotos?</span><label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wzSnEditar" value="sim"> Sim</label><label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wzSnEditar" value="nao"> Não</label></div>
+          <label data-se-sim="wzSnEditar" class="hidden flex items-center gap-2 flex-wrap">Até <input id="wzLimiteEdicao" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="ex.: 15"> fotos para editar <span class="text-xs text-slate-500">(vazio = quantas quiser)</span></label>
+        </div>
+        <div class="wzEtapa hidden bg-slate-900/50 rounded-xl p-3 space-y-2" data-etapa="baixar">
+          <div class="flex items-center gap-3 flex-wrap"><span class="font-semibold text-white">⬇️ 4. O cliente pode baixar as fotos originais?</span><label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wzSnBaixar" value="sim"> Sim</label><label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wzSnBaixar" value="nao"> Não</label></div>
+          <div data-se-sim="wzSnBaixar" class="hidden space-y-2">
+            <label class="flex items-center gap-2 flex-wrap">Cada foto pode ser baixada até <input id="wzMaxDown" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> vez(es)</label>
+            <div id="wzBlocoFotos"></div>
+          </div>
+        </div>
+        <div class="wzEtapa hidden bg-slate-900/50 rounded-xl p-3 space-y-2" data-etapa="contrato">
+          <div class="flex items-center gap-3 flex-wrap"><span class="font-semibold text-white">📝 5. Enviar um contrato para o cliente assinar no primeiro acesso?</span><label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wzSnContrato" value="sim"> Sim</label><label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wzSnContrato" value="nao"> Não</label></div>
+          <p class="text-xs text-slate-500">Se sim, depois de criar o álbum abrimos o contrato já preenchido. Os álbuns só abrem para o cliente depois da assinatura.</p>
+        </div>
+        <p id="wzFimTexto" class="hidden text-xs text-slate-500">Dá para mudar tudo depois, no álbum.</p>
         <p id="wzErro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
-        <button type="button" id="btnCriarFechado" class="cta w-full font-bold px-6 py-3 rounded-xl">Criar álbum ✓</button>
+        <button type="button" id="btnCriarFechado" class="hidden cta w-full font-bold px-6 py-3 rounded-xl">Criar álbum ✓</button>
       </div>
 
       <!-- Evento (link aberto): os campos do formulário do evento são colocados aqui -->
@@ -330,6 +353,8 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         <label class="block">2. Para qual cliente?<select id="ctCliente" class="campo mt-1"></select></label>
         <label class="block">3. Álbum (opcional)<select id="ctAlbum" class="campo mt-1"><option value="">Nenhum</option></select></label>
       </div>
+      <label id="ctObrigatorioLinha" class="flex items-start gap-2 bg-slate-950/40 rounded-xl p-3"><input id="ctObrigatorio" type="checkbox" class="mt-1" checked>
+        <span>🔒 <strong>Contrato obrigatório:</strong> o cliente só vê os álbuns depois de assinar (aparece logo no primeiro acesso dele ao portal).</span></label>
       <div id="ctOutro" class="hidden grid md:grid-cols-2 gap-3">
         <input id="ctOutroNome" class="campo" maxlength="100" placeholder="Nome de quem vai assinar">
         <input id="ctOutroEmail" class="campo" type="email" maxlength="120" placeholder="E-mail de quem vai assinar">
@@ -348,6 +373,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <p id="ctErro" class="text-red-400 min-h-[1.25rem]"></p>
       <div class="flex flex-wrap gap-3">
         <button type="button" id="ctEnviar" class="cta font-bold px-5 py-2.5 rounded-xl">Enviar para assinatura</button>
+        <button type="button" id="ctPdf" class="font-semibold px-4 py-2.5 rounded-xl border border-blue-800 hover:border-cyan-400">📄 Ver em PDF</button>
         <button type="button" id="ctCancelarForm" class="text-slate-400 hover:text-white">Cancelar</button>
       </div>
     </div>
@@ -500,7 +526,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       </label>
       <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="rgEscolher" type="checkbox"> ❤️ Escolher fotos, até
         <input id="rgLimite" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"></label>
-      <label class="flex items-center gap-2 bg-slate-900/50 rounded-xl p-3"><input id="rgEditar" type="checkbox"> ✏️ Pedir edição de fotos</label>
+      <label class="flex items-center gap-2 bg-slate-900/50 rounded-xl p-3"><input id="rgEditar" type="checkbox"> ✏️ Pedir edição de fotos, até <input id="rgLimiteEdicao" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> foto(s)</label>
       <label class="flex items-center gap-2 flex-wrap bg-slate-900/50 rounded-xl p-3"><input id="rgBaixar" type="checkbox"> ⬇️ Pode baixar as fotos originais · cada foto até
         <input id="rgMaxDown" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="sem limite"> vez(es)</label>
         <div id="rgBlocoFotos"></div>
@@ -551,6 +577,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <div class="flex flex-wrap gap-4">
         <button type="button" id="abCopiarAcesso" class="link">📋 Copiar o acesso para enviar</button>
         <button type="button" id="abNovaSenha" class="link">🔑 Nova senha</button>
+        <button type="button" id="abReenviarAcesso" class="link">✉️ Reenviar acesso por e-mail</button>
       </div>
       <div class="pt-3 border-t border-blue-900/60">
         <div class="flex flex-wrap gap-6"><button type="button" id="btnApagarAlbum" class="perigo">🗑️ Remover este álbum</button><button type="button" id="btnRemoverCliente" class="perigo">🗑️ Remover o cliente e todos os álbuns</button></div>
@@ -829,7 +856,9 @@ function desenharContratos() {
     l.appendChild(esq);
     var acoes = el("div", "flex flex-wrap gap-3");
     function acao(txt, fn, classe) { var b = el("button", classe || "link", txt); b.type = "button"; b.addEventListener("click", fn); acoes.appendChild(b); }
+    if (c.obrigatorio && c.status !== "assinado" && c.status !== "cancelado") esq.appendChild(el("p", "text-xs text-amber-300", "🔒 Os álbuns deste cliente só abrem depois da assinatura"));
     acao("Abrir", function () { window.open(c.link, "_blank", "noopener"); });
+    acao("PDF", function () { window.open(c.link + "?pdf=1", "_blank", "noopener"); });
     if (c.status !== "assinado" && c.status !== "cancelado") {
       acao("WhatsApp", function () {
         window.open("https://wa.me/?text=" + encodeURIComponent("Olá, " + c.destinatario_nome.split(" ")[0] + "! Segue o contrato para você ler e assinar online: " + c.link), "_blank", "noopener");
@@ -908,6 +937,7 @@ function ctAtualizarAlbuns() {
   sel.appendChild(new Option("Nenhum", ""));
   dados.albuns.filter(function (a) { return String(a.cliente_id) === cliId; }).forEach(function (a) { sel.appendChild(new Option(a.titulo, a.id)); });
   mostrar("ctOutro", cliId === "outro");
+  mostrar("ctObrigatorioLinha", cliId !== "outro");
 }
 
 function ctTituloPadrao() {
@@ -937,12 +967,55 @@ document.getElementById("ctNovo").addEventListener("click", async function () {
   mostrar("ctForm", true);
   document.getElementById("ctErro").textContent = "";
 });
+// Abre o "Novo contrato" já com o cliente e o álbum escolhidos (vindo do passo a passo do álbum).
+async function ctNovoPara(clienteId, albumId) {
+  mostrarTela("contratos");
+  await carregarContratos();
+  document.getElementById("ctNovo").click();
+  await new Promise(function (ok) { setTimeout(ok, 50); });
+  document.getElementById("ctCliente").value = String(clienteId);
+  ctAtualizarAlbuns();
+  document.getElementById("ctAlbum").value = String(albumId);
+  ctRecalcular();
+  document.getElementById("ctObrigatorio").checked = true;
+  document.getElementById("ctForm").scrollIntoView({ behavior: "smooth", block: "start" });
+}
 document.getElementById("ctModelo").addEventListener("change", function () { document.getElementById("ctTitulo").value = ctTituloPadrao(); ctAtualizarTexto(true); });
 document.getElementById("ctCliente").addEventListener("change", function () { ctAtualizarAlbuns(); ctRecalcular(); });
 document.getElementById("ctAlbum").addEventListener("change", ctRecalcular);
 ["ctOutroNome", "ctOutroEmail"].forEach(function (id) { document.getElementById(id).addEventListener("input", ctRecalcular); });
 document.getElementById("ctTexto").addEventListener("input", function () { ct.editado = true; });
 document.getElementById("ctCancelarForm").addEventListener("click", function () { mostrar("ctForm", false); });
+
+// Abre o contrato numa janela com a cara de documento, pronto para "Salvar como PDF" (revisar antes de enviar).
+function ctAbrirPdf(titulo, texto) {
+  var esc = function (s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); };
+  var neg = function (s) { return esc(s).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>"); };
+  var html = [], lista = false;
+  texto.split("\n").forEach(function (l) {
+    var x = l.trim();
+    if (/^- /.test(x)) { if (!lista) { html.push("<ul>"); lista = true; } html.push("<li>" + neg(x.slice(2)) + "</li>"); return; }
+    if (lista) { html.push("</ul>"); lista = false; }
+    if (!x) return;
+    if (/^# /.test(x)) html.push("<h1>" + neg(x.slice(2)) + "</h1>");
+    else if (/^## /.test(x)) html.push("<h2>" + neg(x.slice(3)) + "</h2>");
+    else html.push("<p>" + neg(x) + "</p>");
+  });
+  if (lista) html.push("</ul>");
+  var w = window.open("", "_blank");
+  if (!w) { avisar("O navegador bloqueou a janela. Libere os pop-ups deste site e tente de novo."); return; }
+  w.document.write("<!DOCTYPE html><html lang=pt-BR><head><meta charset=UTF-8><title>" + esc(titulo) + "</title><style>" +
+    "body{font-family:Georgia,serif;max-width:760px;margin:40px auto;padding:0 24px;color:#111;line-height:1.6}" +
+    "h1{text-align:center;font-size:22px}h2{font-size:16px;margin-top:22px}p,li{font-size:14px}" +
+    ".aviso{font:12px Arial,sans-serif;color:#555;border:1px solid #ccc;border-radius:8px;padding:8px 12px;margin-bottom:24px}" +
+    "@media print{.aviso{display:none}}</style></head><body><p class=aviso>Prévia para revisão. Para guardar: Ctrl+P → \"Salvar como PDF\".</p>" +
+    html.join("") + "</body></html>");
+  w.document.close();
+  setTimeout(function () { w.print(); }, 300);
+}
+document.getElementById("ctPdf").addEventListener("click", function () {
+  ctAbrirPdf(document.getElementById("ctTitulo").value || "Contrato", document.getElementById("ctTexto").value);
+});
 
 document.getElementById("ctEnviar").addEventListener("click", async function () {
   var erro = document.getElementById("ctErro"), b = this;
@@ -956,7 +1029,8 @@ document.getElementById("ctEnviar").addEventListener("click", async function () 
   var r = await api("/api/contratos/novo", {
     titulo: document.getElementById("ctTitulo").value, texto: texto,
     cliente_id: cliId !== "outro" ? cliId : null, album_id: document.getElementById("ctAlbum").value || null,
-    destinatario_nome: v.cliente_nome, destinatario_email: v.cliente_email
+    destinatario_nome: v.cliente_nome, destinatario_email: v.cliente_email,
+    obrigatorio: cliId !== "outro" && document.getElementById("ctObrigatorio").checked
   });
   b.disabled = false;
   if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível enviar."; return; }
@@ -1454,11 +1528,13 @@ document.getElementById("btnCriarFechado").addEventListener("click", async funct
   erro.textContent = "";
   var novo = document.querySelector("input[name=wzCli]:checked").value === "novo";
   var nome = document.getElementById("cliNome").value, email = document.getElementById("cliEmail").value, senha = document.getElementById("cliSenha").value;
+  var querContrato = document.getElementById("wzContrato").checked;
   botao.disabled = true;
   try {
     var clienteId = document.getElementById("albCliente").value;
     if (novo) {
-      var c = await api("/api/portal/clientes/novo", { nome: nome, email: email, senha: senha, tema: document.getElementById("cliTema").value });
+      var c = await api("/api/portal/clientes/novo", { nome: nome, email: email, senha: senha, tema: document.getElementById("cliTema").value, enviar_acesso: document.getElementById("cliEnviarAcesso").checked });
+      var acessoPorEmail = !!c.dados.email_enviado;
       if (!c.ok) { erro.textContent = c.dados.error || "Não foi possível criar o cliente."; return; }
       clienteId = c.dados.id;
       await carregarClientes();
@@ -1470,10 +1546,11 @@ document.getElementById("btnCriarFechado").addEventListener("click", async funct
     if (!a.ok) { erro.textContent = a.dados.error || "Não foi possível criar o álbum."; return; }
     var rg = await api("/api/portal/albuns/regras", {
       id: a.dados.id,
-      prazo_dias: document.getElementById("wzPrazo").value,
+      prazo_dias: wzPrazoDias(),
       pode_escolher: document.getElementById("wzEscolher").checked,
       limite_escolha: document.getElementById("wzLimite").value,
       pode_editar: document.getElementById("wzEditar").checked,
+      limite_edicao: document.getElementById("wzEditar").checked ? document.getElementById("wzLimiteEdicao").value : "",
       pode_baixar: document.getElementById("wzBaixar").checked,
       max_downloads: document.getElementById("wzMaxDown").value,
     max_fotos: lerBlocoFotos("wz").max_fotos,
@@ -1491,17 +1568,21 @@ document.getElementById("btnCriarFechado").addEventListener("click", async funct
     await api("/api/portal/albuns/visual", visual);
     if (novo) {
       var linkCli = window.location.origin + "/p/" + dados.portal.slug;
-      await avisoCopiar("Pronto! 🎉", "Envie estes dados para " + nome + ". Depois é só mandar as fotos do álbum.", [["Link", linkCli], ["E-mail", email], ["Senha", senha]],
+      await avisoCopiar("Pronto! 🎉", (acessoPorEmail ? "Mandamos o acesso para " + email + " (o cliente cria a senha dele pelo e-mail). Se quiser, mande também pelo WhatsApp:" : "Envie estes dados para " + nome + ". Depois é só mandar as fotos do álbum."), [["Link", linkCli], ["E-mail", email], ["Senha", senha]],
         "Olá, " + nome.split(" ")[0] + "! Suas fotos vão ficar aqui: " + linkCli + "\nE-mail: " + email + "\nSenha: " + senha);
     }
-    ["cliNome", "cliEmail", "cliSenha", "albTitulo", "wzLimite", "wzMaxDown", "wzMaxFotos", "wzPrecoExtra", "wzFxPreco0", "wzFxPreco1", "albDescricao", "albCapa", "cliTema"].forEach(function (id) { document.getElementById(id).value = ""; });
+    ["cliNome", "cliEmail", "cliSenha", "albTitulo", "wzLimite", "wzLimiteEdicao", "wzMaxDown", "wzMaxFotos", "wzPrecoExtra", "wzFxPreco0", "wzFxPreco1", "albDescricao", "albCapa", "cliTema"].forEach(function (id) { document.getElementById(id).value = ""; });
+    ["wzSnLimite", "wzSnCobrar", "wzSnDesconto"].forEach(function (n) { marcarSim(n, false); });
+    wzReiniciarPasso3();
     document.getElementById("wzBlocoFotos").atualizar();
     document.querySelector("input[name=wzCli][value=novo]").checked = true;
     trocarTipoCliente();
     await carregarAlbuns();
     carregarCobrancas();
     var criado = dados.albuns.find(function (x) { return x.id === a.dados.id; });
-    if (criado) abrirAlbum(criado); else mostrarTela("home");
+    if (querContrato) {
+      await ctNovoPara(clienteId, a.dados.id);
+    } else if (criado) abrirAlbum(criado); else mostrarTela("home");
   } finally {
     botao.disabled = false;
   }
@@ -1528,6 +1609,25 @@ function preencherCliente() {
 
 var NOMES_TEMA = { classico: "Clássico", escuro: "Galeria escura", minimalista: "Minimalista", delicado: "Delicado", casamento: "Casamento", quinze: "15 anos", infantil: "Infantil", festa: "Festa / aniversário" };
 var LISTA_TEMAS = Object.keys(NOMES_TEMA);
+// [fundo, topo, fotos] de cada layout, para desenhar a miniatura.
+var CORES_TEMA = {
+  classico: ["#f1f5f9", "var(--cfgcor,#be185d)", "#cbd5e1"], escuro: ["#0a0a0a", "#18181b", "#3f3f46"],
+  minimalista: ["#ffffff", "#ffffff", "#d4d4d4"], delicado: ["#fdf6f0", "linear-gradient(135deg,#f3d9d0,#e9d5f5)", "#fecdd3"],
+  casamento: ["#fbf8f3", "#efe6d6", "#d6d3d1"], quinze: ["#fff5f8", "linear-gradient(135deg,#f9d3df,#efc3e3,#f6e3c3)", "#fbcfe8"],
+  infantil: ["#fffbea", "linear-gradient(90deg,#60a5fa,#a78bfa,#f472b6,#fbbf24)", "#bfdbfe"], festa: ["#140d2b", "linear-gradient(120deg,#7c3aed,#db2777,#f59e0b)", "#5b21b6"]
+};
+function miniTema(tema) {
+  var c = CORES_TEMA[tema] || CORES_TEMA.classico;
+  var m = el("span", "block rounded-lg overflow-hidden border border-black/10");
+  m.style.background = c[0];
+  var topo = el("span", "block h-3");
+  topo.style.background = c[1];
+  m.appendChild(topo);
+  var g = el("span", "grid grid-cols-3 gap-0.5 p-1");
+  for (var i = 0; i < 3; i++) { var q = el("i", "block aspect-square rounded-sm"); q.style.background = c[2]; g.appendChild(q); }
+  m.appendChild(g);
+  return m;
+}
 
 // Prévia do layout em tela cheia, com dados de exemplo. ◀ ▶ passam pelos layouts; "Usar este" chama aoEscolher(tema).
 function verPrevia(tema, aoEscolher) {
@@ -1545,11 +1645,23 @@ function verPrevia(tema, aoEscolher) {
   if (!aoEscolher) usar.classList.add("hidden");
   var quadro = el("iframe", "flex-1 w-full bg-white");
   quadro.style.border = "0";
+  var fileira = el("div", "flex gap-2 overflow-x-auto px-3 pb-3");
+  var botoesTema = LISTA_TEMAS.map(function (tm, k) {
+    var b = el("button", "shrink-0 w-24 rounded-xl p-1.5 text-left border-2 border-transparent bg-slate-900");
+    b.type = "button";
+    b.appendChild(miniTema(tm));
+    b.appendChild(el("span", "block text-[11px] text-slate-200 font-semibold mt-1 truncate", NOMES_TEMA[tm]));
+    b.addEventListener("click", function () { i = k; mostrarTema(); });
+    fileira.appendChild(b);
+    return b;
+  });
   fundo.appendChild(barra);
+  fundo.appendChild(fileira);
   fundo.appendChild(quadro);
   document.body.appendChild(fundo);
   function mostrarTema() {
     var t = LISTA_TEMAS[i];
+    botoesTema.forEach(function (b, k) { b.style.borderColor = k === i ? "#22d3ee" : "transparent"; });
     nome.textContent = "👁️ " + NOMES_TEMA[t] + " (" + (i + 1) + " de " + LISTA_TEMAS.length + ")";
     var p = dados.portal || {};
     quadro.src = "/p/previa?previa=" + t + "&nome=" + encodeURIComponent(p.nome || "Seu Estúdio") + "&cor=" + encodeURIComponent(p.cor || "") + (p.logo_url ? "&logo=" + encodeURIComponent(p.logo_url) : "");
@@ -1561,16 +1673,49 @@ function verPrevia(tema, aoEscolher) {
   mostrarTema();
 }
 
-// Botão "👁️ Ver como fica" ao lado de cada lista de layout.
+// Escolha de layout (cliente, evento, álbum): quadradinhos com miniatura no lugar da lista.
+// A lista (select) continua existindo escondida, guardando o valor que o resto do código lê e grava.
+function quadradinhosDeTema(lista) {
+  var grade = el("div", "grid grid-cols-3 sm:grid-cols-5 gap-2 mt-2");
+  var desc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+  var botoes = [];
+  function marcar() { botoes.forEach(function (b) { b.style.borderColor = b.dataset.tema === desc.get.call(lista) ? "#22d3ee" : "transparent"; }); }
+  function escolher(tm) { desc.set.call(lista, tm); marcar(); lista.dispatchEvent(new Event("change")); }
+  [""].concat(LISTA_TEMAS).forEach(function (tm) {
+    var b = el("div", "relative rounded-xl p-1.5 border-2 border-transparent bg-slate-900/60 cursor-pointer hover:bg-slate-900");
+    b.dataset.tema = tm;
+    b.setAttribute("role", "button");
+    b.tabIndex = 0;
+    if (tm) b.appendChild(miniTema(tm));
+    else {
+      var est = miniTema((dados.portal && dados.portal.tema) || "classico");
+      est.style.opacity = ".55";
+      b.appendChild(est);
+    }
+    b.appendChild(el("span", "block text-[11px] font-semibold mt-1 leading-tight", tm ? NOMES_TEMA[tm] : "Igual ao estúdio"));
+    var olho = el("button", "absolute top-1 right-1 text-xs bg-slate-950/80 rounded-md px-1", "👁️");
+    olho.type = "button";
+    olho.title = "Ver como fica";
+    olho.addEventListener("click", function (e) {
+      e.stopPropagation();
+      verPrevia(tm || (dados.portal && dados.portal.tema), function (x) { escolher(x); });
+    });
+    b.appendChild(olho);
+    b.addEventListener("click", function () { escolher(tm); });
+    b.addEventListener("keydown", function (e) { if (e.key === "Enter") escolher(tm); });
+    grade.appendChild(b);
+    botoes.push(b);
+  });
+  // Quando o código muda o valor (ex.: ao abrir outro álbum), o quadradinho marcado acompanha.
+  Object.defineProperty(lista, "value", { get: function () { return desc.get.call(lista); }, set: function (v) { desc.set.call(lista, v); marcar(); } });
+  lista.classList.add("hidden");
+  lista.insertAdjacentElement("afterend", grade);
+  grade.insertAdjacentElement("afterend", el("p", "text-xs text-slate-500 mt-1", "Toque no quadradinho para escolher. 👁️ mostra como fica."));
+  marcar();
+}
 ["cliTema", "evTema", "vsTema"].forEach(function (id) {
   var lista = document.getElementById(id);
-  if (!lista) return;
-  var b = el("button", "link text-sm mt-1", "👁️ Ver como fica");
-  b.type = "button";
-  b.addEventListener("click", function () {
-    verPrevia(lista.value, function (t) { lista.value = t; lista.dispatchEvent(new Event("change")); });
-  });
-  lista.parentNode.insertAdjacentElement("afterend", b);
+  if (lista) quadradinhosDeTema(lista);
 });
 (function () {
   var cartoes = document.getElementById("temas");
@@ -1656,6 +1801,12 @@ document.getElementById("abCopiarAcesso").addEventListener("click", function () 
   this.textContent = "Copiado!";
 });
 
+document.getElementById("abReenviarAcesso").addEventListener("click", async function () {
+  var c = clienteDoAlbum();
+  if (!c) return;
+  var r = await api("/api/portal/clientes/convite", { cliente_id: c.id });
+  avisar(r.ok ? "Mandamos para " + r.dados.email + " o link para entrar e criar a senha (vale 7 dias)." : (r.dados.error || "Não foi possível enviar."), r.ok ? "E-mail enviado ✉️" : "Ops");
+});
 document.getElementById("abNovaSenha").addEventListener("click", async function () {
   var c = clienteDoAlbum();
   if (!c) return;
@@ -2061,47 +2212,110 @@ function textoRegras(r) {
 }
 
 // Bloco "quantas fotos pode baixar" + "fotos a mais" (preço e desconto). Usado no assistente (wz) e na aba Regras (rg).
+// Bloco de fotos com perguntas de sim/não: limitar? cobrar as fotos a mais? dar desconto por quantidade?
+// Os campos só aparecem quando a resposta é sim. Usado no assistente (wz) e na aba Regras (rg).
+function simNao(id, pergunta) {
+  return '<div class="flex items-center gap-3 flex-wrap"><span>' + pergunta + '</span>' +
+    '<label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="' + id + '" value="sim"> Sim</label>' +
+    '<label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="' + id + '" value="nao" checked> Não</label></div>';
+}
+function respSim(id) { var r = document.querySelector("input[name=" + id + "]:checked"); return !!r && r.value === "sim"; }
+function marcarSim(id, sim) { var r = document.querySelector("input[name=" + id + "][value=" + (sim ? "sim" : "nao") + "]"); if (r) r.checked = true; }
+
+/* ---------- passo 3 do álbum: uma pergunta por vez ---------- */
+
+function wzPrazoDias() {
+  var v = document.getElementById("wzPrazo").value;
+  return v === "outro" ? document.getElementById("wzPrazoOutro").value : v;
+}
+function wzEtapaRespondida(nome) {
+  if (nome === "prazo") {
+    var v = document.getElementById("wzPrazo").value;
+    if (!v) return false;
+    if (v === "outro") { var d = parseInt(document.getElementById("wzPrazoOutro").value, 10); return d >= 1 && d <= 365; }
+    return true;
+  }
+  return !!document.querySelector("input[name=wzSn" + nome.charAt(0).toUpperCase() + nome.slice(1) + "]:checked");
+}
+// Mostra cada etapa só depois da anterior respondida; liga as caixinhas escondidas; o botão aparece no fim.
+function wzAtualizarPasso3() {
+  var liberado = true;
+  document.querySelectorAll(".wzEtapa").forEach(function (e) {
+    e.classList.toggle("hidden", !liberado);
+    if (liberado && !wzEtapaRespondida(e.getAttribute("data-etapa"))) liberado = false;
+  });
+  mostrar("wzPrazoOutroLinha", document.getElementById("wzPrazo").value === "outro");
+  document.querySelectorAll("[data-se-sim]").forEach(function (x) { x.classList.toggle("hidden", !respSim(x.getAttribute("data-se-sim"))); });
+  [["wzSnEscolher", "wzEscolher"], ["wzSnEditar", "wzEditar"], ["wzSnBaixar", "wzBaixar"], ["wzSnContrato", "wzContrato"]].forEach(function (p) {
+    var cx = document.getElementById(p[1]), novo = respSim(p[0]);
+    if (cx.checked !== novo) { cx.checked = novo; cx.dispatchEvent(new Event("change")); }
+  });
+  mostrar("btnCriarFechado", liberado);
+  mostrar("wzFimTexto", liberado);
+}
+function wzReiniciarPasso3() {
+  document.getElementById("wzPrazo").value = "";
+  document.getElementById("wzPrazoOutro").value = "";
+  ["wzSnEscolher", "wzSnEditar", "wzSnBaixar", "wzSnContrato"].forEach(function (n) { document.querySelectorAll("input[name=" + n + "]").forEach(function (r) { r.checked = false; }); });
+  wzAtualizarPasso3();
+}
+document.getElementById("wzF3").addEventListener("change", wzAtualizarPasso3);
+document.getElementById("wzF3").addEventListener("input", wzAtualizarPasso3);
+
 function montarBlocoFotos(p) {
   var caixa = document.getElementById(p + "BlocoFotos");
-  caixa.className = "bg-slate-900/50 rounded-xl p-3 space-y-2";
+  caixa.className = "bg-slate-900/50 rounded-xl p-3 space-y-3";
   caixa.innerHTML =
-    '<label class="flex items-center gap-2 flex-wrap">📸 Até quantas fotos pode baixar? <input id="' + p + 'MaxFotos" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="todas"> foto(s)</label>' +
-    '<div id="' + p + 'Extras" class="hidden space-y-2 pl-1">' +
-      '<label class="flex items-center gap-2 flex-wrap">💰 Se quiser mais, cada foto a mais custa R$ <input id="' + p + 'PrecoExtra" class="campo" inputmode="decimal" style="max-width:100px;padding:6px 8px" placeholder="não vendo"></label>' +
-      '<div id="' + p + 'Faixas" class="hidden space-y-2 text-xs">' +
-        '<p class="text-slate-400">Desconto por quantidade (opcional):</p>' +
-        [0, 1].map(function (i) {
-          return '<label class="flex items-center gap-2 flex-wrap">a partir de <input id="' + p + 'FxQtd' + i + '" type="number" min="2" class="campo" style="max-width:70px;padding:4px 6px" value="' + (i ? 20 : 10) + '"> fotos, R$ <input id="' + p + 'FxPreco' + i + '" class="campo" inputmode="decimal" style="max-width:90px;padding:4px 6px" placeholder="sem desconto"> cada</label>';
-        }).join("") +
+    simNao(p + "SnLimite", "📸 Limitar quantas fotos o cliente pode baixar?") +
+    '<div id="' + p + 'LimiteBox" class="hidden pl-4 space-y-3 border-l-2 border-cyan-500/30">' +
+      '<label class="flex items-center gap-2 flex-wrap">Até <input id="' + p + 'MaxFotos" type="number" min="1" class="campo" style="max-width:90px;padding:6px 8px" placeholder="ex.: 30"> fotos</label>' +
+      simNao(p + "SnCobrar", "💰 Vai cobrar se ele quiser mais fotos?") +
+      '<div id="' + p + 'Extras" class="hidden pl-4 space-y-3 border-l-2 border-emerald-500/30">' +
+        '<label class="flex items-center gap-2 flex-wrap">Cada foto a mais custa R$ <input id="' + p + 'PrecoExtra" class="campo" inputmode="decimal" style="max-width:100px;padding:6px 8px" placeholder="ex.: 15,00"></label>' +
+        '<p id="' + p + 'AvisoPix" class="hidden text-xs text-amber-300">⚠️ Você ainda não cadastrou como recebe. Cadastre o seu PIX em <button type="button" class="link" data-ir-receber>💳 Como recebo</button>, senão o cliente não consegue pedir as fotos a mais.</p>' +
+        simNao(p + "SnDesconto", "🏷️ Vai dar desconto para quem levar mais fotos?") +
+        '<div id="' + p + 'Faixas" class="hidden pl-4 space-y-2 text-xs border-l-2 border-amber-500/30">' +
+          [0, 1].map(function (i) {
+            return '<label class="flex items-center gap-2 flex-wrap">' + (i ? "E a partir de " : "A partir de ") + '<input id="' + p + 'FxQtd' + i + '" type="number" min="2" class="campo" style="max-width:70px;padding:4px 6px" placeholder="' + (i ? 20 : 10) + '"> fotos, R$ <input id="' + p + 'FxPreco' + i + '" class="campo" inputmode="decimal" style="max-width:90px;padding:4px 6px" placeholder="' + (i ? "ex.: 10,00" : "ex.: 12,00") + '"> cada' + (i ? ' <span class="text-slate-500">(opcional)</span>' : '') + '</label>';
+          }).join("") +
+        '</div>' +
       '</div>' +
     '</div>' +
-    '<p class="text-xs text-slate-400">Vazio = pode baixar todas. Com limite, quando o cliente chegar nele, ele pede as fotos a mais e recebe a cobrança com o seu PIX ou link. Quando você marcar como pago, elas são liberadas.</p>';
+    '<p class="text-xs text-slate-400">Quando o cliente chegar no limite, ele pede as fotos a mais e recebe a cobrança com o seu PIX ou link. Quando você marcar como pago, elas são liberadas na hora.</p>';
   function atualizar() {
-    var baixar = document.getElementById(p + "Baixar").checked;
-    caixa.classList.toggle("hidden", !baixar);
-    var temLimite = !!document.getElementById(p + "MaxFotos").value;
-    document.getElementById(p + "Extras").classList.toggle("hidden", !temLimite);
-    document.getElementById(p + "Faixas").classList.toggle("hidden", !temLimite || !document.getElementById(p + "PrecoExtra").value.trim());
+    caixa.classList.toggle("hidden", !document.getElementById(p + "Baixar").checked);
+    var lim = respSim(p + "SnLimite"), cob = lim && respSim(p + "SnCobrar"), des = cob && respSim(p + "SnDesconto");
+    mostrar(p + "LimiteBox", lim);
+    mostrar(p + "Extras", cob);
+    mostrar(p + "Faixas", des);
+    var temPix = dados.portal && (dados.portal.instrucoes_pagamento || dados.portal.link_pagamento);
+    mostrar(p + "AvisoPix", cob && !temPix);
   }
-  [p + "Baixar", p + "MaxFotos", p + "PrecoExtra"].forEach(function (id) { document.getElementById(id).addEventListener("input", atualizar); document.getElementById(id).addEventListener("change", atualizar); });
+  caixa.addEventListener("change", atualizar);
+  document.getElementById(p + "Baixar").addEventListener("change", atualizar);
+  caixa.querySelector("[data-ir-receber]").addEventListener("click", function () { mostrarTela("receber"); });
   caixa.atualizar = atualizar;
   atualizar();
 }
 function lerBlocoFotos(p) {
   var v = function (id) { return document.getElementById(p + id).value.trim(); };
+  var lim = respSim(p + "SnLimite"), cob = lim && respSim(p + "SnCobrar"), des = cob && respSim(p + "SnDesconto");
   return {
-    max_fotos: v("MaxFotos"),
-    preco_extra: v("PrecoExtra"),
-    faixas_extra: [0, 1].map(function (i) { return { a_partir: v("FxQtd" + i), preco: v("FxPreco" + i) }; })
+    max_fotos: lim ? v("MaxFotos") : "",
+    preco_extra: cob ? v("PrecoExtra") : "",
+    faixas_extra: des ? [0, 1].map(function (i) { return { a_partir: v("FxQtd" + i), preco: v("FxPreco" + i) }; }) : []
   };
 }
 function preencherBlocoFotos(p, r) {
   var reaisCampo = function (c) { return c ? (c / 100).toFixed(2).replace(".", ",") : ""; };
+  var fx = (r && r.faixas_extra) || [];
+  marcarSim(p + "SnLimite", !!(r && r.max_fotos));
+  marcarSim(p + "SnCobrar", !!(r && r.preco_extra_centavos));
+  marcarSim(p + "SnDesconto", fx.length > 0);
   document.getElementById(p + "MaxFotos").value = (r && r.max_fotos) || "";
   document.getElementById(p + "PrecoExtra").value = reaisCampo(r && r.preco_extra_centavos);
-  var fx = (r && r.faixas_extra) || [];
   [0, 1].forEach(function (i) {
-    document.getElementById(p + "FxQtd" + i).value = fx[i] ? fx[i].a_partir : (i ? 20 : 10);
+    document.getElementById(p + "FxQtd" + i).value = fx[i] ? fx[i].a_partir : "";
     document.getElementById(p + "FxPreco" + i).value = fx[i] ? reaisCampo(fx[i].preco_centavos) : "";
   });
   document.getElementById(p + "BlocoFotos").atualizar();
@@ -2116,6 +2330,7 @@ function preencherRegras(r) {
   document.getElementById("rgEscolher").checked = r.pode_escolher;
   document.getElementById("rgLimite").value = r.limite_escolha || "";
   document.getElementById("rgEditar").checked = r.pode_editar;
+  document.getElementById("rgLimiteEdicao").value = r.limite_edicao || "";
   document.getElementById("rgBaixar").checked = r.pode_baixar;
   document.getElementById("rgMaxDown").value = r.max_downloads || "";
   preencherBlocoFotos("rg", r);
@@ -2159,6 +2374,7 @@ document.getElementById("btnRegras").addEventListener("click", async function ()
     pode_escolher: document.getElementById("rgEscolher").checked,
     limite_escolha: document.getElementById("rgLimite").value,
     pode_editar: document.getElementById("rgEditar").checked,
+    limite_edicao: document.getElementById("rgEditar").checked ? document.getElementById("rgLimiteEdicao").value : "",
     pode_baixar: document.getElementById("rgBaixar").checked,
     max_downloads: document.getElementById("rgMaxDown").value,
     max_fotos: lerBlocoFotos("rg").max_fotos,
