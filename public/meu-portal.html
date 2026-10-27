@@ -128,6 +128,11 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
           <label class="text-sm text-slate-300 block">Senha
             <div class="flex gap-2 mt-1"><input id="cliSenha" class="campo" maxlength="100" placeholder="mín. 8 caracteres" autocomplete="new-password"><button type="button" id="btnGerar" class="link whitespace-nowrap">Gerar</button></div>
           </label>
+          <div class="text-sm text-slate-300 bg-slate-900/50 rounded-xl p-3 space-y-2">
+            <p>👥 Mais alguém vai ver as fotos? <span class="text-xs text-slate-400">(ex.: o noivo, pai e mãe, sócios da festa: cada um com o próprio login)</span></p>
+            <div id="wzPessoas" class="space-y-2"></div>
+            <button type="button" id="wzAddPessoa" class="link text-sm">➕ Adicionar pessoa</button>
+          </div>
           <label class="flex items-start gap-2 text-sm text-slate-300 bg-slate-900/50 rounded-xl p-3"><input id="cliEnviarAcesso" type="checkbox" class="mt-1" checked>
             <span>✉️ <strong>Mandar o acesso por e-mail</strong> para o cliente: ele recebe o link e o login, e cria a senha dele num botão. A senha nunca vai escrita no e-mail.</span></label>
           <label class="text-sm text-slate-300 block">🎨 Layout da área deste cliente<select id="cliTema" class="campo mt-1"><option value="">Igual ao do estúdio</option><option value="classico">Clássico</option><option value="escuro">Galeria escura</option><option value="minimalista">Minimalista</option><option value="delicado">Delicado</option><option value="casamento">💍 Casamento</option><option value="quinze">👑 15 anos</option><option value="infantil">🎈 Infantil</option><option value="festa">🎉 Festa / aniversário</option></select></label>
@@ -239,6 +244,14 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <label class="text-sm text-slate-300 block">✍️ Sobre você (opcional: aparece para os clientes)
         <textarea id="cfgBio" class="campo mt-1 h-20" maxlength="600" placeholder="Fotógrafo de casamentos em Goiânia há 10 anos..."></textarea>
       </label>
+      <div class="bg-slate-900/50 rounded-2xl p-4 space-y-2">
+        <p class="text-sm text-slate-300">📝 <strong>Dados para os contratos</strong> <span class="text-xs text-slate-400">(preenche uma vez e todos os contratos já saem com eles; não aparecem para os clientes no portal)</span></p>
+        <div class="grid md:grid-cols-3 gap-3">
+          <input id="cfgDocNome" class="campo" maxlength="120" placeholder="Nome completo ou razão social">
+          <input id="cfgDocNumero" class="campo" maxlength="30" placeholder="CPF ou CNPJ">
+          <input id="cfgDocCidade" class="campo" maxlength="80" placeholder="Cidade - UF (ex.: Goiânia - GO)">
+        </div>
+      </div>
     </div>
     <p class="text-sm text-slate-300 mt-5 mb-2">🎨 Layout: vale para os álbuns dos clientes e para as páginas dos eventos. Escolha e clique em Salvar.</p>
     <div id="temas" class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -347,17 +360,28 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <button type="button" id="ctModelosBtn" class="text-sm font-semibold text-cyan-300 hover:text-white">✏️ Meus modelos</button>
     </div>
 
+    <div id="ctBanner" class="hidden rounded-2xl p-4 border-2 border-amber-400/70 bg-amber-500/10"></div>
     <div id="ctForm" class="hidden bg-slate-900/50 rounded-2xl p-4 space-y-4 text-sm">
       <div class="grid md:grid-cols-3 gap-3">
         <label class="block">1. Modelo<select id="ctModelo" class="campo mt-1"></select></label>
         <label class="block">2. Para qual cliente?<select id="ctCliente" class="campo mt-1"></select></label>
         <label class="block">3. Álbum (opcional)<select id="ctAlbum" class="campo mt-1"><option value="">Nenhum</option></select></label>
       </div>
-      <label id="ctObrigatorioLinha" class="flex items-start gap-2 bg-slate-950/40 rounded-xl p-3"><input id="ctObrigatorio" type="checkbox" class="mt-1" checked>
-        <span>🔒 <strong>Contrato obrigatório:</strong> o cliente só vê os álbuns depois de assinar (aparece logo no primeiro acesso dele ao portal).</span></label>
-      <div id="ctOutro" class="hidden grid md:grid-cols-2 gap-3">
-        <input id="ctOutroNome" class="campo" maxlength="100" placeholder="Nome de quem vai assinar">
-        <input id="ctOutroEmail" class="campo" type="email" maxlength="120" placeholder="E-mail de quem vai assinar">
+      <div class="bg-slate-950/40 rounded-xl p-3 space-y-2">
+        <p class="font-semibold">✍️ Quem vai assinar <span class="text-xs text-slate-400 font-normal">(cada pessoa recebe o próprio link e assina com um código no e-mail dela)</span></p>
+        <div id="ctAssinantes" class="space-y-2"></div>
+        <button type="button" id="ctAddAss" class="link text-sm">➕ Adicionar pessoa que vai assinar (casal, pai e mãe, sócios...)</button>
+      </div>
+      <label class="block bg-slate-950/40 rounded-xl p-3">🔒 <strong>Acesso às fotos</strong>
+        <select id="ctRegra" class="campo mt-2">
+          <option value="todos">Todos precisam assinar antes de ver as fotos</option>
+          <option value="um">Basta uma pessoa assinar para liberar</option>
+          <option value="nenhum">Não trava: as fotos ficam liberadas (ex.: libero depois do sinal)</option>
+        </select>
+      </label>
+      <div class="bg-slate-950/40 rounded-xl p-3 space-y-2">
+        <label class="flex items-start gap-2"><input id="ctMenor" type="checkbox" class="mt-1"><span>👧 O serviço é para <strong>menor de idade</strong> (ex.: 15 anos). Quem assina são os responsáveis: pai, mãe ou os dois.</span></label>
+        <input id="ctMenorNome" class="hidden campo" maxlength="100" placeholder="Nome do menor (não precisa de CPF)">
       </div>
       <details open>
         <summary class="cursor-pointer font-semibold">4. Dados do contrato <span class="text-xs text-slate-400 font-normal">(já preenchidos com o que temos; complete o resto)</span></summary>
@@ -578,6 +602,16 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         <button type="button" id="abCopiarAcesso" class="link">📋 Copiar o acesso para enviar</button>
         <button type="button" id="abNovaSenha" class="link">🔑 Nova senha</button>
         <button type="button" id="abReenviarAcesso" class="link">✉️ Reenviar acesso por e-mail</button>
+      </div>
+      <div class="pt-3 border-t border-blue-900/60 space-y-2">
+        <p class="font-bold">👥 Pessoas com acesso a este álbum <span class="text-xs text-slate-400 font-normal">(cada uma com o próprio login e senha)</span></p>
+        <div id="abPessoas" class="space-y-1 text-sm"></div>
+        <div id="abPessoaForm" class="hidden grid md:grid-cols-3 gap-2">
+          <input id="abPesNome" class="campo text-sm" maxlength="80" placeholder="Nome (ex.: João, o noivo)">
+          <input id="abPesEmail" class="campo text-sm" type="email" maxlength="120" placeholder="E-mail (é o login dela)">
+          <button type="button" id="abPesSalvar" class="cta font-bold px-4 py-2 rounded-xl text-sm">Adicionar e mandar o acesso</button>
+        </div>
+        <button type="button" id="abPesNova" class="link text-sm">➕ Adicionar pessoa (casal, pai e mãe, sócios da festa...)</button>
       </div>
       <div class="pt-3 border-t border-blue-900/60">
         <div class="flex flex-wrap gap-6"><button type="button" id="btnApagarAlbum" class="perigo">🗑️ Remover este álbum</button><button type="button" id="btnRemoverCliente" class="perigo">🗑️ Remover o cliente e todos os álbuns</button></div>
@@ -822,11 +856,55 @@ fetch("/api/bancos").then(function (r) { return r.json(); }).then(function (d) {
 
 /* ---------- contratos ---------- */
 
-var ct = { modelos: [], meus: [], campos: [], contratos: [], editado: false, modeloEditando: 0 };
+var ct = { modelos: [], meus: [], campos: [], contratos: [], editado: false, modeloEditando: 0, estudio: {}, assinantes: [] };
 var CT_STATUS = { enviado: ["✉️ Enviado", "text-slate-300"], visto: ["👀 Visto pelo cliente", "text-amber-300"], assinado: ["✅ Assinado", "text-emerald-300"], cancelado: ["Cancelado", "text-slate-500"] };
 
 function ctPreencher(texto, valores) {
-  return String(texto).replace(/\{\{([a-z_]+)\}\}/g, function (m, k) { var v = (valores[k] || "").trim(); return v || "____"; });
+  var menor = (document.getElementById("ctMenor").checked && document.getElementById("ctMenorNome").value.trim()) || "";
+  var clausula = menor ? "**MENOR DE IDADE:** o serviço é para " + menor + ", menor de idade, representado(a) neste contrato por seu(s) responsável(is) legal(is), que assinam como CONTRATANTE(S) e respondem por todas as obrigações." : "";
+  return String(texto).replace(/\n*\{\{clausula_menor\}\}/g, function () { return clausula ? "\n\n" + clausula : ""; })
+    .replace(/\{\{([a-z_]+)\}\}/g, function (m, k) { var v = (valores[k] || "").trim(); return v || "____"; });
+}
+
+// Lista de quem assina: linhas com nome e e-mail (pode adicionar e tirar pessoas).
+function ctDesenharAssinantes() {
+  var caixa = document.getElementById("ctAssinantes");
+  caixa.innerHTML = "";
+  ct.assinantes.forEach(function (a, i) {
+    var l = el("div", "grid grid-cols-[1fr_1fr_auto] gap-2 items-center");
+    var n = el("input", "campo text-sm"); n.placeholder = "Nome completo"; n.maxLength = 100; n.value = a.nome || "";
+    var e = el("input", "campo text-sm"); e.placeholder = "E-mail"; e.type = "email"; e.maxLength = 120; e.value = a.email || "";
+    n.addEventListener("input", function () { a.nome = n.value; ctAtualizarPessoasNoTexto(); });
+    e.addEventListener("input", function () { a.email = e.value; ctAtualizarPessoasNoTexto(); });
+    var x = el("button", "perigo text-sm px-2", "✕"); x.type = "button"; x.title = "Tirar esta pessoa";
+    x.addEventListener("click", function () { if (ct.assinantes.length > 1) { ct.assinantes.splice(i, 1); ctDesenharAssinantes(); ctAtualizarPessoasNoTexto(); } });
+    if (ct.assinantes.length === 1) x.classList.add("invisible");
+    l.appendChild(n); l.appendChild(e); l.appendChild(x);
+    caixa.appendChild(l);
+  });
+}
+function ctAtualizarPessoasNoTexto() {
+  var nomes = ct.assinantes.map(function (a) { return (a.nome || "").trim(); }).filter(Boolean);
+  var emails = ct.assinantes.map(function (a) { return (a.email || "").trim(); }).filter(Boolean);
+  var n = document.getElementById("ctc_cliente_nome"), e = document.getElementById("ctc_cliente_email");
+  if (n) n.value = nomes.length > 1 ? nomes.slice(0, -1).join(", ") + " e " + nomes[nomes.length - 1] : (nomes[0] || "");
+  if (e) e.value = emails.join(", ");
+  ctAtualizarTexto(false);
+}
+// Quem assina, por padrão: as pessoas do álbum escolhido (ou o cliente escolhido).
+async function ctCarregarPessoas() {
+  var cliId = document.getElementById("ctCliente").value, albId = document.getElementById("ctAlbum").value;
+  var lista = [];
+  if (albId) {
+    var r = await api("/api/portal/album?id=" + albId);
+    if (r.ok && r.dados.pessoas) lista = r.dados.pessoas.map(function (p) { return { nome: p.nome, email: p.email, cliente_id: p.id }; });
+  }
+  if (!lista.length) {
+    var cli = dados.clientes.find(function (c) { return String(c.id) === cliId; });
+    lista = cli ? [{ nome: cli.nome, email: cli.email, cliente_id: cli.id }] : [{ nome: "", email: "", cliente_id: null }];
+  }
+  ct.assinantes = lista;
+  ctDesenharAssinantes();
 }
 function ctReais(c) { return c ? "R$ " + (c / 100).toFixed(2).replace(".", ",") : ""; }
 function ctTodosModelos() {
@@ -838,7 +916,7 @@ function ctLembrado(k) { try { return localStorage.getItem("ct_" + k) || ""; } c
 async function carregarContratos() {
   var r = await api("/api/contratos");
   if (!r.ok) { document.getElementById("ctLista").textContent = r.dados.error || "Não foi possível carregar."; return; }
-  ct.modelos = r.dados.modelos; ct.meus = r.dados.meus; ct.campos = r.dados.campos; ct.contratos = r.dados.contratos;
+  ct.modelos = r.dados.modelos; ct.meus = r.dados.meus; ct.campos = r.dados.campos; ct.contratos = r.dados.contratos; ct.estudio = r.dados.estudio || {};
   desenharContratos();
 }
 
@@ -852,21 +930,29 @@ function desenharContratos() {
     var l = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/50 rounded-xl px-4 py-3 text-sm" + (parado ? " border border-red-400/50" : ""));
     var esq = el("div", "min-w-0");
     esq.appendChild(el("p", "font-semibold break-words", (parado ? "🔴 " : "") + c.titulo));
-    esq.appendChild(el("p", "text-xs " + s[1], s[0] + " · " + c.destinatario_nome + " · " + dataBr(c.created_at) + (parado ? " · parado há mais de 3 dias" : "")));
+    var pessoas = c.assinantes || [];
+    var feitas = pessoas.filter(function (p) { return p.status === "assinado"; }).length;
+    esq.appendChild(el("p", "text-xs " + s[1], s[0] + (pessoas.length > 1 ? " (" + feitas + " de " + pessoas.length + ")" : "") + " · " + dataBr(c.created_at) + (parado ? " · parado há mais de 3 dias" : "")));
+    esq.appendChild(el("p", "text-xs text-slate-300", pessoas.map(function (p) { return (p.status === "assinado" ? "✅ " : p.status === "visto" ? "👀 " : "⏳ ") + p.nome; }).join(" · ")));
+    var REGRAS_TXT = { todos: "🔒 Fotos liberadas quando todos assinarem", um: "🔒 Fotos liberadas quando uma pessoa assinar", nenhum: "" };
+    if (c.status !== "assinado" && c.status !== "cancelado" && REGRAS_TXT[c.regra]) esq.appendChild(el("p", "text-xs text-amber-300", REGRAS_TXT[c.regra]));
     l.appendChild(esq);
     var acoes = el("div", "flex flex-wrap gap-3");
     function acao(txt, fn, classe) { var b = el("button", classe || "link", txt); b.type = "button"; b.addEventListener("click", fn); acoes.appendChild(b); }
-    if (c.obrigatorio && c.status !== "assinado" && c.status !== "cancelado") esq.appendChild(el("p", "text-xs text-amber-300", "🔒 Os álbuns deste cliente só abrem depois da assinatura"));
     acao("Abrir", function () { window.open(c.link, "_blank", "noopener"); });
     acao("PDF", function () { window.open(c.link + "?pdf=1", "_blank", "noopener"); });
     if (c.status !== "assinado" && c.status !== "cancelado") {
-      acao("WhatsApp", function () {
-        window.open("https://wa.me/?text=" + encodeURIComponent("Olá, " + c.destinatario_nome.split(" ")[0] + "! Segue o contrato para você ler e assinar online: " + c.link), "_blank", "noopener");
+      // Cada pessoa que falta tem o próprio link.
+      pessoas.filter(function (p) { return p.status !== "assinado"; }).forEach(function (p) {
+        var primeiro = p.nome.split(" ")[0];
+        acao("💬 " + primeiro, function () {
+          window.open("https://wa.me/?text=" + encodeURIComponent("Olá, " + primeiro + "! Segue o contrato para você ler e assinar online: " + p.link), "_blank", "noopener");
+        });
+        acao("📋 link de " + primeiro, function () { navigator.clipboard.writeText(p.link); this.textContent = "Copiado ✓"; });
       });
-      acao("Copiar link", function () { navigator.clipboard.writeText(c.link); this.textContent = "Copiado ✓"; });
       acao("Reenviar e-mail", async function () {
         var r = await api("/api/contratos/reenviar", { id: c.id });
-        avisar(r.ok ? (r.dados.email_enviado ? "E-mail reenviado para " + c.destinatario_email + "." : "O contrato está salvo, mas o e-mail não saiu. Mande o link pelo WhatsApp.") : (r.dados.error || "Não foi possível."));
+        avisar(r.ok ? (r.dados.email_enviado ? "E-mail reenviado para quem ainda não assinou." : "O contrato está salvo, mas o e-mail não saiu. Mande os links pelo WhatsApp.") : (r.dados.error || "Não foi possível."));
       });
       acao("Cancelar", async function () {
         if (!(await confirmar("Cancelar este contrato?", "O link para de funcionar e o cliente não consegue mais assinar.", "Sim, cancelar"))) return;
@@ -913,12 +999,14 @@ async function ctAtualizarTexto(forcar) {
 function ctValoresIniciais() {
   var v = {};
   ct.campos.forEach(function (c) { var i = document.getElementById("ctc_" + c[0]); if (i) v[c[0]] = i.value; });
-  var cliId = document.getElementById("ctCliente").value;
-  var cli = dados.clientes.find(function (c) { return String(c.id) === cliId; });
-  if (cli) { v.cliente_nome = cli.nome; v.cliente_email = cli.email; }
-  else if (cliId === "outro") { v.cliente_nome = document.getElementById("ctOutroNome").value; v.cliente_email = document.getElementById("ctOutroEmail").value; }
-  v.estudio_nome = v.estudio_nome || (dados.portal && dados.portal.nome) || "";
-  ["estudio_documento", "estudio_cidade", "cidade_foro", "forma_pagamento", "prazo_entrega"].forEach(function (k) { v[k] = v[k] || ctLembrado(k); });
+  var nomes = ct.assinantes.map(function (a) { return (a.nome || "").trim(); }).filter(Boolean);
+  v.cliente_nome = nomes.length > 1 ? nomes.slice(0, -1).join(", ") + " e " + nomes[nomes.length - 1] : (nomes[0] || "");
+  v.cliente_email = ct.assinantes.map(function (a) { return (a.email || "").trim(); }).filter(Boolean).join(", ");
+  v.estudio_nome = v.estudio_nome || ct.estudio.nome || (dados.portal && dados.portal.nome) || "";
+  v.estudio_documento = v.estudio_documento || ct.estudio.documento || ctLembrado("estudio_documento");
+  v.estudio_cidade = v.estudio_cidade || ct.estudio.cidade || ctLembrado("estudio_cidade");
+  v.cidade_foro = v.cidade_foro || ct.estudio.cidade || ctLembrado("cidade_foro");
+  ["forma_pagamento", "prazo_entrega"].forEach(function (k) { v[k] = v[k] || ctLembrado(k); });
   var alb = dados.albuns.find(function (a) { return String(a.id) === document.getElementById("ctAlbum").value; });
   if (alb) {
     var r = alb.regras || {};
@@ -936,8 +1024,6 @@ function ctAtualizarAlbuns() {
   sel.innerHTML = "";
   sel.appendChild(new Option("Nenhum", ""));
   dados.albuns.filter(function (a) { return String(a.cliente_id) === cliId; }).forEach(function (a) { sel.appendChild(new Option(a.titulo, a.id)); });
-  mostrar("ctOutro", cliId === "outro");
-  mostrar("ctObrigatorioLinha", cliId !== "outro");
 }
 
 function ctTituloPadrao() {
@@ -945,13 +1031,15 @@ function ctTituloPadrao() {
   return (m.nome.replace(/^⭐ /, "").split(" (")[0] + (v.cliente_nome ? " - " + v.cliente_nome : "")).slice(0, 120);
 }
 
-function ctRecalcular() {
+async function ctRecalcular() {
+  await ctCarregarPessoas();
   ctDesenharCampos(ctValoresIniciais());
   document.getElementById("ctTitulo").value = ctTituloPadrao();
   ctAtualizarTexto(true);
 }
 
 document.getElementById("ctNovo").addEventListener("click", async function () {
+  mostrar("ctBanner", false);
   if (!ct.campos.length) await carregarContratos();
   mostrar("ctModelos", false);
   var selM = document.getElementById("ctModelo");
@@ -961,14 +1049,18 @@ document.getElementById("ctNovo").addEventListener("click", async function () {
   selC.innerHTML = "";
   dados.clientes.filter(function (c) { return !c.removido_em; }).forEach(function (c) { selC.appendChild(new Option(c.nome, c.id)); });
   selC.appendChild(new Option("Outra pessoa (não é cliente do portal)", "outro"));
+  document.getElementById("ctRegra").value = "todos";
+  document.getElementById("ctMenor").checked = false;
+  document.getElementById("ctMenorNome").value = "";
+  mostrar("ctMenorNome", false);
   ctAtualizarAlbuns();
   ctDesenharCampos({});
-  ctRecalcular();
+  await ctRecalcular();
   mostrar("ctForm", true);
   document.getElementById("ctErro").textContent = "";
 });
 // Abre o "Novo contrato" já com o cliente e o álbum escolhidos (vindo do passo a passo do álbum).
-async function ctNovoPara(clienteId, albumId) {
+async function ctNovoPara(clienteId, albumId, acesso) {
   mostrarTela("contratos");
   await carregarContratos();
   document.getElementById("ctNovo").click();
@@ -976,16 +1068,40 @@ async function ctNovoPara(clienteId, albumId) {
   document.getElementById("ctCliente").value = String(clienteId);
   ctAtualizarAlbuns();
   document.getElementById("ctAlbum").value = String(albumId);
-  ctRecalcular();
-  document.getElementById("ctObrigatorio").checked = true;
-  document.getElementById("ctForm").scrollIntoView({ behavior: "smooth", block: "start" });
+  await ctRecalcular();
+  document.getElementById("ctRegra").value = "todos";
+  // Aviso de último passo + dados de acesso do cliente novo (para mandar pelo WhatsApp, se quiser).
+  var b = document.getElementById("ctBanner");
+  b.innerHTML = "";
+  b.appendChild(el("p", "text-lg font-bold text-amber-200", "📝 Último passo: confira o contrato e clique em \"Enviar para assinatura\""));
+  b.appendChild(el("p", "text-sm text-slate-300", "O álbum já foi criado. O cliente só vê as fotos depois de assinar."));
+  if (acesso) {
+    b.appendChild(el("p", "text-sm mt-2 " + (acesso.porEmail ? "text-emerald-300" : "text-slate-300"), acesso.porEmail ? "✉️ Mandamos o acesso para " + acesso.email + " (ele cria a senha pelo e-mail)." : "Mande o acesso para o cliente:"));
+    var caixa = el("div", "flex flex-wrap gap-2 mt-2 text-sm");
+    var msg = "Olá, " + acesso.nome.split(" ")[0] + "! Suas fotos vão ficar aqui: " + acesso.link + "\nLogin: " + acesso.email + "\nSenha: " + acesso.senha + "\nNo primeiro acesso você cria a sua própria senha.";
+    var cp = el("button", "link", "📋 Copiar link, login e senha");
+    cp.type = "button";
+    cp.addEventListener("click", function () { navigator.clipboard.writeText(msg); cp.textContent = "Copiado ✓"; });
+    var wa = el("a", "link", "💬 Mandar pelo WhatsApp");
+    wa.href = "https://wa.me/?text=" + encodeURIComponent(msg); wa.target = "_blank"; wa.rel = "noopener";
+    caixa.appendChild(cp); caixa.appendChild(wa);
+    b.appendChild(caixa);
+  }
+  mostrar("ctBanner", true);
+  document.getElementById("ctBanner").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 document.getElementById("ctModelo").addEventListener("change", function () { document.getElementById("ctTitulo").value = ctTituloPadrao(); ctAtualizarTexto(true); });
 document.getElementById("ctCliente").addEventListener("change", function () { ctAtualizarAlbuns(); ctRecalcular(); });
 document.getElementById("ctAlbum").addEventListener("change", ctRecalcular);
-["ctOutroNome", "ctOutroEmail"].forEach(function (id) { document.getElementById(id).addEventListener("input", ctRecalcular); });
+document.getElementById("ctAddAss").addEventListener("click", function () {
+  if (ct.assinantes.length >= 6) { avisar("No máximo 6 pessoas por contrato."); return; }
+  ct.assinantes.push({ nome: "", email: "", cliente_id: null });
+  ctDesenharAssinantes();
+});
+document.getElementById("ctMenor").addEventListener("change", function () { mostrar("ctMenorNome", this.checked); ctAtualizarTexto(false); });
+document.getElementById("ctMenorNome").addEventListener("input", function () { ctAtualizarTexto(false); });
 document.getElementById("ctTexto").addEventListener("input", function () { ct.editado = true; });
-document.getElementById("ctCancelarForm").addEventListener("click", function () { mostrar("ctForm", false); });
+document.getElementById("ctCancelarForm").addEventListener("click", function () { mostrar("ctForm", false); mostrar("ctBanner", false); });
 
 // Abre o contrato numa janela com a cara de documento, pronto para "Salvar como PDF" (revisar antes de enviar).
 function ctAbrirPdf(titulo, texto) {
@@ -1028,15 +1144,18 @@ document.getElementById("ctEnviar").addEventListener("click", async function () 
   b.disabled = true;
   var r = await api("/api/contratos/novo", {
     titulo: document.getElementById("ctTitulo").value, texto: texto,
-    cliente_id: cliId !== "outro" ? cliId : null, album_id: document.getElementById("ctAlbum").value || null,
-    destinatario_nome: v.cliente_nome, destinatario_email: v.cliente_email,
-    obrigatorio: cliId !== "outro" && document.getElementById("ctObrigatorio").checked
+    album_id: document.getElementById("ctAlbum").value || null,
+    assinantes: ct.assinantes.map(function (a) { return { nome: a.nome, email: a.email, cliente_id: a.cliente_id }; }),
+    regra: document.getElementById("ctRegra").value
   });
   b.disabled = false;
   if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível enviar."; return; }
   mostrar("ctForm", false);
-  await avisoCopiar("Contrato enviado! 📝", r.dados.email_enviado ? "Mandamos o link para " + v.cliente_email + ". Se quiser, mande também pelo WhatsApp:" : "O e-mail não saiu agora. Mande o link pelo WhatsApp:",
-    [["Link para assinar", r.dados.link]], "Olá, " + (v.cliente_nome || "").split(" ")[0] + "! Segue o contrato para você ler e assinar online: " + r.dados.link);
+  mostrar("ctBanner", false);
+  var ass = r.dados.assinantes || [];
+  await avisoCopiar("Contrato enviado! 📝", (r.dados.email_enviado ? "Cada pessoa recebeu o próprio link por e-mail." : "O e-mail não saiu agora.") + " Se quiser, mande também pelo WhatsApp:",
+    ass.map(function (a) { return ["Link de " + a.nome, a.link]; }),
+    ass.length === 1 ? "Olá, " + ass[0].nome.split(" ")[0] + "! Segue o contrato para você ler e assinar online: " + ass[0].link : "Olá! Segue o contrato para assinar online. Cada pessoa tem o seu link:\n" + ass.map(function (a) { return a.nome + ": " + a.link; }).join("\n"));
   carregarContratos();
 });
 
@@ -1123,11 +1242,15 @@ async function carregar() {
     document.getElementById("cfgLinkPag").value = dados.portal.link_pagamento || "";
     document.getElementById("cfgNota").value = dados.portal.emite_nota ? "1" : "0";
     document.getElementById("cfgBio").value = dados.portal.bio || "";
+    document.getElementById("cfgDocNome").value = dados.portal.doc_nome || "";
+    document.getElementById("cfgDocNumero").value = dados.portal.doc_numero || "";
+    document.getElementById("cfgDocCidade").value = dados.portal.doc_cidade || "";
     mostrarLogo(dados.portal.logo_url);
   }
   // Sem portal ainda: o primeiro passo é configurar o estúdio. Depois, a tela inicial com os links.
   if (dados.portal && telaInicial && abaPedida === "receber") mostrarTela("receber");
   else if (dados.portal && telaInicial && abaPedida === "contratos") { mostrarTela("contratos"); carregarContratos(); }
+  else if (dados.portal && telaInicial && abaPedida === "cobrancas") mostrarTela("cobrancas");
   else if (dados.portal) mostrarTela(document.getElementById("secConfig").classList.contains("hidden") || telaInicial ? "home" : "config");
   else if (r.dados.plano) mostrarTela("config");
   telaInicial = false;
@@ -1532,7 +1655,9 @@ document.getElementById("btnCriarFechado").addEventListener("click", async funct
   botao.disabled = true;
   try {
     var clienteId = document.getElementById("albCliente").value;
+    botao.textContent = "Criando...";
     if (novo) {
+      botao.textContent = "Criando o cliente...";
       var c = await api("/api/portal/clientes/novo", { nome: nome, email: email, senha: senha, tema: document.getElementById("cliTema").value, enviar_acesso: document.getElementById("cliEnviarAcesso").checked });
       var acessoPorEmail = !!c.dados.email_enviado;
       if (!c.ok) { erro.textContent = c.dados.error || "Não foi possível criar o cliente."; return; }
@@ -1544,6 +1669,14 @@ document.getElementById("btnCriarFechado").addEventListener("click", async funct
     } else if (!clienteId) { erro.textContent = "Escolha o cliente"; return; }
     var a = await api("/api/portal/albuns/novo", { cliente_id: clienteId, tipo: document.getElementById("albTipo").value, titulo: document.getElementById("albTitulo").value });
     if (!a.ok) { erro.textContent = a.dados.error || "Não foi possível criar o álbum."; return; }
+    // Pessoas extras (casal, pai e mãe...): cada uma ganha login próprio e recebe o acesso por e-mail.
+    var extras = novo ? wzPessoasExtras() : [];
+    for (var ix = 0; ix < extras.length; ix++) {
+      botao.textContent = "Adicionando " + extras[ix].nome + "...";
+      var pr = await api("/api/portal/albuns/pessoas/adicionar", { album_id: a.dados.id, nome: extras[ix].nome, email: extras[ix].email, senha: gerarSenha(), enviar_acesso: document.getElementById("cliEnviarAcesso").checked });
+      if (!pr.ok) avisar("Não deu para adicionar " + (extras[ix].nome || extras[ix].email) + ": " + (pr.dados.error || "erro") + ". Você pode adicionar depois, no álbum → Mais.");
+    }
+    document.getElementById("wzPessoas").innerHTML = "";
     var rg = await api("/api/portal/albuns/regras", {
       id: a.dados.id,
       prazo_dias: wzPrazoDias(),
@@ -1562,13 +1695,14 @@ document.getElementById("btnCriarFechado").addEventListener("click", async funct
     var visual = { id: a.dados.id, descricao: document.getElementById("albDescricao").value };
     var arqCapa = document.getElementById("albCapa").files[0];
     if (arqCapa) {
+      botao.textContent = "Enviando a foto de capa...";
       try { visual.capa_file_id = await enviarEspecial(await reduzirImagem(arqCapa, 1800, "image/jpeg"), "capa.jpg", "capa"); }
       catch (e) { avisar("O álbum foi criado, mas a foto de capa não foi enviada: " + e.message); }
     }
     await api("/api/portal/albuns/visual", visual);
     if (novo) {
       var linkCli = window.location.origin + "/p/" + dados.portal.slug;
-      await avisoCopiar("Pronto! 🎉", (acessoPorEmail ? "Mandamos o acesso para " + email + " (o cliente cria a senha dele pelo e-mail). Se quiser, mande também pelo WhatsApp:" : "Envie estes dados para " + nome + ". Depois é só mandar as fotos do álbum."), [["Link", linkCli], ["E-mail", email], ["Senha", senha]],
+      if (!querContrato) await avisoCopiar("Pronto! 🎉", (acessoPorEmail ? "Mandamos o acesso para " + email + " (o cliente cria a senha dele pelo e-mail). Se quiser, mande também pelo WhatsApp:" : "Envie estes dados para " + nome + ". Depois é só mandar as fotos do álbum."), [["Link", linkCli], ["E-mail", email], ["Senha", senha]],
         "Olá, " + nome.split(" ")[0] + "! Suas fotos vão ficar aqui: " + linkCli + "\nE-mail: " + email + "\nSenha: " + senha);
     }
     ["cliNome", "cliEmail", "cliSenha", "albTitulo", "wzLimite", "wzLimiteEdicao", "wzMaxDown", "wzMaxFotos", "wzPrecoExtra", "wzFxPreco0", "wzFxPreco1", "albDescricao", "albCapa", "cliTema"].forEach(function (id) { document.getElementById(id).value = ""; });
@@ -1581,10 +1715,11 @@ document.getElementById("btnCriarFechado").addEventListener("click", async funct
     carregarCobrancas();
     var criado = dados.albuns.find(function (x) { return x.id === a.dados.id; });
     if (querContrato) {
-      await ctNovoPara(clienteId, a.dados.id);
+      await ctNovoPara(clienteId, a.dados.id, novo ? { nome: nome, email: email, senha: senha, link: window.location.origin + "/p/" + dados.portal.slug, porEmail: acessoPorEmail } : null);
     } else if (criado) abrirAlbum(criado); else mostrarTela("home");
   } finally {
     botao.disabled = false;
+    botao.textContent = "Criar álbum ✓";
   }
 });
 
@@ -1788,6 +1923,58 @@ document.getElementById("abCopiarMsg").addEventListener("click", function () {
   this.textContent = "Copiada!";
 });
 document.getElementById("abVerVisual").addEventListener("click", function () { abaAlbum("visual"); });
+
+// Pessoas do álbum: a principal e as adicionadas. Uma pessoa nova recebe e-mail para criar a senha.
+function desenharPessoas(lista) {
+  var caixa = document.getElementById("abPessoas");
+  caixa.innerHTML = "";
+  lista.forEach(function (p) {
+    var l = el("div", "flex flex-wrap items-center justify-between gap-2 bg-slate-900/50 rounded-lg px-3 py-2");
+    l.appendChild(el("span", "", (p.principal ? "⭐ " : "👤 ") + p.nome + " · " + p.email + (p.principal ? " (principal)" : "")));
+    if (!p.principal) {
+      var b = el("button", "perigo text-xs", "Tirar acesso");
+      b.type = "button";
+      b.addEventListener("click", async function () {
+        if (!(await confirmar("Tirar o acesso de " + p.nome + "?", "Ela deixa de ver este álbum (a conta continua existindo).", "Sim, tirar"))) return;
+        await api("/api/portal/albuns/pessoas/remover", { album_id: aberto.id, cliente_id: p.id });
+        document.getElementById("grade").innerHTML = ""; paginaAtual = 0; carregarPagina();
+      });
+      l.appendChild(b);
+    }
+    caixa.appendChild(l);
+  });
+}
+document.getElementById("abPesNova").addEventListener("click", function () { mostrar("abPessoaForm", true); document.getElementById("abPesNome").focus(); });
+document.getElementById("abPesSalvar").addEventListener("click", async function () {
+  var b = this;
+  b.disabled = true;
+  var r = await api("/api/portal/albuns/pessoas/adicionar", { album_id: aberto.id, nome: document.getElementById("abPesNome").value, email: document.getElementById("abPesEmail").value, senha: gerarSenha() });
+  b.disabled = false;
+  if (!r.ok) { avisar(r.dados.error || "Não foi possível adicionar."); return; }
+  avisar(r.dados.nova ? (r.dados.email_enviado ? "Pronto! Mandamos o acesso por e-mail: ela cria a própria senha pelo link." : "Pessoa adicionada, mas o e-mail não saiu. Use \"Nova senha\" para mandar o acesso pelo WhatsApp.") : "Pronto! Essa pessoa já tinha conta no seu portal: agora ela também vê este álbum.", "Pessoa adicionada 👥");
+  ["abPesNome", "abPesEmail"].forEach(function (id) { document.getElementById(id).value = ""; });
+  mostrar("abPessoaForm", false);
+  await carregarClientes();
+  document.getElementById("grade").innerHTML = ""; paginaAtual = 0; carregarPagina();
+});
+
+// Pessoas extras no passo a passo (cada linha: nome + e-mail).
+function wzAddPessoa(nome, email) {
+  var l = el("div", "grid grid-cols-[1fr_1fr_auto] gap-2 wzPessoa");
+  var n = el("input", "campo text-sm"); n.placeholder = "Nome"; n.maxLength = 80; n.value = nome || "";
+  var e = el("input", "campo text-sm"); e.placeholder = "E-mail (login dela)"; e.type = "email"; e.maxLength = 120; e.value = email || "";
+  var x = el("button", "perigo text-sm px-2", "✕"); x.type = "button";
+  x.addEventListener("click", function () { l.remove(); });
+  l.appendChild(n); l.appendChild(e); l.appendChild(x);
+  document.getElementById("wzPessoas").appendChild(l);
+}
+function wzPessoasExtras() {
+  return Array.prototype.map.call(document.querySelectorAll("#wzPessoas .wzPessoa"), function (l) {
+    var i = l.querySelectorAll("input");
+    return { nome: i[0].value.trim(), email: i[1].value.trim() };
+  }).filter(function (p) { return p.nome || p.email; });
+}
+document.getElementById("wzAddPessoa").addEventListener("click", function () { wzAddPessoa(); });
 
 function clienteDoAlbum() {
   return aberto ? central.clientes.find(function (c) { return c.id === aberto.cliente_id; }) : null;
@@ -2161,7 +2348,10 @@ document.getElementById("btnSalvar").addEventListener("click", async function ()
   if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível salvar."; return; }
   var primeiraVez = !dados.portal;
   if (!primeiraVez) {
-    var m = await api("/api/portal/marca", { bio: document.getElementById("cfgBio").value });
+    var m = await api("/api/portal/marca", {
+      bio: document.getElementById("cfgBio").value,
+      doc_nome: document.getElementById("cfgDocNome").value, doc_numero: document.getElementById("cfgDocNumero").value, doc_cidade: document.getElementById("cfgDocCidade").value
+    });
     if (!m.ok) { erro.textContent = m.dados.error || "Não foi possível salvar o texto."; return; }
     dados.portal.bio = document.getElementById("cfgBio").value.trim() || null;
   }
@@ -2417,6 +2607,7 @@ async function carregarPagina() {
     aberto.descricao = d.album.descricao;
     document.getElementById("vsDescricao").value = d.album.descricao || "";
     desenharEdicoes(d.edicoes || []);
+    desenharPessoas(d.album.pessoas || []);
   }
   var grade = document.getElementById("grade");
   d.arquivos.forEach(function (f) {

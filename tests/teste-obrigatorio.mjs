@@ -8,7 +8,7 @@ const RAIZ = fileURLToPath(new URL("../", import.meta.url)).replace(/\\/g, "/");
 const worker = (await import(new URL("../", import.meta.url).href + "src/worker.js")).default;
 
 const db = new DatabaseSync(":memory:");
-for (const m of ["0001_init", "0002_recuperar_senha", "0003_aceite_termos", "0004_avisos", "0005_portal", "0006_cobrancas", "0007_cupons", "0008_tabela_precos", "0009_cupom_preco", "0010_assistente", "0011_sentinela", "0012_faq_mais", "0013_eventos", "0014_faq_blog_eventos", "0015_regras_acesso", "0016_faq_estudio", "0017_lixeira", "0018_visual", "0019_aumentar_espaco", "0020_fotos_extras", "0021_bancos", "0022_contratos", "0023_copias", "0024_contrato_obrigatorio"]) db.exec(readFileSync(RAIZ + "migrations/" + m + ".sql", "utf8"));
+for (const m of ["0001_init", "0002_recuperar_senha", "0003_aceite_termos", "0004_avisos", "0005_portal", "0006_cobrancas", "0007_cupons", "0008_tabela_precos", "0009_cupom_preco", "0010_assistente", "0011_sentinela", "0012_faq_mais", "0013_eventos", "0014_faq_blog_eventos", "0015_regras_acesso", "0016_faq_estudio", "0017_lixeira", "0018_visual", "0019_aumentar_espaco", "0020_fotos_extras", "0021_bancos", "0022_contratos", "0023_copias", "0024_contrato_obrigatorio", "0025_senha_cliente", "0026_varias_pessoas"]) db.exec(readFileSync(RAIZ + "migrations/" + m + ".sql", "utf8"));
 
 const DB = {
   prepare(sql) {
@@ -111,7 +111,7 @@ confere("álbum fica fechado até assinar", r.status === 403 && r.dados.contrato
 r = await chamar("/api/p/baixar?id=" + fotos[0]);
 confere("download também fica fechado", r.status === 403 && r.dados.contrato, r);
 // assina
-db.prepare("UPDATE contratos SET codigo_hash = ?, codigo_expira = datetime('now','+10 minutes')").run(createHash("sha256").update("1:123456").digest("hex"));
+db.prepare("UPDATE contrato_assinantes SET codigo_hash = ?, codigo_expira = datetime('now','+10 minutes') WHERE id = 1").run(createHash("sha256").update("1:123456").digest("hex"));
 r = await chamar("/api/c/assinar", { t, nome: "Ana Souza", cpf: "529.982.247-25", codigo: "123456" });
 confere("assina e o comprovante traz o link de volta para os álbuns", r.status === 200 && r.dados.portal === "/p/estudio-luz", r.dados);
 r = await chamar("/api/p/album?id=" + albId);
@@ -172,6 +172,31 @@ r = await chamar("/api/portal/clientes/convite", { cliente_id: biaId });
 confere("fotógrafo pode reenviar o acesso por e-mail", r.status === 200 && emails.some(e => e.to[0] === "bia@t.com"), r);
 r = await chamar("/api/portal/clientes/novo", { nome: "Caio", email: "caio@t.com", senha: "senha-do-foto-2", enviar_acesso: false });
 confere("dá para criar sem mandar e-mail", r.status === 200 && r.dados.email_enviado === false, r.dados);
+
+// primeiro acesso com a senha do fotógrafo: pede para criar a própria; depois dá para trocar
+cookie = "";
+await chamar("/api/p/login", { slug: "estudio-luz", email: "caio@t.com", senha: "senha-do-foto-2" });
+r = await chamar("/api/p/me");
+confere("entrou com a senha do fotógrafo: o portal pede para criar a dele", r.dados.precisa_senha === true, r.dados.precisa_senha);
+r = await chamar("/api/p/senha", { nova: "curta" });
+confere("senha curta é recusada", r.status === 400, r);
+r = await chamar("/api/p/senha", { nova: "senha-do-caio-1" });
+confere("cria a própria senha sem precisar da atual", r.status === 200, r);
+r = await chamar("/api/p/me");
+confere("depois disso não pede mais", r.dados.precisa_senha === false, r.dados.precisa_senha);
+r = await chamar("/api/p/senha", { atual: "errada-123", nova: "senha-do-caio-2" });
+confere("para trocar de novo precisa da senha atual", r.status === 400, r);
+r = await chamar("/api/p/senha", { atual: "senha-do-caio-1", nova: "senha-do-caio-2" });
+confere("troca a senha com a atual certa", r.status === 200, r);
+r = await chamar("/api/p/me");
+confere("continua logado neste aparelho depois de trocar", r.status === 200, r.status);
+cookie = "";
+r = await chamar("/api/p/login", { slug: "estudio-luz", email: "caio@t.com", senha: "senha-do-caio-2" });
+confere("entra com a senha nova", r.status === 200, r);
+cookie = dono;
+const caioId = db.prepare("SELECT id FROM portal_clientes WHERE email = 'caio@t.com'").get().id;
+await chamar("/api/portal/clientes/senha", { cliente_id: caioId, senha: "senha-nova-foto" });
+confere("senha nova dada pelo fotógrafo volta a pedir a troca no próximo acesso", db.prepare("SELECT senha_propria FROM portal_clientes WHERE id = ?").get(caioId).senha_propria === 0, "");
 
 console.log(falhas ? "\n" + falhas + " FALHA(S)" : "\nTODOS OS TESTES PASSARAM");
 process.exit(falhas ? 1 : 0);
