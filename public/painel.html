@@ -88,6 +88,14 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
     </div>
   </div>
 
+  <!-- Confirmação do e-mail -->
+  <div id="confirmarEmail" class="hidden glass rounded-2xl p-4 border-2" style="border-color:#f59e0b">
+    <p class="font-bold text-amber-200">📧 Confirme o seu e-mail</p>
+    <p class="text-sm text-slate-300 mt-1">Mandamos um link para <strong id="confEmail"></strong>. Clique nele para poder contratar e usar o teste grátis. Olhe também o Spam.</p>
+    <button type="button" id="btnReenviarConf" class="mt-2 text-sm font-semibold text-cyan-300 hover:text-white">Mandar o link de novo</button>
+    <span id="confMsg" class="text-sm text-emerald-300 ml-2"></span>
+  </div>
+
   <!-- Avisos: quadradinhos que piscam quando algo precisa da pessoa (contratos, cobranças, pedidos, plano) -->
   <div id="avisosBox" class="hidden space-y-2">
     <p class="text-sm font-semibold text-slate-300">🔔 Precisa de você</p>
@@ -349,6 +357,24 @@ async function carregarAvisos() {
   desenharAvisos(lista);
 }
 
+function mostrarConfirmacao(u) {
+  var q = new URLSearchParams(window.location.search).get("confirmado");
+  if (q === "1") avisar("E-mail confirmado! Agora é só escolher o seu plano ou usar o teste grátis.", "Tudo certo ✅");
+  if (q === "0") avisar("Esse link venceu ou já foi usado. Se ainda aparecer o aviso amarelo, peça um link novo.", "Link de confirmação");
+  if (u.email_confirmado === false) {
+    document.getElementById("confEmail").textContent = u.email;
+    document.getElementById("confirmarEmail").classList.remove("hidden");
+  }
+}
+document.getElementById("btnReenviarConf").addEventListener("click", async function () {
+  var b = this, m = document.getElementById("confMsg");
+  b.disabled = true;
+  var r = await fetch("/api/email/reenviar", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  var d = await r.json();
+  b.disabled = false;
+  m.textContent = r.ok ? (d.ja_confirmado ? "Seu e-mail já está confirmado." : "Mandamos de novo!") : (d.error || "Não foi possível.");
+});
+
 function mostrarPlano(plano) {
   planoAtual = plano;
   // Plano vencendo em até 5 dias (ou teste grátis acabando) vira aviso no topo.
@@ -555,6 +581,7 @@ fetch("/api/me").then(function (r) {
   }
   estadoSeguranca(u.totp);
   mostrarPlano(u.plano);
+    mostrarConfirmacao(u);
   if (cupomUrl && !u.plano) {
     mostrar("blocoOpcoes", true);
     mostrar("blocoCupom", true);

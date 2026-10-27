@@ -189,7 +189,7 @@ async function usuarioLogado(request, env) {
   if (!token) return null;
   const h = await sha256Hex(token);
   return await env.DB.prepare(
-    "SELECT u.id, u.email, u.name, u.role, u.totp_enabled FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.pending = 0 AND s.expires_at > datetime('now')"
+    "SELECT u.id, u.email, u.name, u.role, u.totp_enabled, u.email_confirmado_em FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.pending = 0 AND s.expires_at > datetime('now')"
   ).bind(h).first();
 }
 
@@ -242,6 +242,39 @@ async function enviarEmail(env, para, assunto, html, texto) {
   }
   return true;
 }
+
+/* ---------- confirmação de e-mail ---------- */
+const DIAS_LINK_CONFIRMACAO = 3;
+const MSG_CONFIRMAR = "Confirme o seu e-mail para continuar: clique no link que mandamos para você (olhe também o Spam). No Painel dá para pedir outro.";
+async function enviarConfirmacao(env, u) {
+  const b = new Uint8Array(24);
+  crypto.getRandomValues(b);
+  const token = paraHex(b);
+  await env.DB.prepare("UPDATE users SET confirmacao_hash = ?, confirmacao_expira = datetime('now', ?) WHERE id = ?")
+    .bind(await sha256Hex(token), "+" + DIAS_LINK_CONFIRMACAO + " days", u.id).run();
+  const m = emailAviso(String(u.name || "").split(" ")[0], "Confirme o seu e-mail na Master Nuvem",
+    ["Falta só um clique para ativar a sua conta.", "O link vale " + DIAS_LINK_CONFIRMACAO + " dias. Se você não criou esta conta, ignore este e-mail."],
+    { texto: "Confirmar meu e-mail", link: SITE + "/api/email/confirmar?t=" + token });
+  return await enviarEmail(env, u.email, "Confirme o seu e-mail - Master Nuvem", m.html, m.texto);
+}
+
+/* ---------- Turnstile (Cloudflare): prova que é uma pessoa no login e no cadastro ---------- */
+async function turnstileOk(env, request, token) {
+  if (!env.TURNSTILE_SECRET) return true;   // ainda não configurado: não bloqueia ninguém
+  try {
+    const form = new FormData();
+    form.append("secret", env.TURNSTILE_SECRET);
+    form.append("response", String(token || ""));
+    form.append("remoteip", request.headers.get("CF-Connecting-IP") || "");
+    const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: form });
+    const d = await r.json();
+    return !!d.success;
+  } catch (e) {
+    console.error("Turnstile indisponível:", e.message);
+    return true;   // se o serviço da Cloudflare cair, não trava o site inteiro
+  }
+}
+const MSG_ROBO = "Não conseguimos confirmar que você não é um robô. Recarregue a página e tente de novo.";
 
 function emailRecuperarSenha(nome, link) {
   const ola = "Olá" + (nome ? ", " + nome.replace(/[<>&"]/g, "") : "") + "!";
@@ -843,8 +876,44 @@ async function tratarApi(request, env, url) {
       nome: u.name,
       role: u.role,
       totp: !!u.totp_enabled,
+      email_confirmado: !!u.email_confirmado_em,
       plano: plano ? { quota_gb: plano.quota_gb, paid_until: plano.paid_until, teste: String(plano.mp_payment_id || "").indexOf("cupom:") === 0 } : null
     }, 200);
+  }
+
+  // Link do e-mail de confirmação: confirma e volta para o Painel.
+  if (caminho === "/api/email/confirmar" && request.method === "GET") {
+    const tk = String(url.searchParams.get("t") || "");
+    const r = /^[0-9a-f]{48}$/.test(tk) ? await env.DB.prepare(
+      "UPDATE users SET email_confirmado_em = datetime('now'), confirmacao_hash = NULL, confirmacao_expira = NULL WHERE confirmacao_hash = ? AND confirmacao_expira > datetime('now')"
+    ).bind(await sha256Hex(tk)).run() : null;
+    return Response.redirect(SITE + "/painel?" + (r && r.meta.changes ? "confirmado=1" : "confirmado=0"), 302);
+  }
+
+  if (caminho === "/api/email/reenviar") {
+    if (request.method !== "POST") return resposta({ error: "Método não permitido" }, 405);
+    if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
+    const u = await usuarioLogado(request, env);
+    if (!u) return resposta({ error: "Não autenticado" }, 401);
+    if (u.email_confirmado_em) return resposta({ ok: true, ja_confirmado: true }, 200);
+    if (!(await dentroDoLimite(env, await chaveConta("confirmar|" + u.email), "confirmar_email", 3))) return resposta({ error: "Já mandamos alguns e-mails. Espere 1 hora e olhe também o Spam." }, 429);
+    const ok = await enviarConfirmacao(env, u);
+    return resposta(ok ? { ok: true, email: u.email } : { error: "Não conseguimos enviar agora. Tente de novo em alguns minutos." }, ok ? 200 : 502);
+  }
+
+  // Configurações públicas que a página precisa (ex.: chave pública do Turnstile).
+  if (caminho === "/api/config" && request.method === "GET") {
+    return resposta({ turnstile_site_key: env.TURNSTILE_SITE_KEY || null }, 200);
+  }
+
+  // Saúde do site, para o monitor externo (ex.: UptimeRobot) avisar se cair.
+  if (caminho === "/api/saude") {
+    try {
+      await env.DB.prepare("SELECT 1 AS ok").first();
+      return resposta({ ok: true, site: "no ar" }, 200);
+    } catch (e) {
+      return resposta({ ok: false, erro: "banco" }, 503);
+    }
   }
 
   if (caminho === "/api/register") {
@@ -867,6 +936,7 @@ async function tratarApi(request, env, url) {
     if (corpo.aceite !== true) {
       return resposta({ error: "Para criar a conta, aceite os Termos de uso e a Política de privacidade." }, 400);
     }
+    if (!(await turnstileOk(env, request, corpo.turnstile))) return resposta({ error: MSG_ROBO, robo: true }, 400);
     if (!(await dentroDoLimite(env, await chaveIp(request), "cadastro", MAX_CADASTROS_IP))) {
       return resposta({ error: "Muitas contas criadas desta conexão. Tente de novo em 1 hora." }, 429);
     }
@@ -889,8 +959,10 @@ async function tratarApi(request, env, url) {
       return resposta({ error: "Erro ao cadastrar" }, 500);
     }
 
+    // Manda o link para confirmar o e-mail (contratar plano e usar cupom pedem e-mail confirmado).
+    await enviarConfirmacao(env, { id: userId, email: email, name: nome });
     const token = await criarSessao(env, userId, false);
-    return resposta({ ok: true }, 200, cookieSessao(token, DIAS_SESSAO * 86400));
+    return resposta({ ok: true, confirmar_email: true }, 200, cookieSessao(token, DIAS_SESSAO * 86400));
   }
 
   if (caminho === "/api/login") {
@@ -902,6 +974,7 @@ async function tratarApi(request, env, url) {
 
     const email = String(corpo.email || "").trim().toLowerCase();
     const senha = String(corpo.senha || "");
+    if (!(await turnstileOk(env, request, corpo.turnstile))) return resposta({ error: MSG_ROBO, robo: true }, 400);
 
     // Bloqueia por 1 hora depois de muitas senhas erradas (do mesmo IP ou contra a mesma conta).
     const kIp = await chaveIp(request);
@@ -1124,6 +1197,7 @@ async function tratarApi(request, env, url) {
     if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
     const u = await usuarioLogado(request, env);
     if (!u) return resposta({ error: "Entre na sua conta para usar o cupom", login: true }, 401);
+    if (!u.email_confirmado_em) return resposta({ error: MSG_CONFIRMAR, confirmar_email: true }, 403);
     const corpo = await lerJson(request);
     if (!corpo) return resposta({ error: "JSON inválido" }, 400);
 
@@ -1168,6 +1242,7 @@ async function tratarApi(request, env, url) {
 
     const u = await usuarioLogado(request, env);
     if (!u) return resposta({ error: "Entre na sua conta para contratar", login: true }, 401);
+    if (!u.email_confirmado_em) return resposta({ error: MSG_CONFIRMAR, confirmar_email: true }, 403);
 
     const corpo = await lerJson(request);
     if (!corpo) return resposta({ error: "JSON inválido" }, 400);
@@ -1445,6 +1520,27 @@ function comProtecao(r, api) {
   return new Response(r.body, { status: r.status, statusText: r.statusText, headers: h });
 }
 
+/* ---------- Lembrete: recarga do chip do WhatsApp de atendimento ---------- */
+// Chip pré-pago sem recarga é bloqueado e depois cancelado pela operadora (e o WhatsApp vai junto).
+// A cada DIAS_RECARGA_WHATSAPP dias, contando de INICIO_RECARGA_WHATSAPP, manda e-mail para o contato@
+// e cria um alerta no /admin (Sentinela, com 🔴). A chave do alerta impede repetir no mesmo ciclo.
+const DIAS_RECARGA_WHATSAPP = 60;
+const INICIO_RECARGA_WHATSAPP = "2026-10-27";
+async function lembreteWhatsapp(env, agora) {
+  const dias = Math.floor((agora - Date.parse(INICIO_RECARGA_WHATSAPP + "T00:00:00Z")) / 86400000);
+  const ciclo = Math.floor(dias / DIAS_RECARGA_WHATSAPP);
+  if (ciclo < 1) return false;
+  const msg = "Lembrete: coloque crédito (R$ 15 ou R$ 20) no chip do WhatsApp (62) 98284-6067 para a operadora não cancelar a linha.";
+  const r = await env.DB.prepare("INSERT OR IGNORE INTO sentinela_alertas (chave, nivel, mensagem) VALUES (?, 'aviso', ?)")
+    .bind("lembrete-whatsapp-" + ciclo, msg).run();
+  if (!r.meta.changes) return false;
+  const m = emailAviso("João", "Hora de recarregar o chip do WhatsApp", [msg, "O próximo lembrete chega daqui a " + DIAS_RECARGA_WHATSAPP + " dias."], { texto: "Abrir o painel admin", link: SITE + "/admin" });
+  await enviarEmail(env, EMAIL_SUPORTE, "Lembrete: recarregar o chip do WhatsApp", m.html, m.texto);
+  return true;
+}
+
+export { lembreteWhatsapp };
+
 export default {
   async scheduled(event, env, ctx) {
     // "*/20 * * * *" = sentinela; "0 * * * *" = limpeza (na hora cheia rodam as duas).
@@ -1452,7 +1548,7 @@ export default {
     // A cópia de segurança do banco roda uma vez por dia, na limpeza das 06:00 UTC (03:00 em Brasília).
     if (event.cron === "0 * * * *") ctx.waitUntil(limpeza(env).then(function (relatorio) {
       if (new Date(event.scheduledTime).getUTCHours() !== 6) return relatorio;
-      return fazerCopia(env).then(function () { return relatorio; });
+      return fazerCopia(env).then(function () { return lembreteWhatsapp(env, event.scheduledTime); }).then(function () { return relatorio; });
     }));
     else ctx.waitUntil(sentinela(env).then(function () { return purgarLixeira(env); }).then(function () { return checarLinksBancos(env, ferramentasBancos()); }));
   },

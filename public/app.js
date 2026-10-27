@@ -79,6 +79,9 @@ async function processarPagamento(metodo) {
 }
 
 function iniciar() {
+  document.querySelectorAll("[data-preco]").forEach(function (el) {
+    el.textContent = calcularPreco(parseInt(el.getAttribute("data-preco"), 10)).toFixed(2).replace(".", ",");
+  });
   var slider = document.getElementById("gbSlider");
   var btn = document.getElementById("checkoutBtn");
 

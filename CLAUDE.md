@@ -139,7 +139,7 @@ checkout, ciclo de 30 dias com avisos, 2FA do admin ativado, limpeza por Cron). 
 1. Responda **em português**, passo a passo, com blocos de código simples; o João não é programador de carreira.
 2. Rode primeiro `git status` e leia este arquivo. Não pesquise o que já está aqui.
 3. Mudanças pequenas e testáveis; explique o que mudou em 2–3 linhas.
-4. **Testes automáticos:** `node tests/rodar.mjs` (22 grupos, banco SQLite em memória + Mercado Pago/B2/Resend simulados; nada toca a produção). Rodar antes de todo deploy. Teste novo: copiar um `tests/teste-*.mjs` parecido.
+4. **Testes automáticos:** `node tests/rodar.mjs` (28 grupos, banco SQLite em memória + Mercado Pago/B2/Resend simulados; nada toca a produção). Rodar antes de todo deploy. Teste novo: copiar um `tests/teste-*.mjs` parecido.
    Testar local: `npx wrangler dev` (precisa de `.dev.vars`). Banco local: `--local`; produção: `--remote` (**confirmar antes de mexer em produção**).
 5. Nunca imprimir, commitar ou pedir para colar segredos no chat. Novo segredo → `npx wrangler secret put NOME`.
 6. Não quebrar o que funciona (login, cota, URLs assinadas). Qualquer mudança em preço/cobrança: mostrar a conta antes.
@@ -308,5 +308,11 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
    - **Painel com avisos:** `GET /api/portal/resumo` → quadradinhos "🔔 Precisa de você" no /painel (contratos esperando, a receber, pedidos de evento, edições, plano vencendo em até 5 dias), com 🔴 e "(N)" no título da aba.
    - Páginas públicas não citam mais os fornecedores (Backblaze/Cloudflare): rodapé, Quem somos, Termos e Privacidade usam termos genéricos. Não anunciar "servidor próprio" (não é verdade: propaganda enganosa).
    - Atenção: ids do bloco de fotos usam `LimiteBox` (`rgLimite`/`wzLimite` já são o campo de favoritas).
-5. Pendências menores: Turnstile no login e cadastro; upload acima de 4,5 GB (multipart); preço duplicado em
+   **Profissional, parte 2 (publicado em 2026-10-27, migração 0027):**
+   - **Confirmar e-mail:** cadastro manda link (`/api/email/confirmar?t=`, 3 dias, hash em `users.confirmacao_hash`); sem confirmar, `/api/checkout` e `/api/cupom` dão 403 `{confirmar_email:true}`. Painel mostra aviso amarelo + "Mandar o link de novo" (`/api/email/reenviar`, 3/h). Contas antigas já vieram confirmadas. `/api/me` devolve `email_confirmado`. Teste: `tests/teste-email.mjs`.
+   - **Turnstile (anti-robô) no login e cadastro:** só funciona com os segredos `TURNSTILE_SITE_KEY` e `TURNSTILE_SECRET` (`scriptssegredo.ps1`); sem eles não verifica. `GET /api/config` entrega só a chave pública. Se a Cloudflare do Turnstile cair, deixa passar.
+   - **`GET /api/saude`** (200 / 503 se o banco cair) para monitor externo (UptimeRobot, feito pelo João).
+   - **Página inicial:** 3 planos prontos (100 GB, 1 TB, 5 TB; preço calculado por `calcularPreco` via `data-preco`) e prévia real do portal (iframe de `/p/previa?previa=casamento`).
+   - **Lembrete do chip do WhatsApp:** `lembreteWhatsapp` na limpeza das 06:00 UTC; a cada 60 dias desde 2026-10-27 (`DIAS_RECARGA_WHATSAPP`, `INICIO_RECARGA_WHATSAPP`) e-mail para contato@ + alerta na Sentinela (chave `lembrete-whatsapp-<ciclo>`). Teste: `tests/teste-lembrete.mjs`.
+5. Pendências menores: upload acima de 4,5 GB (multipart); preço duplicado em
    `app.js` e `worker.js`; responder e-mails como @masternuvem.com.br; WhatsApp.
