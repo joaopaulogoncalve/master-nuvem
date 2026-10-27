@@ -9,7 +9,7 @@ async function avisarFotografo(env, para, assunto, linhas) {
   return await emailComBotao(env, para, assunto, linhas, { texto: "Abrir o Meu estúdio", link: "https://masternuvem.com.br/meu-portal" });
 }
 
-async function emailComBotao(env, para, assunto, linhas, botao) {
+export async function emailComBotao(env, para, assunto, linhas, botao) {
   if (!env.RESEND_API_KEY || !para) return false;
   const esc = function (s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); };
   try {
@@ -265,7 +265,7 @@ async function paginaArquivos(env, albumId, clienteId, pagina, semPrevia) {
 
 /* ---------- assinante (fotógrafo) ---------- */
 
-async function usuarioLogado(request, env) {
+export async function usuarioLogado(request, env) {
   const token = lerCookie(request, "sessao");
   if (!token) return null;
   return await env.DB.prepare(

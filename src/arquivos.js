@@ -240,8 +240,8 @@ export async function tratarArquivos(request, env, url) {
     const r = await env.DB.prepare(
       "INSERT INTO files (user_id, object_key, name, size_bytes, status, album_id, evento_id, e_previa, uso) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?)"
     ).bind(u.id, chave, nome, Math.floor(tamanho), albumId, eventoId, albumId && corpo.previa === true ? 1 : 0,
-      // Logo do estúdio ou capa de álbum/evento: fica fora de Meus arquivos e das fotos (mas conta na cota).
-      !albumId && !eventoId && (corpo.uso === "logo" || corpo.uso === "capa") ? corpo.uso : null).run();
+      // Logo do estúdio, capa de álbum/evento ou foto do portfólio: fica fora de Meus arquivos e das fotos (mas conta na cota).
+      !albumId && !eventoId && ["logo", "capa", "portfolio"].indexOf(corpo.uso) >= 0 ? corpo.uso : null).run();
 
     const link = await urlAssinada(env, "PUT", chave, 3600);
     return resp({ id: r.meta.last_row_id, url: link }, 200);

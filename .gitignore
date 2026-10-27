@@ -5,3 +5,4 @@
 # Dependências e arquivos temporários
 node_modules/
 .wrangler/
+fotos-google/
