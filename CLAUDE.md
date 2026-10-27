@@ -39,6 +39,8 @@ Navegador ◄──► Backblaze B2 (S3)   → upload/download DIRETO por URL as
 | `MP_ACCESS_TOKEN` | Token do Mercado Pago (checkout e consulta de pagamentos no webhook). Token **definitivo** (de produção) gravado; PIX real testado em 2026-10-25. |
 | `RESEND_API_KEY` | **2026-10-26: a chave antiga estava inválida (Resend 401 Malformed access token) e nenhum e-mail saía; chave nova `site-master-nuvem` gravada e testada (Delivered).** Para conferir erros de e-mail: `npx wrangler tail master-nuvem`. Envio de e-mail (Resend, remetente `nao-responda@masternuvem.com.br`). Gravar com `scripts\segredo.ps1 -Nome RESEND_API_KEY` |
 | `MP_WEBHOOK_SECRET` | Opcional. Se existir, o webhook exige a assinatura `x-signature` do MP. Só criar depois de confirmar que os avisos chegam assinados (senão nenhum plano ativa). A segurança principal é consultar o pagamento na API. |
+| `UPTIMEROBOT_API_KEY` | Chave **só de leitura** do UptimeRobot (Integrations & API → Read-only API key). Usada pelo quadradinho "🩺 Site no ar" do /admin (`/api/admin/site`, função `lerUptimeRobot`). Sem ela o quadradinho diz "Falta ligar". |
+| `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET` | Turnstile (anti-robô) no login e cadastro; gravados em 2026-10-27. |
 | `B2_KEY_ID` | ID da chave de aplicação do Backblaze (`site-master-nuvem`, só o bucket, Read and Write). A Master Key **não** funciona na API S3. Trocar: `scripts\b2-chave-site.ps1 -KeyId 005...` |
 | `B2_APP_KEY` | Chave secreta do Backblaze |
 | `B2_BUCKET` | `master-nuvem-cliente` (bucket **privado**) |
@@ -139,7 +141,7 @@ checkout, ciclo de 30 dias com avisos, 2FA do admin ativado, limpeza por Cron). 
 1. Responda **em português**, passo a passo, com blocos de código simples; o João não é programador de carreira.
 2. Rode primeiro `git status` e leia este arquivo. Não pesquise o que já está aqui.
 3. Mudanças pequenas e testáveis; explique o que mudou em 2–3 linhas.
-4. **Testes automáticos:** `node tests/rodar.mjs` (28 grupos, banco SQLite em memória + Mercado Pago/B2/Resend simulados; nada toca a produção). Rodar antes de todo deploy. Teste novo: copiar um `tests/teste-*.mjs` parecido.
+4. **Testes automáticos:** `node tests/rodar.mjs` (29 grupos, banco SQLite em memória + Mercado Pago/B2/Resend simulados; nada toca a produção). Rodar antes de todo deploy. Teste novo: copiar um `tests/teste-*.mjs` parecido.
    Testar local: `npx wrangler dev` (precisa de `.dev.vars`). Banco local: `--local`; produção: `--remote` (**confirmar antes de mexer em produção**).
 5. Nunca imprimir, commitar ou pedir para colar segredos no chat. Novo segredo → `npx wrangler secret put NOME`.
 6. Não quebrar o que funciona (login, cota, URLs assinadas). Qualquer mudança em preço/cobrança: mostrar a conta antes.

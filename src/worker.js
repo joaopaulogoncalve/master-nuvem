@@ -479,6 +479,11 @@ async function tratarAdmin(request, env, url) {
     return resposta({ cupons: r.results }, 200);
   }
 
+  // Site no ar: lê os monitores do UptimeRobot (chave só de leitura em UPTIMEROBOT_API_KEY).
+  if (caminho === "/api/admin/site" && request.method === "GET") {
+    return resposta(await lerUptimeRobot(env), 200);
+  }
+
   // Cópias de segurança do banco: lista, fazer agora e baixar (link de 5 min).
   if (caminho === "/api/admin/copias" && request.method === "GET") {
     const r = await env.DB.prepare("SELECT id, chave, bytes, tabelas, linhas, ok, erro, created_at FROM copias ORDER BY id DESC LIMIT 10").all();
@@ -1520,6 +1525,36 @@ function comProtecao(r, api) {
   return new Response(r.body, { status: r.status, statusText: r.statusText, headers: h });
 }
 
+/* ---------- Site no ar (UptimeRobot) ---------- */
+// status do UptimeRobot: 0 pausado, 1 ainda não conferido, 2 no ar, 8 parece fora, 9 fora.
+const STATUS_UPTIME = { 0: "pausado", 1: "preparando", 2: "no_ar", 8: "fora", 9: "fora" };
+async function lerUptimeRobot(env) {
+  if (!env.UPTIMEROBOT_API_KEY) return { configurado: false };
+  try {
+    const corpo = new URLSearchParams({ api_key: env.UPTIMEROBOT_API_KEY, format: "json", custom_uptime_ratios: "30", logs: "1", logs_limit: "10" });
+    const r = await fetch("https://api.uptimerobot.com/v2/getMonitors", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: corpo.toString() });
+    const d = await r.json();
+    if (d.stat !== "ok") return { configurado: true, erro: (d.error && d.error.message) || "O UptimeRobot recusou a chave." };
+    return {
+      configurado: true,
+      monitores: (d.monitors || []).map(function (m) {
+        return {
+          nome: m.friendly_name || m.url,
+          url: m.url,
+          status: STATUS_UPTIME[m.status] || "preparando",
+          uptime_30: m.custom_uptime_ratio ? parseFloat(m.custom_uptime_ratio) : null,
+          // type 1 = caiu (a duração é quanto tempo ficou fora)
+          quedas: (m.logs || []).filter(function (l) { return l.type === 1; }).slice(0, 5).map(function (l) {
+            return { quando: new Date(l.datetime * 1000).toISOString(), duracao_s: l.duration || 0, motivo: (l.reason && l.reason.detail) || "" };
+          })
+        };
+      })
+    };
+  } catch (e) {
+    return { configurado: true, erro: "Não foi possível falar com o UptimeRobot agora." };
+  }
+}
+
 /* ---------- Lembrete: recarga do chip do WhatsApp de atendimento ---------- */
 // Chip pré-pago sem recarga é bloqueado e depois cancelado pela operadora (e o WhatsApp vai junto).
 // A cada DIAS_RECARGA_WHATSAPP dias, contando de INICIO_RECARGA_WHATSAPP, manda e-mail para o contato@
@@ -1539,7 +1574,7 @@ async function lembreteWhatsapp(env, agora) {
   return true;
 }
 
-export { lembreteWhatsapp };
+export { lembreteWhatsapp, lerUptimeRobot };
 
 export default {
   async scheduled(event, env, ctx) {
