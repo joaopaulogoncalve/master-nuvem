@@ -58,6 +58,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         <input id="aceite" type="checkbox" class="mt-1">
         <span>Li e aceito os <a href="/termos" target="_blank" class="text-cyan-300 underline">Termos de uso</a> e a <a href="/privacidade" target="_blank" class="text-cyan-300 underline">Política de privacidade</a>.</span>
       </label>
+      <div id="robo" class="flex justify-center"></div>
       <p id="erro" class="text-sm text-red-400 min-h-[1.25rem]"></p>
       <button type="submit" id="botao" class="cta w-full font-bold py-3 rounded-xl transition">Entrar</button>
       <button type="button" id="linkEsqueci" class="block mx-auto text-sm text-blue-300 hover:text-white">Esqueci minha senha</button>
@@ -88,6 +89,18 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
 
 <script>
 var modo = "entrar";
+var roboWidget = null;
+// Anti-robô (Cloudflare Turnstile): carrega só se o site tiver a chave configurada.
+fetch("/api/config").then(function (r) { return r.json(); }).then(function (c) {
+  if (!c.turnstile_site_key) return;
+  window.aoCarregarTurnstile = function () {
+    roboWidget = window.turnstile.render("#robo", { sitekey: c.turnstile_site_key, language: "pt-br", theme: "dark" });
+  };
+  var s = document.createElement("script");
+  s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=aoCarregarTurnstile&render=explicit";
+  s.async = true;
+  document.head.appendChild(s);
+}).catch(function () {});
 
 function definirModo(novo) {
   modo = novo;
@@ -123,7 +136,8 @@ async function enviar(ev) {
     email: document.getElementById("email").value,
     senha: document.getElementById("senha").value,
     nome: document.getElementById("nome").value,
-    aceite: document.getElementById("aceite").checked
+    aceite: document.getElementById("aceite").checked,
+    turnstile: roboWidget !== null && window.turnstile ? window.turnstile.getResponse(roboWidget) : ""
   };
   if (modo === "criar" && !dados.aceite) {
     erro.textContent = "Para criar a conta, aceite os Termos de uso e a Política de privacidade.";
@@ -150,6 +164,7 @@ async function enviar(ev) {
       return;
     }
     erro.textContent = json.error || "Não foi possível continuar.";
+    if (roboWidget !== null && window.turnstile) window.turnstile.reset(roboWidget);
   } catch (e) {
     erro.textContent = "Erro de conexão. Tente novamente.";
   }
