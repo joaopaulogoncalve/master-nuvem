@@ -90,6 +90,15 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <div id="listaBlog" class="space-y-1"></div>
     </div>
 
+    <div id="secSite" class="adSec hidden glass rounded-3xl p-6 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-lg font-bold">🩺 Site no ar <span class="text-sm font-normal text-slate-400">conferido a cada 5 min pelo UptimeRobot</span></h2>
+        <button type="button" id="btnSite" class="text-sm font-semibold text-cyan-300 hover:text-white">Atualizar</button>
+      </div>
+      <p class="text-xs text-slate-500">Se o site inteiro cair, esta tela cai junto: o aviso na hora chega por e-mail (ou no app) do UptimeRobot. Aqui você vê depois quanto tempo ficou fora.</p>
+      <div id="listaSite" class="space-y-2"></div>
+    </div>
+
     <div id="secCopias" class="adSec hidden glass rounded-3xl p-6 space-y-3">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="text-lg font-bold">📦 Cópias de segurança <span class="text-sm font-normal text-slate-400">do banco de dados, todo dia às 3h</span></h2>
@@ -826,11 +835,42 @@ document.getElementById("btnCopiaAgora").addEventListener("click", async functio
   carregarCopias();
 });
 
+/* ---------- site no ar (UptimeRobot) ---------- */
+
+var siteInfo = null;
+function duracaoTexto(s) {
+  if (s < 60) return s + " s";
+  if (s < 3600) return Math.round(s / 60) + " min";
+  return (Math.round(s / 360) / 10) + " h";
+}
+async function carregarSite() {
+  var resp = await fetch("/api/admin/site");
+  if (!resp.ok) return;
+  siteInfo = await resp.json();
+  var lista = document.getElementById("listaSite");
+  lista.innerHTML = "";
+  if (!siteInfo.configurado) { lista.appendChild(el("p", "text-sm text-slate-400", "Ainda não ligado: falta gravar a chave só de leitura do UptimeRobot (UPTIMEROBOT_API_KEY).")); return; }
+  if (siteInfo.erro) { lista.appendChild(el("p", "text-sm text-red-300", siteInfo.erro)); return; }
+  var ICONE = { no_ar: "✅", fora: "🔴", pausado: "⏸️", preparando: "⏳" };
+  siteInfo.monitores.forEach(function (m) {
+    var c = el("div", "bg-slate-900/40 rounded-lg px-3 py-2 text-sm");
+    var topo = el("div", "flex flex-wrap items-center justify-between gap-2");
+    topo.appendChild(el("span", m.status === "fora" ? "text-red-300 font-semibold" : "", ICONE[m.status] + " " + m.nome));
+    topo.appendChild(el("span", "text-slate-400", m.uptime_30 === null ? "" : String(m.uptime_30).replace(".", ",") + "% no ar (30 dias)"));
+    c.appendChild(topo);
+    m.quedas.forEach(function (q) {
+      c.appendChild(el("p", "text-xs text-slate-400 mt-1", "↘ Caiu em " + new Date(q.quando).toLocaleString("pt-BR") + " · ficou fora " + duracaoTexto(q.duracao_s) + (q.motivo ? " · " + q.motivo : "")));
+    });
+    lista.appendChild(c);
+  });
+}
+document.getElementById("btnSite").addEventListener("click", carregarSite);
+
 /* ---------- tela inicial: quadradinhos com resumo e ponto vermelho ---------- */
 
 var SECOES = [
   ["Clientes", "👥 Clientes"], ["Assistente", "☁️ Assistente"], ["Sentinela", "🛡️ Sentinela"],
-  ["Bancos", "🏦 Bancos"], ["Blog", "📝 Blog"], ["B2", "💾 Backblaze"], ["Copias", "📦 Cópias"], ["Cupons", "🎟️ Cupons"]
+  ["Bancos", "🏦 Bancos"], ["Blog", "📝 Blog"], ["B2", "💾 Backblaze"], ["Copias", "📦 Cópias"], ["Site", "🩺 Site no ar"], ["Cupons", "🎟️ Cupons"]
 ];
 var resumoTile = {};
 
@@ -845,6 +885,17 @@ document.getElementById("adVoltar").addEventListener("click", function () { abri
 function contarTexto(id, re) {
   var m = (document.getElementById(id).textContent || "").match(re);
   return m ? parseInt(m[1], 10) : 0;
+}
+
+function resumoSite() {
+  if (!siteInfo) return ["Carregando...", 0];
+  if (!siteInfo.configurado) return ["Falta ligar o UptimeRobot", 0];
+  if (siteInfo.erro) return [siteInfo.erro, 1];
+  var fora = siteInfo.monitores.filter(function (m) { return m.status === "fora"; }).length;
+  var piores = siteInfo.monitores.filter(function (m) { return m.uptime_30 !== null; }).map(function (m) { return m.uptime_30; });
+  var menor = piores.length ? Math.min.apply(null, piores) : null;
+  if (fora) return [fora + " fora do ar agora!", fora];
+  return ["Tudo no ar" + (menor === null ? "" : " · " + String(menor).replace(".", ",") + "% em 30 dias"), 0];
 }
 
 function atualizarTiles() {
@@ -864,6 +915,7 @@ function atualizarTiles() {
     Blog: [noAr + " no ar · " + agendados + " agendado(s)", 0],
     B2: ["Lucro: " + document.getElementById("b2Lucro").textContent + "/mês", document.getElementById("b2Aviso").classList.contains("hidden") ? 0 : 1],
     Cupons: [document.getElementById("listaCupons").children.length + " cupom(ns)", 0],
+    Site: resumoSite(),
     Copias: [ultimaCopia ? (ultimaCopia.ok ? "Última: " + dataHora(ultimaCopia.created_at) : "A última cópia falhou!") : "Nenhuma cópia ainda", ultimaCopia && (!ultimaCopia.ok || Date.now() - new Date(String(ultimaCopia.created_at).replace(" ", "T") + "Z").getTime() > 2 * 86400000) ? 1 : (ultimaCopia ? 0 : 1)]
   };
   var home = document.getElementById("adHome");
@@ -903,7 +955,7 @@ function limitarLista(id, n) {
 
 // Depois de cada carregamento: encurta as listas e atualiza os quadradinhos.
 [["carregar", []], ["carregarB2", []], ["carregarCupons", [["listaCupons", 4]]], ["carregarAssistente", [["listaSemResposta", 5]]],
- ["carregarSentinela", [["senAlertas", 8]]], ["carregarBlog", [["listaBlog", 6]]], ["carregarBancos", [["bcLista", 6]]], ["carregarCopias", []]].forEach(function (x) {
+ ["carregarSentinela", [["senAlertas", 8]]], ["carregarBlog", [["listaBlog", 6]]], ["carregarBancos", [["bcLista", 6]]], ["carregarCopias", []], ["carregarSite", []]].forEach(function (x) {
   var original = window[x[0]];
   window[x[0]] = async function () {
     var r = await original.apply(this, arguments);
@@ -930,6 +982,7 @@ carregarSentinela();
 carregarBlog();
 carregarBancos();
 carregarCopias();
+carregarSite();
 document.getElementById("sair").addEventListener("click", function () {
   postar("/api/logout").then(function () { window.location.href = "/entrar"; });
 });
