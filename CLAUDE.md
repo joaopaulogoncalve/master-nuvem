@@ -313,6 +313,6 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
    - **Turnstile (anti-robô) no login e cadastro:** só funciona com os segredos `TURNSTILE_SITE_KEY` e `TURNSTILE_SECRET` (`scriptssegredo.ps1`); sem eles não verifica. `GET /api/config` entrega só a chave pública. Se a Cloudflare do Turnstile cair, deixa passar.
    - **`GET /api/saude`** (200 / 503 se o banco cair) para monitor externo (UptimeRobot, feito pelo João).
    - **Página inicial:** 3 planos prontos (100 GB, 1 TB, 5 TB; preço calculado por `calcularPreco` via `data-preco`) e prévia real do portal (iframe de `/p/previa?previa=casamento`).
-   - **Lembrete do chip do WhatsApp:** `lembreteWhatsapp` na limpeza das 06:00 UTC; a cada 60 dias desde 2026-10-27 (`DIAS_RECARGA_WHATSAPP`, `INICIO_RECARGA_WHATSAPP`) e-mail para contato@ + alerta na Sentinela (chave `lembrete-whatsapp-<ciclo>`). Teste: `tests/teste-lembrete.mjs`.
+   - **Lembrete do chip do WhatsApp:** `lembreteWhatsapp` na limpeza das 06:00 UTC; a cada 30 dias desde 2026-10-27 (chip TIM) (`DIAS_RECARGA_WHATSAPP`, `INICIO_RECARGA_WHATSAPP`) e-mail para contato@ + alerta na Sentinela (chave `lembrete-whatsapp-<ciclo>`). Teste: `tests/teste-lembrete.mjs`.
 5. Pendências menores: upload acima de 4,5 GB (multipart); preço duplicado em
    `app.js` e `worker.js`; responder e-mails como @masternuvem.com.br; WhatsApp.

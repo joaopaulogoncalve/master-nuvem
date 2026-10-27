@@ -1524,7 +1524,7 @@ function comProtecao(r, api) {
 // Chip pré-pago sem recarga é bloqueado e depois cancelado pela operadora (e o WhatsApp vai junto).
 // A cada DIAS_RECARGA_WHATSAPP dias, contando de INICIO_RECARGA_WHATSAPP, manda e-mail para o contato@
 // e cria um alerta no /admin (Sentinela, com 🔴). A chave do alerta impede repetir no mesmo ciclo.
-const DIAS_RECARGA_WHATSAPP = 60;
+const DIAS_RECARGA_WHATSAPP = 30;   // chip TIM: recarga de R$ 15-20 costuma valer 30 dias
 const INICIO_RECARGA_WHATSAPP = "2026-10-27";
 async function lembreteWhatsapp(env, agora) {
   const dias = Math.floor((agora - Date.parse(INICIO_RECARGA_WHATSAPP + "T00:00:00Z")) / 86400000);
