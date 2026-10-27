@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfólio</title>
+<meta name="description" content="Portfólio de fotografia: trabalhos, contato e orçamento.">
+<link rel="icon" type="image/png" href="/marca/icone-64.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="/avisos.js"></script>
+<style>
+:root{--cor:#0ea5e9}
+body{background:#fafaf9;color:#1c1917;font-family:Inter,system-ui,sans-serif}
+.titulo{font-family:"Playfair Display",Georgia,serif}
+.btn{background:var(--cor);color:#fff;font-weight:700;border-radius:999px;padding:12px 24px;display:inline-block}
+.btn:disabled{opacity:.6}
+.btn2{border:1px solid currentColor;font-weight:600;border-radius:999px;padding:10px 20px;display:inline-block}
+.campo{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #d6d3d1;background:#fff;outline:none}
+.campo:focus{border-color:var(--cor)}
+.capa{position:relative;min-height:78vh;display:flex;align-items:flex-end;background:#1c1917 center/cover no-repeat;color:#fff}
+.capa::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0000 30%,#000b 100%)}
+.capa>*{position:relative;z-index:1}
+.chip{border:1px solid #d6d3d1;border-radius:999px;padding:8px 16px;font-weight:600;font-size:14px;white-space:nowrap}
+.chip.on{background:var(--cor);border-color:var(--cor);color:#fff}
+.grade{columns:3 260px;column-gap:12px}
+.grade img{width:100%;margin-bottom:12px;border-radius:10px;cursor:zoom-in;break-inside:avoid;background:#e7e5e4;-webkit-user-drag:none}
+#luz{position:fixed;inset:0;background:#000e;z-index:50;display:none;align-items:center;justify-content:center}
+#luz.on{display:flex}
+#luz img{max-width:94vw;max-height:88vh;object-fit:contain;-webkit-user-drag:none}
+#luz button{position:absolute;color:#fff;font-size:30px;width:52px;height:52px;border-radius:999px;background:#fff2}
+.zap{position:fixed;right:18px;bottom:18px;z-index:40;background:#25d366;color:#fff;font-weight:700;border-radius:999px;padding:13px 20px;box-shadow:0 8px 24px #0003}
+</style>
+</head>
+<body>
+
+<div id="carregando" class="min-h-screen flex items-center justify-center text-stone-500">Carregando...</div>
+
+<div id="naoAchou" class="hidden min-h-screen flex flex-col items-center justify-center text-center px-6">
+  <p class="text-5xl mb-3">📷</p>
+  <h1 class="titulo text-3xl font-bold">Página não encontrada</h1>
+  <p class="text-stone-500 mt-2">Este portfólio não existe ou ainda não foi publicado.</p>
+  <a href="/" class="mt-6 text-sm underline text-stone-600">Ir para a Master Nuvem</a>
+</div>
+
+<div id="pagina" class="hidden">
+  <header class="absolute top-0 inset-x-0 z-20">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-3 text-white">
+      <a href="#" class="flex items-center gap-3 font-semibold">
+        <img id="logo" class="hidden h-10 w-10 rounded-full object-contain bg-white/90 p-1" alt="">
+        <span id="nomeTopo" class="titulo text-xl"></span>
+      </a>
+      <nav class="hidden sm:flex items-center gap-5 text-sm font-semibold">
+        <a href="#trabalhos" class="hover:underline">Trabalhos</a>
+        <a href="#sobre" class="hover:underline">Sobre</a>
+        <a href="#orcamento" class="hover:underline">Orçamento</a>
+      </nav>
+    </div>
+  </header>
+
+  <section id="capa" class="capa">
+    <div class="max-w-6xl w-full mx-auto px-4 pb-14">
+      <p id="cidade" class="hidden text-sm uppercase tracking-widest text-white/80 mb-2"></p>
+      <h1 id="nome" class="titulo text-4xl sm:text-6xl font-bold"></h1>
+      <p id="frase" class="hidden text-lg sm:text-xl text-white/90 mt-3 max-w-2xl"></p>
+      <div class="flex flex-wrap gap-3 mt-7">
+        <a href="#orcamento" class="btn">Pedir orçamento</a>
+        <a href="#trabalhos" class="btn2 text-white">Ver trabalhos</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="trabalhos" class="max-w-6xl mx-auto px-4 py-14">
+    <h2 class="titulo text-3xl font-bold mb-5">Trabalhos</h2>
+    <div id="chips" class="flex gap-2 overflow-x-auto pb-2 mb-5"></div>
+    <div id="grade" class="grade"></div>
+  </section>
+
+  <section id="sobre" class="hidden bg-white border-y border-stone-200">
+    <div class="max-w-3xl mx-auto px-4 py-14 text-center">
+      <h2 class="titulo text-3xl font-bold mb-5">Sobre</h2>
+      <p id="bio" class="text-stone-600 text-lg leading-relaxed whitespace-pre-line"></p>
+      <div id="redes" class="flex flex-wrap justify-center gap-3 mt-7"></div>
+    </div>
+  </section>
+
+  <section id="orcamento" class="max-w-xl mx-auto px-4 py-14">
+    <h2 class="titulo text-3xl font-bold text-center">Pedir orçamento</h2>
+    <p class="text-stone-500 text-center mt-2 mb-6">Conte um pouco do que você precisa. A resposta vem direto de <span class="nomeTxt"></span>.</p>
+    <form id="formOrc" class="space-y-3">
+      <input id="oNome" class="campo" placeholder="Seu nome" maxlength="80" required>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <input id="oEmail" type="email" class="campo" placeholder="E-mail" maxlength="120">
+        <input id="oZap" type="tel" class="campo" placeholder="WhatsApp com DDD" maxlength="20">
+      </div>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <select id="oTipo" class="campo"><option value="">O que você precisa?</option></select>
+        <input id="oQuando" class="campo" placeholder="Data ou mês (ex.: março/2027)" maxlength="40">
+      </div>
+      <textarea id="oMsg" class="campo" rows="4" placeholder="Mensagem (local, quantas pessoas, ideias...)" maxlength="1500"></textarea>
+      <p id="oErro" class="text-sm text-red-600 min-h-[1.25rem]"></p>
+      <button type="submit" id="oBotao" class="btn w-full">Enviar pedido</button>
+    </form>
+    <div id="oPronto" class="hidden text-center bg-white border border-stone-200 rounded-2xl p-8">
+      <p class="text-4xl">✅</p>
+      <p class="font-bold text-lg mt-2">Pedido enviado!</p>
+      <p class="text-stone-500 mt-1"><span class="nomeTxt"></span> vai responder pelo contato que você deixou.</p>
+    </div>
+  </section>
+
+  <footer class="border-t border-stone-200 py-8 text-center text-sm text-stone-500 space-y-1">
+    <p>© <span id="ano"></span> <span class="nomeTxt"></span></p>
+    <p>Portfólio criado com <a href="/portais" class="font-semibold underline">Master Nuvem</a> · crie o seu também</p>
+  </footer>
+
+  <a id="zap" class="zap hidden" target="_blank" rel="noopener">💬 WhatsApp</a>
+</div>
+
+<div id="luz" role="dialog" aria-label="Foto ampliada">
+  <img id="luzImg" alt="">
+  <button type="button" id="luzFechar" style="top:16px;right:16px" aria-label="Fechar">×</button>
+  <button type="button" id="luzAnt" style="left:12px" aria-label="Anterior">‹</button>
+  <button type="button" id="luzProx" style="right:12px" aria-label="Próxima">›</button>
+</div>
+
+<script>
+var slug = (location.pathname.match(/^\/f\/([a-z0-9-]+)/) || [])[1] || "";
+var info = null, galeriaAtual = 0, luzIdx = 0;
+
+function el(tag, cls, txt) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (txt !== undefined) e.textContent = txt;
+  return e;
+}
+function mostrar(id, sim) { document.getElementById(id).classList.toggle("hidden", !sim); }
+
+// As fotos são uma vitrine: sem menu de "salvar imagem" (só dificulta; quem quiser copiar ainda consegue).
+document.addEventListener("contextmenu", function (e) { if (e.target.tagName === "IMG") e.preventDefault(); });
+
+function desenharGaleria(i) {
+  galeriaAtual = i;
+  document.querySelectorAll("#chips .chip").forEach(function (c, j) { c.classList.toggle("on", j === i); });
+  var grade = document.getElementById("grade");
+  grade.innerHTML = "";
+  info.galerias[i].fotos.forEach(function (url, k) {
+    var img = el("img");
+    img.loading = "lazy";
+    img.src = url;
+    img.alt = info.galerias[i].titulo + " - " + info.nome;
+    img.addEventListener("click", function () { abrirLuz(k); });
+    grade.appendChild(img);
+  });
+}
+
+function abrirLuz(k) {
+  var fotos = info.galerias[galeriaAtual].fotos;
+  luzIdx = (k + fotos.length) % fotos.length;
+  document.getElementById("luzImg").src = fotos[luzIdx];
+  document.getElementById("luz").classList.add("on");
+}
+function fecharLuz() { document.getElementById("luz").classList.remove("on"); }
+document.getElementById("luzFechar").addEventListener("click", fecharLuz);
+document.getElementById("luzAnt").addEventListener("click", function () { abrirLuz(luzIdx - 1); });
+document.getElementById("luzProx").addEventListener("click", function () { abrirLuz(luzIdx + 1); });
+document.getElementById("luz").addEventListener("click", function (e) { if (e.target.id === "luz") fecharLuz(); });
+document.addEventListener("keydown", function (e) {
+  if (!document.getElementById("luz").classList.contains("on")) return;
+  if (e.key === "Escape") fecharLuz();
+  if (e.key === "ArrowLeft") abrirLuz(luzIdx - 1);
+  if (e.key === "ArrowRight") abrirLuz(luzIdx + 1);
+});
+
+function linkZap(numero, texto) {
+  var n = String(numero).replace(/\D/g, "");
+  if (n.length <= 11) n = "55" + n;
+  return "https://wa.me/" + n + "?text=" + encodeURIComponent(texto);
+}
+
+async function carregar() {
+  var r = await fetch("/api/f/info?slug=" + encodeURIComponent(slug));
+  mostrar("carregando", false);
+  if (!r.ok) { mostrar("naoAchou", true); return; }
+  info = await r.json();
+  if (info.cor && /^#[0-9a-fA-F]{6}$/.test(info.cor)) document.documentElement.style.setProperty("--cor", info.cor);
+  document.title = info.nome + (info.titulo ? " · " + info.titulo : " · Fotografia");
+  document.querySelector("meta[name=description]").setAttribute("content",
+    (info.titulo || "Portfólio de " + info.nome) + (info.cidade ? " em " + info.cidade : "") + ". Veja os trabalhos e peça um orçamento.");
+  document.getElementById("nome").textContent = info.nome;
+  document.getElementById("nomeTopo").textContent = info.nome;
+  document.querySelectorAll(".nomeTxt").forEach(function (x) { x.textContent = info.nome; });
+  document.getElementById("ano").textContent = new Date().getFullYear();
+  if (info.titulo) { document.getElementById("frase").textContent = info.titulo; mostrar("frase", true); }
+  if (info.cidade) { document.getElementById("cidade").textContent = "📍 " + info.cidade; mostrar("cidade", true); }
+  if (info.logo) { document.getElementById("logo").src = info.logo; mostrar("logo", true); }
+  if (info.capa) document.getElementById("capa").style.backgroundImage = "url(\"" + info.capa.replace(/"/g, "%22") + "\")";
+
+  var chips = document.getElementById("chips");
+  info.galerias.forEach(function (g, i) {
+    var c = el("button", "chip", g.titulo + " (" + g.fotos.length + ")");
+    c.type = "button";
+    c.addEventListener("click", function () { desenharGaleria(i); });
+    chips.appendChild(c);
+  });
+  if (info.galerias.length < 2) chips.classList.add("hidden");
+  desenharGaleria(0);
+
+  var redes = document.getElementById("redes");
+  if (info.whatsapp) {
+    var z = document.getElementById("zap");
+    z.href = linkZap(info.whatsapp, "Olá! Vi o seu portfólio e quero saber mais.");
+    mostrar("zap", true);
+    var bz = el("a", "btn2 text-stone-700", "💬 WhatsApp");
+    bz.href = z.href; bz.target = "_blank"; bz.rel = "noopener";
+    redes.appendChild(bz);
+  }
+  if (info.instagram) {
+    var bi = el("a", "btn2 text-stone-700", "📸 @" + info.instagram);
+    bi.href = "https://instagram.com/" + encodeURIComponent(info.instagram);
+    bi.target = "_blank"; bi.rel = "noopener";
+    redes.appendChild(bi);
+  }
+  if (info.bio || redes.children.length) {
+    document.getElementById("bio").textContent = info.bio || "";
+    mostrar("sobre", true);
+  }
+  var tipo = document.getElementById("oTipo");
+  (info.tipos || []).forEach(function (t) { var o = el("option", "", t); o.value = t; tipo.appendChild(o); });
+  mostrar("pagina", true);
+}
+
+document.getElementById("formOrc").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  var erro = document.getElementById("oErro"), b = document.getElementById("oBotao");
+  erro.textContent = "";
+  b.disabled = true;
+  b.textContent = "Enviando...";
+  var r = await fetch("/api/f/orcamento", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      slug: slug, nome: document.getElementById("oNome").value, email: document.getElementById("oEmail").value,
+      whatsapp: document.getElementById("oZap").value, tipo: document.getElementById("oTipo").value,
+      quando: document.getElementById("oQuando").value, mensagem: document.getElementById("oMsg").value
+    })
+  });
+  var d = await r.json().catch(function () { return {}; });
+  b.disabled = false;
+  b.textContent = "Enviar pedido";
+  if (!r.ok) { erro.textContent = d.error || "Não foi possível enviar. Tente de novo."; return; }
+  mostrar("formOrc", false);
+  mostrar("oPronto", true);
+});
+
+carregar();
+</script>
+</body>
+</html>

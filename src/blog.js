@@ -101,7 +101,7 @@ function pagina(opcoes) {
     "<a href=\"/\" class=\"flex items-center gap-2 font-bold text-xl\"><img src=\"/marca/mascote.svg\" alt=\"\" class=\"h-8 w-auto\">Master<span class=\"grad\">Nuvem</span></a>" +
     "<div class=\"flex gap-5 text-sm font-semibold text-blue-300\"><a href=\"/blog\" class=\"hover:text-white\">Blog</a><a href=\"/painel\" class=\"hover:text-white\">Entrar</a></div></div></nav>\n" +
     opcoes.corpo +
-    "\n<footer class=\"border-t border-blue-900/50 mt-10\"><div class=\"max-w-5xl mx-auto px-4 py-8 text-center text-sm text-slate-500 space-y-2\"><p class=\"space-x-2\"><a href=\"/\" class=\"hover:text-white\">Início</a> · <a href=\"/sobre\" class=\"hover:text-white\">Quem somos</a> · <a href=\"/blog\" class=\"hover:text-white\">Blog</a> · <a href=\"/termos\" class=\"hover:text-white\">Termos de uso</a> · <a href=\"/privacidade\" class=\"hover:text-white\">Privacidade</a> · <a href=\"mailto:contato@masternuvem.com.br\" class=\"hover:text-white\">contato@masternuvem.com.br</a> · <a href=\"https://wa.me/5562982846067?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Master%20Nuvem.\" target=\"_blank\" rel=\"noopener\" class=\"hover:text-white\">WhatsApp (62) 98284-6067</a></p><p class=\"text-xs\">Master Nuvem · 66.265.791 JOAO PAULO DA SILVA GONCALVES (MEI) · CNPJ 66.265.791/0001-90 · Goiânia - GO</p><p class=\"text-xs\">Pagamentos pelo Mercado Pago · data centers profissionais, com criptografia e cópia de segurança diária</p></div></footer>\n" +
+    "\n<footer class=\"border-t border-blue-900/50 mt-10\"><div class=\"max-w-5xl mx-auto px-4 py-8 text-center text-sm text-slate-500 space-y-2\"><p class=\"space-x-2\"><a href=\"/\" class=\"hover:text-white\">Início</a> · <a href=\"/sobre\" class=\"hover:text-white\">Quem somos</a> · <a href=\"/blog\" class=\"hover:text-white\">Blog</a> · <a href=\"/termos\" class=\"hover:text-white\">Termos de uso</a> · <a href=\"/privacidade\" class=\"hover:text-white\">Privacidade</a> · <a href=\"mailto:contato@masternuvem.com.br\" class=\"hover:text-white\">contato@masternuvem.com.br</a> · <a href=\"https://wa.me/5562982846067?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Master%20Nuvem.\" target=\"_blank\" rel=\"noopener\" class=\"hover:text-white\">WhatsApp (62) 98284-6067</a> · <a href=\"/avaliar\" target=\"_blank\" rel=\"noopener\" class=\"hover:text-white\">⭐ Avalie no Google</a></p><p class=\"text-xs\">Master Nuvem · 66.265.791 JOAO PAULO DA SILVA GONCALVES (MEI) · CNPJ 66.265.791/0001-90 · Goiânia - GO</p><p class=\"text-xs\">Pagamentos pelo Mercado Pago · data centers profissionais, com criptografia e cópia de segurança diária</p></div></footer>\n" +
     "<script src=\"/assistente.js\" defer></script>\n</body>\n</html>";
 }
 
@@ -182,19 +182,20 @@ function paginaPost(p) {
   });
 }
 
-function sitemap() {
+function sitemap(extras) {
   const fixos = ["/", "/blog", "/portais", "/sobre", "/termos", "/privacidade"];
   const urls = fixos.map(function (c) { return "<url><loc>" + SITE + c + "</loc></url>"; })
-    .concat(postsPublicados().map(function (p) { return "<url><loc>" + SITE + "/blog/" + p.slug + "</loc><lastmod>" + p.publicar + "</lastmod></url>"; }));
+    .concat(postsPublicados().map(function (p) { return "<url><loc>" + SITE + "/blog/" + p.slug + "</loc><lastmod>" + p.publicar + "</lastmod></url>"; }))
+    .concat((extras || []).map(function (c) { return "<url><loc>" + SITE + c + "</loc></url>"; }));
   return new Response("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n" + urls.join("\n") + "\n</urlset>", {
     headers: { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=3600" }
   });
 }
 
 // Devolve a resposta para /blog, /blog/<slug> e /sitemap.xml; null se o caminho não é do blog.
-export function tratarBlog(url) {
+export function tratarBlog(url, extrasSitemap) {
   const c = url.pathname.replace(/\/+$/, "") || "/";
-  if (c === "/sitemap.xml") return sitemap();
+  if (c === "/sitemap.xml") return sitemap(extrasSitemap);
   if (c === "/blog") return htmlResposta(paginaLista());
   const m = c.match(/^\/blog\/([a-z0-9-]+)$/);
   if (!m) return null;

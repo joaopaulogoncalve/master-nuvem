@@ -55,6 +55,7 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
         <p id="homeSub" class="text-slate-400 text-sm mt-1"></p>
       </div>
       <div class="flex flex-wrap gap-2">
+        <button type="button" id="irPortfolio" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">🌟 Portfólio</button>
         <button type="button" id="irContratos" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">📝 Contratos</button>
         <button type="button" id="irCobrancas" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">💰 Cobranças</button>
         <button type="button" id="irConfig" class="text-sm font-semibold text-slate-200 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">🎨 Minha página</button>
@@ -347,6 +348,51 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
   </section>
 
   <!-- Contratos: modelo pronto, preenchido sozinho, assinatura online -->
+  <!-- TELA: portfólio público (página de vendas do fotógrafo) -->
+  <section id="secPortfolio" class="hidden glass rounded-3xl p-6 space-y-6">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-bold">🌟 Meu portfólio</h2>
+        <p class="text-sm text-slate-400">Sua página de vendas, aberta para qualquer pessoa e para o Google: suas melhores fotos, contatos e um botão "Pedir orçamento".</p>
+      </div>
+      <button type="button" id="pfVoltar" class="link whitespace-nowrap">← Meus links</button>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button type="button" class="abaPf aba on text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800" data-pf="fotos">📷 Fotos</button>
+      <button type="button" class="abaPf aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800" data-pf="dados">✏️ Textos e contatos</button>
+      <button type="button" class="abaPf aba text-sm font-semibold px-4 py-2 rounded-xl border border-blue-800" data-pf="orc">💬 Orçamentos <span id="pfOrcN"></span></button>
+    </div>
+
+    <div id="pfStatus" class="rounded-2xl p-4 border border-blue-800"></div>
+
+    <div id="pfPaneFotos" class="space-y-4">
+      <p class="text-sm text-slate-400">Separe por galerias (ex.: Casamentos, 15 anos, Ensaios). As fotos são reduzidas no seu navegador antes de enviar (leves, rápidas e não são o original). Toque em ⭐ para escolher a foto de capa.</p>
+      <button type="button" id="pfNovaGaleria" class="cta font-bold px-4 py-2 rounded-xl text-sm">➕ Nova galeria</button>
+      <div id="pfGalerias" class="space-y-4"></div>
+      <input type="file" id="pfArquivos" class="hidden" accept="image/*" multiple>
+    </div>
+
+    <div id="pfPaneDados" class="hidden space-y-3">
+      <label class="block text-sm text-slate-300">Frase de destaque (aparece embaixo do seu nome)
+        <input id="pfTitulo" class="campo mt-1" maxlength="90" placeholder="Ex.: Fotografia de casamento e família em Goiânia"></label>
+      <label class="block text-sm text-slate-300">Cidade
+        <input id="pfCidade" class="campo mt-1" maxlength="60" placeholder="Ex.: Goiânia - GO"></label>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <label class="block text-sm text-slate-300">WhatsApp (com DDD)
+          <input id="pfZap" class="campo mt-1" maxlength="20" placeholder="62 98888-7777"></label>
+        <label class="block text-sm text-slate-300">Instagram
+          <input id="pfInsta" class="campo mt-1" maxlength="40" placeholder="@seuestudio"></label>
+      </div>
+      <p class="text-xs text-slate-500">O texto "Sobre", a logo e a cor são os mesmos da 🎨 Minha página.</p>
+      <button type="button" id="pfSalvar" class="cta font-bold px-5 py-2.5 rounded-xl">Salvar</button>
+    </div>
+
+    <div id="pfPaneOrc" class="hidden space-y-2">
+      <div id="pfOrcamentos" class="space-y-2"></div>
+    </div>
+  </section>
+
   <section id="secContratos" class="hidden glass rounded-3xl p-6 space-y-5">
     <div class="flex items-start justify-between gap-3">
       <div>
@@ -1251,6 +1297,7 @@ async function carregar() {
   if (dados.portal && telaInicial && abaPedida === "receber") mostrarTela("receber");
   else if (dados.portal && telaInicial && abaPedida === "contratos") { mostrarTela("contratos"); carregarContratos(); }
   else if (dados.portal && telaInicial && abaPedida === "cobrancas") mostrarTela("cobrancas");
+  else if (dados.portal && telaInicial && abaPedida === "portfolio") abrirPortfolio();
   else if (dados.portal) mostrarTela(document.getElementById("secConfig").classList.contains("hidden") || telaInicial ? "home" : "config");
   else if (r.dados.plano) mostrarTela("config");
   telaInicial = false;
@@ -1327,7 +1374,7 @@ document.getElementById("cfgLogoTirar").addEventListener("click", async function
 
 /* ---------- telas: uma coisa de cada vez ---------- */
 
-var TELAS = { home: "vHome", criar: "vCriar", config: "secConfig", receber: "secReceber", contratos: "secContratos", cobrancas: "secCobrancas", album: "secAberto", evento: "vEvento" };
+var TELAS = { home: "vHome", criar: "vCriar", config: "secConfig", receber: "secReceber", contratos: "secContratos", portfolio: "secPortfolio", cobrancas: "secCobrancas", album: "secAberto", evento: "vEvento" };
 var central = { clientes: [] };   // carregarCentral() fica em window e é chamada também pela venda de eventos
 var eventosLista = [];
 var filtroAtual = "";
@@ -1357,6 +1404,8 @@ document.getElementById("cfgIrReceber").addEventListener("click", function () {
   mostrarTela("receber");
 });
 document.getElementById("irCobrancas").addEventListener("click", function () { mostrarTela("cobrancas"); });
+document.getElementById("irPortfolio").addEventListener("click", function () { abrirPortfolio(); });
+document.getElementById("pfVoltar").addEventListener("click", function () { mostrarTela("home"); });
 document.getElementById("irContratos").addEventListener("click", function () { mostrarTela("contratos"); carregarContratos(); });
 document.getElementById("ctVoltar").addEventListener("click", function () { mostrarTela("home"); });
 document.getElementById("cfgVoltar").addEventListener("click", function () { mostrarTela(dados.portal ? "home" : "config"); });
@@ -2665,6 +2714,229 @@ document.getElementById("btnRemoverCliente").addEventListener("click", function 
   if (!c) return;
   paraLixeira("/api/portal/lixeira", { tipo: "cliente", id: c.id }, "o cliente \"" + c.nome + "\" com TODOS os álbuns e fotos dele", "Ele perde o acesso ao portal na hora.");
 });
+/* ---------- portfólio público ---------- */
+
+var pf = null;          // { portfolio, galerias, orcamentos, tipos }
+var pfGaleriaEnvio = null;
+
+function abaPortfolio(qual) {
+  document.querySelectorAll(".abaPf").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-pf") === qual); });
+  mostrar("pfPaneFotos", qual === "fotos");
+  mostrar("pfPaneDados", qual === "dados");
+  mostrar("pfPaneOrc", qual === "orc");
+}
+document.querySelectorAll(".abaPf").forEach(function (b) { b.addEventListener("click", function () { abaPortfolio(b.getAttribute("data-pf")); }); });
+
+async function abrirPortfolio() {
+  mostrarTela("portfolio");
+  await carregarPortfolio();
+}
+
+async function carregarPortfolio() {
+  var r = await api("/api/portfolio");
+  if (!r.ok) { avisar(r.dados.error || "Não foi possível abrir o portfólio."); return; }
+  pf = r.dados;
+  document.getElementById("pfTitulo").value = pf.portfolio.titulo;
+  document.getElementById("pfCidade").value = pf.portfolio.cidade;
+  document.getElementById("pfZap").value = pf.portfolio.whatsapp;
+  document.getElementById("pfInsta").value = pf.portfolio.instagram ? "@" + pf.portfolio.instagram : "";
+  desenharStatusPf();
+  desenharGaleriasPf();
+  desenharOrcamentosPf();
+}
+
+function totalFotosPf() {
+  return pf.galerias.reduce(function (s, g) { return s + g.fotos.length; }, 0);
+}
+
+function desenharStatusPf() {
+  var box = document.getElementById("pfStatus");
+  box.innerHTML = "";
+  var p = pf.portfolio;
+  if (p.ativo && totalFotosPf()) {
+    box.style.borderColor = "#10b981";
+    box.appendChild(el("p", "font-bold text-emerald-300", "✅ Sua página está no ar"));
+    var l = el("p", "text-sm text-slate-300 mt-1 break-all", p.link);
+    box.appendChild(l);
+    var linha = el("div", "flex flex-wrap gap-2 mt-3");
+    var abrir = el("a", "cta font-bold px-4 py-2 rounded-xl text-sm", "Abrir minha página");
+    abrir.href = p.link; abrir.target = "_blank"; abrir.rel = "noopener";
+    var copiar = el("button", "text-sm font-semibold text-cyan-300 border border-blue-800 px-3 py-2 rounded-xl", "Copiar link / WhatsApp");
+    copiar.type = "button";
+    copiar.addEventListener("click", function () { avisoCopiar("Seu portfólio", "Coloque esse link na bio do Instagram, no WhatsApp e no Google Meu Negócio.", [["Link", p.link]], "Veja os meus trabalhos e peça um orçamento: " + p.link); });
+    var tirar = el("button", "text-sm text-slate-400 hover:text-white px-2", "Tirar do ar");
+    tirar.type = "button";
+    tirar.addEventListener("click", async function () {
+      if (!(await confirmar("Tirar a página do ar?", "O link para de funcionar até você ligar de novo. As fotos continuam guardadas.", "Sim, tirar do ar"))) return;
+      await salvarPortfolio(false);
+    });
+    linha.appendChild(abrir); linha.appendChild(copiar); linha.appendChild(tirar);
+    box.appendChild(linha);
+    return;
+  }
+  box.style.borderColor = "#f59e0b88";
+  box.appendChild(el("p", "font-bold text-amber-200", p.ativo ? "⏳ Falta pelo menos 1 foto para a página aparecer" : "Sua página ainda não está no ar"));
+  box.appendChild(el("p", "text-sm text-slate-400 mt-1", "1) Crie uma galeria e envie suas melhores fotos.  2) Preencha WhatsApp e Instagram em Textos e contatos.  3) Clique em Colocar no ar."));
+  if (!p.ativo) {
+    var ligar = el("button", "cta font-bold px-4 py-2 rounded-xl text-sm mt-3", "🚀 Colocar no ar");
+    ligar.type = "button";
+    ligar.addEventListener("click", async function () {
+      if (!totalFotosPf()) { avisar("Envie pelo menos 1 foto antes de colocar a página no ar.", "Quase lá"); return; }
+      await salvarPortfolio(true);
+    });
+    box.appendChild(ligar);
+  }
+}
+
+async function salvarPortfolio(ativo, extra) {
+  var corpo = {
+    ativo: ativo === undefined ? pf.portfolio.ativo : ativo,
+    titulo: document.getElementById("pfTitulo").value,
+    cidade: document.getElementById("pfCidade").value,
+    whatsapp: document.getElementById("pfZap").value,
+    instagram: document.getElementById("pfInsta").value
+  };
+  Object.assign(corpo, extra || {});
+  var r = await api("/api/portfolio/salvar", corpo);
+  if (!r.ok) { avisar(r.dados.error || "Não foi possível salvar."); return false; }
+  await carregarPortfolio();
+  return true;
+}
+document.getElementById("pfSalvar").addEventListener("click", async function () {
+  if (await salvarPortfolio()) avisar("Textos e contatos salvos.", "Pronto ✅");
+});
+
+function desenharGaleriasPf() {
+  var box = document.getElementById("pfGalerias");
+  box.innerHTML = "";
+  if (!pf.galerias.length) box.appendChild(el("p", "text-sm text-slate-400", "Nenhuma galeria ainda. Comece com \"➕ Nova galeria\"."));
+  pf.galerias.forEach(function (g) {
+    var c = el("div", "rounded-2xl border border-blue-900 p-4 space-y-3");
+    var topo = el("div", "flex flex-wrap items-center justify-between gap-2");
+    topo.appendChild(el("p", "font-bold", g.titulo + " · " + g.fotos.length + " foto(s)"));
+    var acoes = el("div", "flex flex-wrap gap-2 text-sm");
+    var enviar = el("button", "cta font-bold px-3 py-1.5 rounded-lg", "⬆️ Enviar fotos");
+    enviar.type = "button";
+    enviar.addEventListener("click", function () { pfGaleriaEnvio = g; document.getElementById("pfArquivos").click(); });
+    var ren = el("button", "text-cyan-300 font-semibold px-2", "Renomear");
+    ren.type = "button";
+    ren.addEventListener("click", async function () {
+      var t = await pedirTexto("Nome da galeria", "", g.titulo);
+      if (!t) return;
+      var r = await api("/api/portfolio/galerias/renomear", { id: g.id, titulo: t });
+      if (!r.ok) avisar(r.dados.error); else carregarPortfolio();
+    });
+    var rem = el("button", "text-red-300 font-semibold px-2", "Apagar");
+    rem.type = "button";
+    rem.addEventListener("click", async function () {
+      if (!(await confirmar("Apagar a galeria \"" + g.titulo + "\"?", "As " + g.fotos.length + " foto(s) dela saem do portfólio e são apagadas.", "Sim, apagar", true))) return;
+      rem.disabled = true; rem.textContent = "Apagando...";
+      var r;
+      do { r = await api("/api/portfolio/galerias/remover", { id: g.id }); } while (r.ok && r.dados.restam > 0);
+      if (!r.ok) avisar(r.dados.error || "Não foi possível apagar.");
+      carregarPortfolio();
+    });
+    acoes.appendChild(enviar); acoes.appendChild(ren); acoes.appendChild(rem);
+    topo.appendChild(acoes);
+    c.appendChild(topo);
+    var grade = el("div", "grid grid-cols-3 sm:grid-cols-6 gap-2");
+    g.fotos.forEach(function (f) {
+      var q = el("div", "relative rounded-lg overflow-hidden bg-slate-800");
+      var img = el("img", "w-full aspect-square object-cover");
+      img.loading = "lazy"; img.src = f.url; img.alt = "";
+      q.appendChild(img);
+      var ehCapa = pf.portfolio.capa_id === f.file_id;
+      var estrela = el("button", "absolute top-1 left-1 rounded-full w-7 h-7 text-sm " + (ehCapa ? "bg-amber-400" : "bg-black/50"), "⭐");
+      estrela.type = "button";
+      estrela.title = ehCapa ? "Esta é a capa" : "Usar como capa";
+      estrela.addEventListener("click", async function () { if (await salvarPortfolio(undefined, { capa_id: f.file_id })) avisar("Essa foto agora é a capa da sua página.", "Capa escolhida ⭐"); });
+      var lixo = el("button", "absolute top-1 right-1 rounded-full w-7 h-7 text-sm bg-black/50", "🗑");
+      lixo.type = "button";
+      lixo.title = "Tirar do portfólio";
+      lixo.addEventListener("click", async function () {
+        if (!(await confirmar("Tirar esta foto do portfólio?", "Ela é apagada do portfólio (o original que está nos seus álbuns não muda).", "Sim, tirar", true))) return;
+        var r = await api("/api/portfolio/fotos/remover", { id: f.id });
+        if (!r.ok) avisar(r.dados.error); else carregarPortfolio();
+      });
+      q.appendChild(estrela); q.appendChild(lixo);
+      grade.appendChild(q);
+    });
+    c.appendChild(grade);
+    var prog = el("p", "text-sm text-cyan-200 hidden");
+    prog.id = "pfProg" + g.id;
+    c.appendChild(prog);
+    box.appendChild(c);
+  });
+}
+
+document.getElementById("pfNovaGaleria").addEventListener("click", async function () {
+  var t = await pedirTexto("Nova galeria", "Que tipo de trabalho? (ex.: Casamentos, 15 anos, Ensaios, Newborn)", "");
+  if (!t) return;
+  var r = await api("/api/portfolio/galerias/nova", { titulo: t });
+  if (!r.ok) { avisar(r.dados.error); return; }
+  await carregarPortfolio();
+});
+
+document.getElementById("pfArquivos").addEventListener("change", async function () {
+  var arquivos = Array.prototype.slice.call(this.files);
+  this.value = "";
+  var g = pfGaleriaEnvio;
+  if (!arquivos.length || !g) return;
+  var prog = document.getElementById("pfProg" + g.id);
+  prog.classList.remove("hidden");
+  var erros = [];
+  for (var i = 0; i < arquivos.length; i++) {
+    prog.textContent = "Enviando " + (i + 1) + " de " + arquivos.length + "...";
+    try {
+      var blob = await reduzirImagem(arquivos[i], 2000, "image/jpeg");
+      var id = await enviarEspecial(blob, arquivos[i].name.replace(/\.[^.]+$/, "") + ".jpg", "portfolio");
+      var r = await api("/api/portfolio/fotos/adicionar", { galeria_id: g.id, file_id: id });
+      if (!r.ok) throw new Error(r.dados.error);
+    } catch (e) {
+      erros.push(arquivos[i].name + ": " + (e.message || "erro"));
+      if (/até \d+ fotos|Espaço insuficiente/.test(e.message || "")) break;
+    }
+  }
+  await carregarPortfolio();
+  if (erros.length) avisar(erros.slice(0, 5).join("\n"), "Algumas fotos não foram");
+});
+
+function desenharOrcamentosPf() {
+  var box = document.getElementById("pfOrcamentos");
+  box.innerHTML = "";
+  var novos = pf.orcamentos.filter(function (o) { return o.status === "novo"; }).length;
+  document.getElementById("pfOrcN").textContent = novos ? "🔴 " + novos : "";
+  if (!pf.orcamentos.length) { box.appendChild(el("p", "text-sm text-slate-400", "Nenhum pedido ainda. Quando alguém pedir orçamento na sua página, aparece aqui e chega no seu e-mail.")); return; }
+  pf.orcamentos.forEach(function (o) {
+    var c = el("div", "rounded-xl border p-3 text-sm space-y-1 " + (o.status === "novo" ? "border-red-400/60" : "border-blue-900"));
+    c.appendChild(el("p", "font-bold", (o.status === "novo" ? "🔴 " : "✅ ") + o.nome + (o.tipo ? " · " + o.tipo : "") + (o.quando ? " · " + o.quando : "")));
+    if (o.mensagem) c.appendChild(el("p", "text-slate-300 whitespace-pre-line", o.mensagem));
+    c.appendChild(el("p", "text-xs text-slate-500", new Date(String(o.created_at).replace(" ", "T") + "Z").toLocaleString("pt-BR")));
+    var linha = el("div", "flex flex-wrap gap-2 pt-1");
+    if (o.whatsapp) {
+      var z = el("a", "cta font-bold px-3 py-1.5 rounded-lg", "💬 Responder no WhatsApp");
+      var n = o.whatsapp.length <= 11 ? "55" + o.whatsapp : o.whatsapp;
+      z.href = "https://wa.me/" + n + "?text=" + encodeURIComponent("Olá, " + o.nome.split(" ")[0] + "! Recebi o seu pedido de orçamento pelo meu portfólio.");
+      z.target = "_blank"; z.rel = "noopener";
+      linha.appendChild(z);
+    }
+    if (o.email) {
+      var m = el("a", "text-cyan-300 font-semibold px-2 py-1.5", "✉️ " + o.email);
+      m.href = "mailto:" + o.email + "?subject=" + encodeURIComponent("Orçamento");
+      linha.appendChild(m);
+    }
+    [["respondido", "Marcar respondido"], ["arquivado", "Arquivar"]].forEach(function (s) {
+      if (o.status === s[0]) return;
+      var b = el("button", "text-slate-400 hover:text-white px-2", s[1]);
+      b.type = "button";
+      b.addEventListener("click", async function () { await api("/api/portfolio/orcamentos/status", { id: o.id, status: s[0] }); carregarPortfolio(); });
+      linha.appendChild(b);
+    });
+    c.appendChild(linha);
+    box.appendChild(c);
+  });
+}
+
 /* ---------- envio de fotos para o álbum ---------- */
 
 function enviarParaB2(url, arquivo, aoProgredir) {

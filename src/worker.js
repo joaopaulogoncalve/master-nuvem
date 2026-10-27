@@ -7,6 +7,7 @@ import { tratarEventosDono, tratarEventoPublico } from "./eventos.js";
 import { tratarContratosDono, tratarContratoPublico } from "./contratos.js";
 import { tratarBlog, agendaBlog } from "./blog.js";
 import { purgarLixeira } from "./lixeira.js";
+import { tratarPortfolioDono, tratarPortfolioPublico, portfoliosNoAr } from "./portfolio.js";
 import { tratarBancos, tratarAdminBancos, checarLinksBancos } from "./bancos.js";
 const enc = new TextEncoder();
 const DIAS_SESSAO = 30;
@@ -33,6 +34,7 @@ const SITE = "https://masternuvem.com.br";
 // Limpeza automática (roda de hora em hora pelo Cron). Os Termos prometem 15 dias depois do vencimento.
 const DIAS_GUARDA_APOS_VENCER = 15;
 const DIAS_AVISO_ANTES = 3;
+const DIAS_PEDIR_AVALIACAO = 7;   // e-mail pedindo avaliação no Google, 7 dias depois de pagar
 // Limite de chamadas externas por execução (o plano grátis da Cloudflare permite 50 por vez).
 const MAX_EMAILS_POR_RODADA = 10;
 const MAX_APAGAR_POR_RODADA = 30;
@@ -1351,6 +1353,14 @@ async function tratarApi(request, env, url) {
     return await tratarEventosDono(request, env, url);
   }
 
+  if (caminho === "/api/portfolio" || caminho.startsWith("/api/portfolio/")) {
+    return await tratarPortfolioDono(request, env, url);
+  }
+
+  if (caminho.startsWith("/api/f/")) {
+    return await tratarPortfolioPublico(request, env, url);
+  }
+
   if (caminho.startsWith("/api/e/")) {
     return await tratarEventoPublico(request, env, url);
   }
@@ -1435,6 +1445,20 @@ async function limpeza(env) {
           { texto: "Renovar ou baixar meus arquivos", link: SITE + "/arquivos" });
       },
       assunto: "Último aviso: seus arquivos serão apagados - Master Nuvem"
+    },
+    {
+      // 7 dias depois de pagar um plano: pede uma avaliação no Google, uma vez só por cliente (teste grátis e plano manual não contam).
+      tipo: "avaliar",
+      sql: "s.created_at <= datetime('now', '-" + DIAS_PEDIR_AVALIACAO + " days') AND s.paid_until > datetime('now') AND s.mp_payment_id IS NOT NULL " +
+        "AND s.mp_payment_id NOT LIKE 'cupom:%' AND s.mp_payment_id NOT LIKE 'manual:%' " +
+        "AND NOT EXISTS (SELECT 1 FROM avisos a2 JOIN subscriptions s2 ON s2.id = a2.sub_id WHERE s2.user_id = s.user_id AND a2.tipo = 'avaliar')",
+      montar: function (s) {
+        return emailAviso(s.name, "Está gostando da Master Nuvem?",
+          ["Faz uma semana que você contratou o seu espaço. Se puder, deixe uma avaliação no Google: leva 1 minuto e ajuda muito uma empresa pequena a ser encontrada.",
+           "Se alguma coisa não está boa, responda pelo WhatsApp (62) 98284-6067 que a gente resolve."],
+          { texto: "⭐ Avaliar no Google", link: SITE + "/avaliar" });
+      },
+      assunto: "Está gostando da Master Nuvem?"
     }
   ];
 
@@ -1524,6 +1548,8 @@ function comProtecao(r, api) {
 // Chip pré-pago sem recarga é bloqueado e depois cancelado pela operadora (e o WhatsApp vai junto).
 // A cada DIAS_RECARGA_WHATSAPP dias, contando de INICIO_RECARGA_WHATSAPP, manda e-mail para o contato@
 // e cria um alerta no /admin (Sentinela, com 🔴). A chave do alerta impede repetir no mesmo ciclo.
+// Link do Google para avaliar a Master Nuvem (Perfil da Empresa → Solicitar avaliações).
+const LINK_AVALIACAO_GOOGLE = "https://g.page/r/CQcUlW05oGWLEBM/review";
 const DIAS_RECARGA_WHATSAPP = 30;   // chip TIM: recarga de R$ 15-20 costuma valer 30 dias
 const INICIO_RECARGA_WHATSAPP = "2026-10-27";
 async function lembreteWhatsapp(env, agora) {
@@ -1571,12 +1597,24 @@ export default {
     }
 
     // Blog (/blog, /blog/<post>) e sitemap.xml: páginas montadas no servidor, com a agenda de publicação automática.
-    const blog = tratarBlog(url);
+    // O sitemap inclui também os portfólios dos fotógrafos que estão no ar.
+    let extrasSitemap = [];
+    if (url.pathname === "/sitemap.xml") {
+      try { extrasSitemap = await portfoliosNoAr(env); } catch (e) { console.error("Sitemap: portfólios", e.message); }
+    }
+    const blog = tratarBlog(url, extrasSitemap);
     if (blog) return comProtecao(blog, false);
 
     // Contrato para assinar: /c/<token> abre sempre a mesma página.
     if (/^\/c\/[0-9a-f]{48}\/?$/.test(url.pathname)) {
       return comProtecao(await env.ASSETS.fetch(new Request(new URL("/contrato", url), request)), false);
+    }
+    // Atalho para avaliar a Master Nuvem no Google (usado nos rodapés, na Nuvenzinha e no e-mail de 7 dias).
+    if (url.pathname === "/avaliar" || url.pathname === "/avaliar/") return Response.redirect(LINK_AVALIACAO_GOOGLE, 302);
+
+    // Portfólio público do fotógrafo: /f/<endereço-do-estúdio> abre sempre a mesma página.
+    if (/^\/f\/[a-z0-9-]+\/?$/.test(url.pathname)) {
+      return comProtecao(await env.ASSETS.fetch(new Request(new URL("/portfolio", url), request)), false);
     }
     // Galeria de evento: /e/<endereço-do-evento> abre sempre a mesma página.
     if (/^\/e\/[a-z0-9-]+\/?$/.test(url.pathname)) {

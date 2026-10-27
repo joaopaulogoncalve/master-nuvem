@@ -8,7 +8,7 @@ const RAIZ = fileURLToPath(new URL("../", import.meta.url)).replace(/\\/g, "/");
 const worker = (await import(new URL("../", import.meta.url).href + "src/worker.js")).default;
 
 const db = new DatabaseSync(":memory:");
-for (const m of ["0001_init", "0002_recuperar_senha", "0003_aceite_termos", "0004_avisos", "0005_portal", "0006_cobrancas", "0007_cupons", "0008_tabela_precos", "0009_cupom_preco", "0010_assistente", "0011_sentinela", "0012_faq_mais", "0013_eventos", "0014_faq_blog_eventos", "0015_regras_acesso", "0016_faq_estudio", "0017_lixeira", "0018_visual", "0019_aumentar_espaco", "0020_fotos_extras", "0021_bancos", "0022_contratos", "0023_copias", "0024_contrato_obrigatorio", "0025_senha_cliente", "0026_varias_pessoas", "0027_confirmar_email"]) db.exec(readFileSync(RAIZ + "migrations/" + m + ".sql", "utf8"));
+for (const m of ["0001_init", "0002_recuperar_senha", "0003_aceite_termos", "0004_avisos", "0005_portal", "0006_cobrancas", "0007_cupons", "0008_tabela_precos", "0009_cupom_preco", "0010_assistente", "0011_sentinela", "0012_faq_mais", "0013_eventos", "0014_faq_blog_eventos", "0015_regras_acesso", "0016_faq_estudio", "0017_lixeira", "0018_visual", "0019_aumentar_espaco", "0020_fotos_extras", "0021_bancos", "0022_contratos", "0023_copias", "0024_contrato_obrigatorio", "0025_senha_cliente", "0026_varias_pessoas", "0027_confirmar_email", "0028_portfolio", "0029_faq_avaliar"]) db.exec(readFileSync(RAIZ + "migrations/" + m + ".sql", "utf8"));
 
 const DB = {
   prepare(sql) {
@@ -116,6 +116,22 @@ await worker.scheduled({ cron: "0 * * * *" }, env, ctx); rel = await ctx.p;
 const restam = db.prepare("SELECT object_key FROM files ORDER BY object_key").all().map(r => r.object_key);
 confere("apaga 16 dias vencido e estorno de 16 dias", apagados.includes("u4/a") && apagados.includes("u4/b") && apagados.includes("u8/a") && !restam.includes("u4/a"), { apagados, restam });
 confere("não apaga: em dia, 13 dias, admin, renovou, sem plano", ["u1/a","u2/a","u3/a","u5/a","u6/a","u7/a","u9/a"].every(k => restam.includes(k)), restam);
+
+// 7 dias depois de pagar: pede avaliação no Google, uma vez só por cliente
+const pago = (uid, mp, criado) => ex("INSERT INTO subscriptions (user_id, quota_gb, status, paid_until, mp_payment_id, created_at) VALUES (?, 100, 'active', datetime('now', '+20 days'), ?, datetime('now', ?))", uid, mp, criado);
+usuario(10, "pagou@t.com"); pago(10, "555", "-8 days");
+usuario(11, "cupom@t.com"); pago(11, "cupom:NUVEM1DIA", "-8 days");
+usuario(12, "recente@t.com"); pago(12, "556", "-3 days");
+usuario(13, "manual@t.com"); pago(13, "manual:1", "-8 days");
+await worker.scheduled({ cron: "0 * * * *" }, env, ctx); await ctx.p;
+const avaliar = emails.filter(e => /gostando/.test(e.subject)).map(e => e.to[0]);
+confere("pede avaliação só de quem pagou há 7+ dias", avaliar.join() === "pagou@t.com", avaliar);
+confere("e-mail leva para /avaliar", (t => t.includes("masternuvem.com.br/avaliar"))(emails.find(e => /gostando/.test(e.subject)).text), "");
+ex("UPDATE subscriptions SET status = 'replaced' WHERE user_id = 10"); pago(10, "557", "-9 days");
+await worker.scheduled({ cron: "0 * * * *" }, env, ctx); await ctx.p;
+confere("não pede de novo depois de renovar", emails.filter(e => /gostando/.test(e.subject)).length === 1, "");
+const ir = await worker.fetch(new Request(BASE + "/avaliar"), env);
+confere("/avaliar leva para o Google", ir.status === 302 && ir.headers.get("Location").includes("g.page/r/"), ir.status);
 
 // admin vê a data de apagamento
 db.prepare("UPDATE users SET role='admin' WHERE id = 6").run();
