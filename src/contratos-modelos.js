@@ -4,8 +4,8 @@
 
 export const CAMPOS = [
   // [chave, rótulo no formulário, exemplo]
-  ["cliente_nome", "Nome do cliente", "Maria da Silva"],
-  ["cliente_email", "E-mail do cliente", "maria@email.com"],
+  ["cliente_nome", "Nome de quem assina", "Maria da Silva e João Souza"],
+  ["cliente_email", "E-mail de quem assina", "maria@email.com"],
   ["estudio_nome", "Seu nome ou do estúdio", "Estúdio Aurora"],
   ["estudio_documento", "Seu CPF ou CNPJ", "12.345.678/0001-90"],
   ["estudio_cidade", "Sua cidade", "Goiânia - GO"],
@@ -27,7 +27,9 @@ const PARTES = `## Partes
 
 **CONTRATADO(A):** {{estudio_nome}}, CPF/CNPJ {{estudio_documento}}, com sede em {{estudio_cidade}}.
 
-**CONTRATANTE:** {{cliente_nome}}, e-mail {{cliente_email}}, CPF informado na assinatura eletrônica deste contrato.`;
+**CONTRATANTE(S):** {{cliente_nome}}, e-mail {{cliente_email}}, com CPF informado na assinatura eletrônica deste contrato. Quando houver mais de um contratante, todos respondem juntos por este contrato.
+
+{{clausula_menor}}`;
 
 const FINAL = `## Direitos autorais e uso de imagem
 
@@ -200,9 +202,19 @@ Fica eleito o foro de {{cidade_foro}}.`
   }
 ];
 
+// Cláusula de menor de idade (sem CPF do menor: quem assina são os responsáveis).
+export function clausulaMenor(nomeMenor) {
+  const n = String(nomeMenor || "").trim();
+  return n ? "**MENOR DE IDADE:** o serviço é para " + n + ", menor de idade, representado(a) neste contrato por seu(s) responsável(is) legal(is), que assinam como CONTRATANTE(S) e respondem por todas as obrigações." : "";
+}
+
 // Troca {{campo}} pelos valores; campo sem valor fica visível como "____" para o fotógrafo completar.
+// A cláusula de menor some quando não se aplica.
 export function preencher(texto, valores) {
-  return String(texto).replace(/\{\{([a-z_]+)\}\}/g, function (m, chave) {
+  return String(texto).replace(/\n*\{\{clausula_menor\}\}/g, function () {
+    const c = valores && valores.clausula_menor ? String(valores.clausula_menor) : "";
+    return c ? "\n\n" + c : "";
+  }).replace(/\{\{([a-z_]+)\}\}/g, function (m, chave) {
     const v = valores && valores[chave] !== undefined && valores[chave] !== null ? String(valores[chave]).trim() : "";
     return v || "____";
   });

@@ -88,8 +88,14 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
     </div>
   </div>
 
+  <!-- Avisos: quadradinhos que piscam quando algo precisa da pessoa (contratos, cobranças, pedidos, plano) -->
+  <div id="avisosBox" class="hidden space-y-2">
+    <p class="text-sm font-semibold text-slate-300">🔔 Precisa de você</p>
+    <div id="avisos" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+  </div>
+
   <!-- 2. Plano -->
-  <div class="glass rounded-3xl p-6 sm:p-8">
+  <div id="plano" class="glass rounded-3xl p-6 sm:p-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
         <p class="text-sm text-slate-400">Seu plano</p>
@@ -302,8 +308,56 @@ function formatarEspaco(gb) {
   return gb + " GB";
 }
 
+/* ---------- quadradinhos de aviso ---------- */
+var avisoPlano = null;
+function desenharAvisos(lista) {
+  var caixa = document.getElementById("avisos");
+  caixa.innerHTML = "";
+  lista.forEach(function (a) {
+    var b = document.createElement("a");
+    b.href = a.link;
+    b.className = "glass rounded-2xl p-4 block hover:border-cyan-400 relative";
+    b.style.borderColor = a.urgente ? "#f87171" : "";
+    var t = document.createElement("p");
+    t.className = "font-bold flex items-center gap-2";
+    t.textContent = a.titulo;
+    if (a.urgente) { var p = document.createElement("span"); p.className = "inline-block w-3 h-3 rounded-full bg-red-500 animate-pulse"; t.appendChild(p); }
+    var s = document.createElement("p");
+    s.className = "text-sm mt-1 " + (a.urgente ? "text-red-300 font-semibold" : "text-slate-400");
+    s.textContent = a.texto;
+    b.appendChild(t); b.appendChild(s);
+    caixa.appendChild(b);
+  });
+  document.getElementById("avisosBox").classList.toggle("hidden", !lista.length);
+  var urgentes = lista.filter(function (a) { return a.urgente; }).length;
+  document.title = (urgentes ? "(" + urgentes + ") " : "") + "Meu painel - Master Nuvem";
+}
+function reaisAviso(c) { return "R$ " + (c / 100).toFixed(2).replace(".", ","); }
+async function carregarAvisos() {
+  var lista = [];
+  if (avisoPlano) lista.push(avisoPlano);
+  try {
+    var r = await fetch("/api/portal/resumo");
+    var d = r.ok ? await r.json() : null;
+    if (d && d.portal) {
+      if (d.contratos.esperando) lista.push({ titulo: "📝 Contratos", texto: d.contratos.esperando + " esperando assinatura" + (d.contratos.parados ? " · " + d.contratos.parados + " parado(s) há 3+ dias" : ""), urgente: d.contratos.parados > 0, link: "/meu-portal?aba=contratos" });
+      if (d.cobrancas.pendentes) lista.push({ titulo: "💰 A receber", texto: reaisAviso(d.cobrancas.total_centavos) + " em " + d.cobrancas.pendentes + " cobrança(s)" + (d.cobrancas.fotos_extras ? " · " + d.cobrancas.fotos_extras + " pedido(s) de fotos a mais" : ""), urgente: d.cobrancas.fotos_extras > 0, link: "/meu-portal?aba=cobrancas" });
+      if (d.pedidos_evento.pendentes) lista.push({ titulo: "🏃 Pedidos de fotos", texto: d.pedidos_evento.pendentes + " esperando você confirmar o PIX (" + reaisAviso(d.pedidos_evento.total_centavos) + ")", urgente: true, link: "/meu-portal?aba=abertos" });
+      if (d.edicoes) lista.push({ titulo: "✏️ Edições", texto: d.edicoes + " foto(s) para editar", urgente: true, link: "/meu-portal" });
+    }
+  } catch (e) {}
+  desenharAvisos(lista);
+}
+
 function mostrarPlano(plano) {
   planoAtual = plano;
+  // Plano vencendo em até 5 dias (ou teste grátis acabando) vira aviso no topo.
+  avisoPlano = null;
+  if (plano && plano.paid_until) {
+    var dias = Math.ceil((new Date(plano.paid_until.replace(" ", "T") + "Z") - Date.now()) / 86400000);
+    if (dias <= 5) avisoPlano = { titulo: "⏳ Seu plano", texto: dias <= 0 ? "vence hoje: renove para não perder o envio" : "vence em " + dias + " dia(s): renove para não parar", urgente: true, link: "#plano" };
+  }
+  carregarAvisos();
   var tamanho = document.getElementById("planoTamanho");
   var detalhe = document.getElementById("planoDetalhe");
   var botao = document.getElementById("btnContratar");

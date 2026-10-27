@@ -8,7 +8,7 @@ const RAIZ = fileURLToPath(new URL("../", import.meta.url)).replace(/\\/g, "/");
 const worker = (await import(new URL("../", import.meta.url).href + "src/worker.js")).default;
 
 const db = new DatabaseSync(":memory:");
-for (const m of ["0001_init", "0002_recuperar_senha", "0003_aceite_termos", "0004_avisos", "0005_portal", "0006_cobrancas", "0007_cupons", "0008_tabela_precos", "0009_cupom_preco", "0010_assistente", "0011_sentinela", "0012_faq_mais", "0013_eventos", "0014_faq_blog_eventos", "0015_regras_acesso", "0016_faq_estudio", "0017_lixeira", "0018_visual", "0019_aumentar_espaco", "0020_fotos_extras", "0021_bancos", "0022_contratos", "0023_copias", "0024_contrato_obrigatorio"]) db.exec(readFileSync(RAIZ + "migrations/" + m + ".sql", "utf8"));
+for (const m of ["0001_init", "0002_recuperar_senha", "0003_aceite_termos", "0004_avisos", "0005_portal", "0006_cobrancas", "0007_cupons", "0008_tabela_precos", "0009_cupom_preco", "0010_assistente", "0011_sentinela", "0012_faq_mais", "0013_eventos", "0014_faq_blog_eventos", "0015_regras_acesso", "0016_faq_estudio", "0017_lixeira", "0018_visual", "0019_aumentar_espaco", "0020_fotos_extras", "0021_bancos", "0022_contratos", "0023_copias", "0024_contrato_obrigatorio", "0025_senha_cliente", "0026_varias_pessoas"]) db.exec(readFileSync(RAIZ + "migrations/" + m + ".sql", "utf8"));
 
 const DB = {
   prepare(sql) {
@@ -125,10 +125,10 @@ confere("código errado não assina", r.status === 400, r);
 emails.length = 0;
 r = await chamar("/api/c/assinar", { t, nome: "Ana Souza", cpf: "529.982.247-25", codigo: cod }, { "CF-Connecting-IP": "200.1.2.3", "User-Agent": "Teste/1.0" });
 confere("código certo assina e devolve o comprovante", r.status === 200 && r.dados.status === "assinado" && r.dados.assinatura.documento === "***.982.247-**" && /^[0-9a-f]{64}$/.test(r.dados.assinatura.hash), r.dados);
-const c = db.prepare("SELECT * FROM contratos WHERE id = ?").get(id);
+const c = db.prepare("SELECT a.*, k.texto FROM contrato_assinantes a JOIN contratos k ON k.id = a.contrato_id WHERE k.id = ?").get(id);
 const esperado = createHash("sha256").update(c.texto).digest("hex");
 confere("guarda IP, navegador, CPF e o SHA-256 do texto", c.assinado_ip === "200.1.2.3" && c.assinado_navegador === "Teste/1.0" && c.assinante_cpf === "52998224725" && c.documento_hash === esperado, c);
-confere("cliente e fotógrafa recebem o comprovante por e-mail", emails.some(e => e.to[0] === "ana@t.com" && /assinado/.test(e.subject)) && emails.some(e => e.to[0] === "foto@t.com" && /assinou/.test(e.subject)), emails.map(e => e.to[0] + ": " + e.subject));
+confere("cliente e fotógrafa recebem o comprovante por e-mail", emails.some(e => e.to[0] === "ana@t.com" && /assinado/.test(e.subject)) && emails.some(e => e.to[0] === "foto@t.com" && /assinou|assinado por todos/.test(e.subject)), emails.map(e => e.to[0] + ": " + e.subject));
 r = await chamar("/api/c/assinar", { t, nome: "Ana Souza", cpf: "529.982.247-25", codigo: cod });
 confere("não assina duas vezes", r.status === 400, r);
 

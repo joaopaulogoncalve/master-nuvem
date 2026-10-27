@@ -92,7 +92,7 @@ body.tema-minimalista .heroi .sobre{align-items:center;text-align:center}
       <img id="logo" class="hidden h-12 w-auto max-w-[140px] object-contain shrink-0 rounded-lg" alt="">
       <div class="min-w-0"><p id="nomeEstudio" class="titulo font-bold leading-tight truncate text-lg"></p><p class="text-xs opacity-80">Área do cliente</p></div>
     </div>
-    <div id="usuario" class="hidden text-sm text-right"><span id="ola"></span> · <button type="button" id="sair" class="underline">Sair</button></div>
+    <div id="usuario" class="hidden text-sm text-right"><span id="ola"></span> · <button type="button" id="trocarSenha" class="underline">🔑 Trocar senha</button> · <button type="button" id="sair" class="underline">Sair</button></div>
   </div>
 </header>
 
@@ -108,6 +108,19 @@ body.tema-minimalista .heroi .sobre{align-items:center;text-align:center}
     <input id="conviteSenha2" type="password" class="campo" placeholder="Repita a senha" autocomplete="new-password">
     <p id="conviteErro" class="text-sm text-red-500 min-h-[1.25rem]"></p>
     <button type="button" id="btnConvite" class="btn w-full">Criar senha e entrar</button>
+  </section>
+
+  <!-- Criar a senha no primeiro acesso / trocar a senha -->
+  <section id="secSenha" class="hidden max-w-sm mx-auto cartao p-6 space-y-3">
+    <h1 id="senhaTitulo" class="titulo text-2xl font-bold text-center">Crie a sua senha</h1>
+    <p id="senhaTexto" class="text-sm suave text-center"></p>
+    <input id="senhaAtual" type="password" class="hidden campo" placeholder="Senha atual" autocomplete="current-password">
+    <input id="senhaNova" type="password" class="campo" placeholder="Senha nova (mínimo 8 caracteres)" autocomplete="new-password">
+    <input id="senhaNova2" type="password" class="campo" placeholder="Repita a senha nova" autocomplete="new-password">
+    <p id="senhaErro" class="text-sm text-red-500 min-h-[1.25rem]"></p>
+    <button type="button" id="btnSenha" class="btn w-full">Salvar senha</button>
+    <button type="button" id="btnSenhaVoltar" class="hidden w-full text-sm suave">Cancelar</button>
+    <button type="button" id="btnSenhaManter" class="hidden w-full text-sm suave underline">Continuar com a senha que recebi</button>
   </section>
 
   <!-- Login -->
@@ -278,6 +291,14 @@ async function iniciar() {
   var me = await api("/api/p/me");
   if (!me.ok || me.dados.portal.slug !== slug) { mostrar("secLogin", true); return; }
   aplicarMarca(me.dados.portal);   // cada cliente tem o seu layout
+  if (me.dados.precisa_senha) {
+    // Entrou com a senha que o estúdio mandou: cria a dele antes de continuar.
+    document.getElementById("ola").textContent = "Olá, " + me.dados.nome.split(" ")[0];
+    mostrar("usuario", true);
+    mostrar("secLogin", false);
+    abrirTelaSenha(true, me.dados.nome);
+    return;
+  }
   document.getElementById("ola").textContent = "Olá, " + me.dados.nome.split(" ")[0];
   mostrar("usuario", true);
   mostrar("secLogin", false);
@@ -295,6 +316,41 @@ document.getElementById("btnConvite").addEventListener("click", async function (
   if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível."; return; }
   window.location.href = "/p/" + slug;   // já entra, sem o código do convite na barra
 });
+
+var senhaPrimeira = false;
+function abrirTelaSenha(primeira, nome) {
+  senhaPrimeira = primeira;
+  ["secAlbuns", "secAlbum", "secVencido", "secPagamentos", "secContratos"].forEach(function (id) { mostrar(id, false); });
+  document.getElementById("senhaTitulo").textContent = primeira ? "Crie a sua senha" : "Trocar senha";
+  document.getElementById("senhaTexto").textContent = primeira ? "Olá, " + (nome || "").split(" ")[0] + "! Se quiser, crie uma senha só sua. Ou continue com a senha que o estúdio mandou." : "Digite a senha atual e escolha uma nova.";
+  mostrar("senhaAtual", !primeira);
+  mostrar("btnSenhaVoltar", !primeira);
+  mostrar("btnSenhaManter", primeira);
+  ["senhaAtual", "senhaNova", "senhaNova2"].forEach(function (id) { document.getElementById(id).value = ""; });
+  document.getElementById("senhaErro").textContent = "";
+  mostrar("secSenha", true);
+  window.scrollTo(0, 0);
+}
+document.getElementById("btnSenha").addEventListener("click", async function () {
+  var n1 = document.getElementById("senhaNova").value, n2 = document.getElementById("senhaNova2").value, erro = document.getElementById("senhaErro");
+  erro.textContent = "";
+  if (n1.length < 8) { erro.textContent = "A senha precisa ter pelo menos 8 caracteres."; return; }
+  if (n1 !== n2) { erro.textContent = "As duas senhas estão diferentes."; return; }
+  this.disabled = true;
+  var r = await api("/api/p/senha", { atual: document.getElementById("senhaAtual").value, nova: n1 });
+  this.disabled = false;
+  if (!r.ok) { erro.textContent = r.dados.error || "Não foi possível."; return; }
+  mostrar("secSenha", false);
+  if (!senhaPrimeira) avisar("Senha trocada! Use a nova da próxima vez que entrar.", "Pronto ✅");
+  iniciar();
+});
+document.getElementById("trocarSenha").addEventListener("click", function () { if (!previa) abrirTelaSenha(false); });
+document.getElementById("btnSenhaManter").addEventListener("click", async function () {
+  await api("/api/p/senha/manter", {});
+  mostrar("secSenha", false);
+  iniciar();
+});
+document.getElementById("btnSenhaVoltar").addEventListener("click", function () { mostrar("secSenha", false); iniciar(); });
 
 function reais(c) {
   return "R$ " + (c / 100).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -382,19 +438,22 @@ function mostrarAlbuns(albuns, me) {
   var secC = document.getElementById("secContratos");
   secC.innerHTML = "";
   mostrar("secContratos", pend.length > 0);
-  var travado = pend.some(function (c) { return c.obrigatorio; });
   pend.forEach(function (c) {
     var card = el("div", "cartao p-5 space-y-3");
     card.style.borderWidth = "2px";
     card.style.borderColor = "var(--marca)";
-    card.appendChild(el("p", "titulo text-lg font-bold", "📝 " + (c.obrigatorio ? "Antes de ver suas fotos, assine o contrato" : "Você tem um contrato para assinar")));
-    card.appendChild(el("p", "text-sm suave", c.titulo + " · leva 1 minuto: você lê, informa nome e CPF e confirma com um código no seu e-mail."));
-    var a = el("a", "btn inline-block", "Ler e assinar o contrato");
-    a.href = c.link;
-    card.appendChild(a);
+    if (c.link) {
+      card.appendChild(el("p", "titulo text-lg font-bold", "📝 " + (c.obrigatorio ? "Antes de ver suas fotos, assine o contrato" : "Você tem um contrato para assinar")));
+      card.appendChild(el("p", "text-sm suave", c.titulo + " · leva 1 minuto: você lê, informa nome e CPF e confirma com um código no seu e-mail."));
+      var a = el("a", "btn inline-block", "Ler e assinar o contrato");
+      a.href = c.link;
+      card.appendChild(a);
+    } else {
+      card.appendChild(el("p", "titulo text-lg font-bold", "⏳ Aguardando a assinatura de " + (c.aguardando || []).join(", ")));
+      card.appendChild(el("p", "text-sm suave", c.titulo + " · as fotos são liberadas assim que " + ((c.aguardando || []).length > 1 ? "todos assinarem" : "essa pessoa assinar") + ". Ela recebeu o link no e-mail dela."));
+    }
     secC.appendChild(card);
   });
-  document.getElementById("listaAlbuns").classList.toggle("hidden", travado);
   if (!albuns.length) lista.appendChild(el("p", "suave", "Ainda não há álbuns para você. Assim que o estúdio enviar, eles aparecem aqui."));
   albuns.forEach(function (a) {
     var c = el("button", "cartao overflow-hidden text-left hover:shadow-lg transition");
@@ -417,7 +476,10 @@ function mostrarAlbuns(albuns, me) {
     if (r.vencido) txt.appendChild(el("p", "text-sm font-semibold text-red-500 mt-1", "⏳ Acesso encerrado"));
     else if (r.acesso_ate) txt.appendChild(el("p", "text-sm font-semibold mt-1", "⏳ Disponível por mais " + tempoRestante(quando(r.acesso_ate) - Date.now())));
     c.appendChild(txt);
-    c.addEventListener("click", function () { abrirAlbum(a); });
+    if (a.aguardando_contrato) {
+      txt.appendChild(el("p", "text-sm font-semibold mt-1", "🔒 Liberado depois da assinatura do contrato"));
+      c.addEventListener("click", function () { avisar("As fotos deste álbum são liberadas depois da assinatura do contrato. Veja o aviso no topo da página.", "📝 Contrato"); });
+    } else c.addEventListener("click", function () { abrirAlbum(a); });
     lista.appendChild(c);
   });
 }

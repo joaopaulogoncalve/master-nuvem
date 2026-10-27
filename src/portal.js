@@ -285,11 +285,28 @@ export async function tratarPortalDono(request, env, url) {
   const u = await usuarioLogado(request, env);
   if (!u) return resp({ error: "Não autenticado" }, 401);
 
-  const portal = await env.DB.prepare("SELECT id, slug, nome, cor, ramo, instrucoes_pagamento, cobrar, tema, logo_file_id, bio, emite_nota, link_pagamento FROM portais WHERE user_id = ?").bind(u.id).first();
+  const portal = await env.DB.prepare("SELECT id, slug, nome, cor, ramo, instrucoes_pagamento, cobrar, tema, logo_file_id, bio, emite_nota, link_pagamento, doc_nome, doc_numero, doc_cidade FROM portais WHERE user_id = ?").bind(u.id).first();
 
   if (caminho === "/api/portal" && request.method === "GET") {
     if (portal) portal.logo_url = await urlDoArquivo(env, portal.logo_file_id);
     return resp({ portal: portal, plano: await temPlano(env, u.id), tipos: TIPOS_FOTO }, 200);
+  }
+
+  // Resumo para o painel: o que precisa do fotógrafo agora (cada item vira um quadradinho que pisca).
+  if (caminho === "/api/portal/resumo" && request.method === "GET") {
+    if (!portal) return resp({ portal: false }, 200);
+    const um = async function (sql, ...b) { return await env.DB.prepare(sql).bind(...b).first(); };
+    const contratos = await um("SELECT COUNT(*) AS n, SUM(CASE WHEN created_at < datetime('now', '-3 days') THEN 1 ELSE 0 END) AS parados FROM contratos WHERE portal_id = ? AND status IN ('enviado', 'visto')", portal.id);
+    const cobrancas = await um("SELECT COUNT(*) AS n, COALESCE(SUM(valor_centavos), 0) AS total, SUM(CASE WHEN fotos_extra IS NOT NULL THEN 1 ELSE 0 END) AS extras FROM cobrancas WHERE portal_id = ? AND status = 'pendente'", portal.id);
+    const edicoes = await um("SELECT COUNT(*) AS n FROM pedidos_edicao e JOIN albuns a ON a.id = e.album_id WHERE a.portal_id = ? AND e.status = 'aberto' AND a.removido_em IS NULL", portal.id);
+    const pedidos = await um("SELECT COUNT(*) AS n, COALESCE(SUM(p.valor_centavos), 0) AS total FROM evento_pedidos p JOIN eventos e ON e.id = p.evento_id WHERE e.portal_id = ? AND p.status = 'pendente'", portal.id);
+    return resp({
+      portal: true,
+      contratos: { esperando: contratos.n, parados: contratos.parados || 0 },
+      cobrancas: { pendentes: cobrancas.n, total_centavos: cobrancas.total, fotos_extras: cobrancas.extras || 0 },
+      edicoes: edicoes.n,
+      pedidos_evento: { pendentes: pedidos.n, total_centavos: pedidos.total }
+    }, 200);
   }
 
   if (caminho === "/api/portal/clientes" && request.method === "GET") {
@@ -323,6 +340,12 @@ export async function tratarPortalDono(request, env, url) {
     if (!album) return resp({ error: "Álbum não encontrado" }, 404);
     album.regras = regrasAlbum(album);
     album.capa_url = await urlDoArquivo(env, album.capa_file_id);
+    // Pessoas com acesso: a principal + as adicionadas (casal, pai e mãe...).
+    const pes = await env.DB.prepare(
+      "SELECT c.id, c.nome, c.email, 1 AS principal FROM portal_clientes c WHERE c.id = ?1 UNION ALL " +
+      "SELECT c.id, c.nome, c.email, 0 FROM album_acessos x JOIN portal_clientes c ON c.id = x.cliente_id WHERE x.album_id = ?2 AND c.removido_em IS NULL"
+    ).bind(album.cliente_id, album.id).all();
+    album.pessoas = pes.results;
     if (url.searchParams.get("favoritas") === "1") {
       // Lista de nomes das favoritas, para o fotógrafo copiar e montar o álbum impresso.
       const f = await env.DB.prepare(
@@ -595,6 +618,10 @@ export async function tratarPortalDono(request, env, url) {
 
   // Marca do estúdio: logo (arquivo enviado com uso "logo") e uma biografia curta. logo_file_id null = tirar a logo.
   if (caminho === "/api/portal/marca") {
+    if (corpo.doc_nome !== undefined || corpo.doc_numero !== undefined || corpo.doc_cidade !== undefined) {
+      await env.DB.prepare("UPDATE portais SET doc_nome = ?, doc_numero = ?, doc_cidade = ? WHERE id = ?")
+        .bind(texto(corpo.doc_nome, 120) || null, texto(corpo.doc_numero, 30) || null, texto(corpo.doc_cidade, 80) || null, portal.id).run();
+    }
     if (corpo.logo_file_id !== undefined) {
       const logo = await arquivoDeUso(env, u.id, corpo.logo_file_id, "logo");
       if (logo === undefined) return resp({ error: "Logo inválida" }, 400);
@@ -694,6 +721,40 @@ export async function tratarPortalDono(request, env, url) {
     ? await env.DB.prepare("SELECT id FROM portal_clientes WHERE id = ? AND portal_id = ?").bind(parseInt(corpo.cliente_id, 10) || 0, portal.id).first()
     : null;
 
+  // Mais uma pessoa no álbum: usa o cliente com esse e-mail, se já existir, ou cria um novo (com login e senha próprios).
+  if (caminho === "/api/portal/albuns/pessoas/adicionar") {
+    const album = await env.DB.prepare("SELECT id, cliente_id FROM albuns WHERE id = ? AND portal_id = ? AND removido_em IS NULL").bind(parseInt(corpo.album_id, 10) || 0, portal.id).first();
+    if (!album) return resp({ error: "Álbum não encontrado" }, 404);
+    const nome = texto(corpo.nome, 80);
+    const email = String(corpo.email || "").trim().toLowerCase();
+    if (nome.length < 2) return resp({ error: "Digite o nome da pessoa" }, 400);
+    if (!EMAIL_OK.test(email) || email.length > 120) return resp({ error: "E-mail inválido" }, 400);
+    let cli = await env.DB.prepare("SELECT id, nome, email FROM portal_clientes WHERE portal_id = ? AND email = ? AND removido_em IS NULL").bind(portal.id, email).first();
+    let nova = false, emailEnviado = false;
+    if (!cli) {
+      const senha = String(corpo.senha || "");
+      if (senha.length < 8 || senha.length > 100) return resp({ error: "A senha precisa ter de 8 a 100 caracteres" }, 400);
+      const h = await novaSenhaHash(senha);
+      const r = await env.DB.prepare("INSERT INTO portal_clientes (portal_id, nome, email, password_hash, password_salt) VALUES (?, ?, ?, ?, ?)")
+        .bind(portal.id, nome, email, h.hash, h.salt).run();
+      cli = { id: r.meta.last_row_id, nome: nome, email: email };
+      nova = true;
+    }
+    if (cli.id === album.cliente_id) return resp({ error: "Essa pessoa já é a principal deste álbum" }, 400);
+    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM album_acessos WHERE album_id = ?").bind(album.id).first();
+    if (n.n >= 10) return resp({ error: "No máximo 10 pessoas extras por álbum" }, 400);
+    await env.DB.prepare("INSERT OR IGNORE INTO album_acessos (album_id, cliente_id) VALUES (?, ?)").bind(album.id, cli.id).run();
+    if (nova && corpo.enviar_acesso !== false) emailEnviado = await enviarConvite(env, portal, cli);
+    return resp({ ok: true, id: cli.id, nova: nova, email_enviado: emailEnviado }, 200);
+  }
+
+  if (caminho === "/api/portal/albuns/pessoas/remover") {
+    const album = await env.DB.prepare("SELECT id FROM albuns WHERE id = ? AND portal_id = ?").bind(parseInt(corpo.album_id, 10) || 0, portal.id).first();
+    if (!album) return resp({ error: "Álbum não encontrado" }, 404);
+    await env.DB.prepare("DELETE FROM album_acessos WHERE album_id = ? AND cliente_id = ?").bind(album.id, parseInt(corpo.cliente_id, 10) || 0).run();
+    return resp({ ok: true }, 200);
+  }
+
   if (caminho === "/api/portal/clientes/convite") {
     if (!cliente) return resp({ error: "Cliente não encontrado" }, 404);
     const cli = await env.DB.prepare("SELECT id, nome, email FROM portal_clientes WHERE id = ?").bind(cliente.id).first();
@@ -707,7 +768,7 @@ export async function tratarPortalDono(request, env, url) {
     if (senha.length < 8 || senha.length > 100) return resp({ error: "A senha precisa ter de 8 a 100 caracteres" }, 400);
     const h = await novaSenhaHash(senha);
     // Senha nova também destrava o acesso, se a sentinela tiver trancado.
-    await env.DB.prepare("UPDATE portal_clientes SET password_hash = ?, password_salt = ?, travada_em = NULL WHERE id = ?").bind(h.hash, h.salt, cliente.id).run();
+    await env.DB.prepare("UPDATE portal_clientes SET password_hash = ?, password_salt = ?, travada_em = NULL, senha_propria = 0 WHERE id = ?").bind(h.hash, h.salt, cliente.id).run();
     await env.DB.prepare("DELETE FROM portal_sessoes WHERE cliente_id = ?").bind(cliente.id).run();
     await registrarEvento(env, request, "destravada", { cliente_id: cliente.id });
     return resp({ ok: true }, 200);
@@ -765,7 +826,7 @@ async function clienteLogado(request, env) {
   const token = lerCookie(request, "portal_sessao");
   if (!token) return null;
   return await env.DB.prepare(
-    "SELECT c.id, c.nome, c.email, c.portal_id, c.tema AS cliente_tema, p.slug, p.nome AS portal_nome, p.cor, p.tema AS portal_tema, p.logo_file_id, p.bio FROM portal_sessoes s " +
+    "SELECT c.id, c.nome, c.email, c.portal_id, c.senha_propria, c.tema AS cliente_tema, p.slug, p.nome AS portal_nome, p.cor, p.tema AS portal_tema, p.logo_file_id, p.bio FROM portal_sessoes s " +
     "JOIN portal_clientes c ON c.id = s.cliente_id JOIN portais p ON p.id = c.portal_id " +
     "WHERE s.token_hash = ? AND s.expires_at > datetime('now') AND c.removido_em IS NULL"
   ).bind(await sha256Hex(token)).first();
@@ -838,7 +899,7 @@ export async function tratarPortalCliente(request, env, url) {
     const senha = String(corpo.senha || "");
     if (senha.length < 8 || senha.length > 100) return resp({ error: "A senha precisa ter de 8 a 100 caracteres" }, 400);
     const h = await novaSenhaHash(senha);
-    await env.DB.prepare("UPDATE portal_clientes SET password_hash = ?, password_salt = ?, convite_hash = NULL, convite_expira = NULL, travada_em = NULL WHERE id = ?").bind(h.hash, h.salt, c.id).run();
+    await env.DB.prepare("UPDATE portal_clientes SET password_hash = ?, password_salt = ?, convite_hash = NULL, convite_expira = NULL, travada_em = NULL, senha_propria = 1 WHERE id = ?").bind(h.hash, h.salt, c.id).run();
     await env.DB.prepare("DELETE FROM portal_sessoes WHERE cliente_id = ?").bind(c.id).run();
     await registrarEvento(env, request, "portal_login_ok", { cliente_id: c.id });
     const b = new Uint8Array(32);
@@ -864,9 +925,9 @@ export async function tratarPortalCliente(request, env, url) {
     const r = await env.DB.prepare(
       "SELECT a.id, a.titulo, a.tipo, a.created_at, a.descricao, a.capa_file_id, " + COLUNAS_REGRAS + ", " +
       "(SELECT COUNT(*) FROM files f WHERE f.album_id = a.id AND f.status = 'ready' AND f.e_previa = 0) AS arquivos, " +
-      "(SELECT COUNT(*) FROM favoritos v JOIN files f ON f.id = v.file_id WHERE f.album_id = a.id AND v.cliente_id = a.cliente_id) AS favoritas, " +
+      "(SELECT COUNT(*) FROM favoritos v JOIN files f ON f.id = v.file_id WHERE f.album_id = a.id AND v.cliente_id = ?1) AS favoritas, " +
       "EXISTS (SELECT 1 FROM cobrancas b JOIN portais p ON p.id = b.portal_id WHERE b.album_id = a.id AND b.status = 'pendente' AND b.bloqueia_album = 1 AND p.cobrar = 1) AS trancado " +
-      "FROM albuns a WHERE a.cliente_id = ? AND a.removido_em IS NULL ORDER BY a.id DESC"
+      "FROM albuns a WHERE (a.cliente_id = ?1 OR EXISTS (SELECT 1 FROM album_acessos x WHERE x.album_id = a.id AND x.cliente_id = ?1)) AND a.removido_em IS NULL ORDER BY a.id DESC"
     ).bind(c.id).all();
     const cob = await env.DB.prepare(
       "SELECT b.id, b.descricao, b.valor_centavos, b.vencimento, b.link_pagamento, b.status, b.pago_em, b.itens, b.fotos_extra, a.titulo AS album " +
@@ -889,11 +950,11 @@ export async function tratarPortalCliente(request, env, url) {
       }
       albuns.push(x);
     }
-    const pendentes = await env.DB.prepare(
-      "SELECT titulo, token, obrigatorio FROM contratos WHERE cliente_id = ? AND status IN ('enviado', 'visto') ORDER BY obrigatorio DESC, id"
-    ).bind(c.id).all();
+    const pendentes = await situacaoContratos();
+    albuns.forEach(function (x) { x.aguardando_contrato = pendentes.some(function (k) { return k.trava && (!k.album_id || k.album_id === x.id); }); });
     return resp({
-      contratos_pendentes: pendentes.results.map(function (x) { return { titulo: x.titulo, link: "/c/" + x.token, obrigatorio: !!x.obrigatorio }; }),
+      precisa_senha: !c.senha_propria,   // entrou com a senha que o fotógrafo mandou: pede para criar a dele
+      contratos_pendentes: pendentes.map(function (x) { return { titulo: x.titulo, link: x.link, obrigatorio: x.trava, aguardando: x.aguardando }; }),
       nome: c.nome,
       portal: { slug: c.slug, nome: c.portal_nome, cor: c.cor, tema: c.cliente_tema || c.portal_tema || "classico", logo: await urlDoArquivo(env, c.logo_file_id), bio: c.bio || null, instrucoes_pagamento: instr ? instr.instrucoes_pagamento : null },
       albuns: albuns,
@@ -907,30 +968,83 @@ export async function tratarPortalCliente(request, env, url) {
     }, 200);
   }
 
+  // Criar (primeiro acesso) ou trocar a senha. Quem já tem senha própria precisa informar a atual.
+  if (caminho === "/api/p/senha") {
+    if (request.method !== "POST") return resp({ error: "Método não permitido" }, 405);
+    if (!origemOk(request, url)) return resp({ error: "Origem inválida" }, 403);
+    const corpo = await lerJson(request);
+    if (!corpo) return resp({ error: "JSON inválido" }, 400);
+    const nova = String(corpo.nova || "");
+    if (nova.length < 8 || nova.length > 100) return resp({ error: "A senha nova precisa ter de 8 a 100 caracteres" }, 400);
+    if (c.senha_propria) {
+      const atual = await env.DB.prepare("SELECT password_hash, password_salt FROM portal_clientes WHERE id = ?").bind(c.id).first();
+      if (!iguais(await derivarSenha(String(corpo.atual || ""), deHex(atual.password_salt)), atual.password_hash)) return resp({ error: "A senha atual está errada" }, 400);
+    }
+    const h = await novaSenhaHash(nova);
+    await env.DB.prepare("UPDATE portal_clientes SET password_hash = ?, password_salt = ?, senha_propria = 1, convite_hash = NULL, convite_expira = NULL WHERE id = ?").bind(h.hash, h.salt, c.id).run();
+    // Derruba as outras sessões (outros aparelhos), menos esta.
+    await env.DB.prepare("DELETE FROM portal_sessoes WHERE cliente_id = ? AND token_hash != ?").bind(c.id, await sha256Hex(lerCookie(request, "portal_sessao") || "")).run();
+    return resp({ ok: true }, 200);
+  }
+
+  if (caminho === "/api/p/senha/manter" && request.method === "POST") {
+    if (!origemOk(request, url)) return resp({ error: "Origem inválida" }, 403);
+    await env.DB.prepare("UPDATE portal_clientes SET senha_propria = 1 WHERE id = ?").bind(c.id).run();
+    return resp({ ok: true }, 200);
+  }
+
   // Álbum só aparece se for deste cliente.
   async function albumDoCliente(id) {
-    return await env.DB.prepare("SELECT a.id, a.titulo, a.tipo, a.descricao, " + COLUNAS_REGRAS + " FROM albuns a WHERE a.id = ? AND a.cliente_id = ? AND a.removido_em IS NULL")
-      .bind(parseInt(id, 10) || 0, c.id).first();
+    return await env.DB.prepare("SELECT a.id, a.titulo, a.tipo, a.descricao, " + COLUNAS_REGRAS + " FROM albuns a WHERE a.id = ?2 AND (a.cliente_id = ?1 OR EXISTS (SELECT 1 FROM album_acessos x WHERE x.album_id = a.id AND x.cliente_id = ?1)) AND a.removido_em IS NULL")
+      .bind(c.id, parseInt(id, 10) || 0).first();
   }
 
   const MSG_VENCIDO = "O prazo de acesso a este álbum terminou. Fale com o estúdio para liberar de novo.";
 
-  // Contrato obrigatório ainda não assinado: os álbuns ficam fechados até a assinatura.
-  async function contratoObrigatorio() {
-    const x = await env.DB.prepare("SELECT token FROM contratos WHERE cliente_id = ? AND obrigatorio = 1 AND status IN ('enviado', 'visto') LIMIT 1").bind(c.id).first();
-    return x ? resp({ error: "Assine o contrato para liberar os seus álbuns.", contrato: true, link: "/c/" + x.token }, 403) : null;
+  // Situação dos contratos desta pessoa: o que ela precisa assinar e o que ainda trava os álbuns.
+  // Um contrato ligado a um álbum trava aquele álbum para todas as pessoas dele; sem álbum, trava os álbuns de quem assina.
+  async function situacaoContratos() {
+    const r = await env.DB.prepare(
+      "SELECT k.id, k.titulo, k.regra, k.album_id FROM contratos k WHERE k.status != 'cancelado' AND (" +
+      " (k.album_id IS NOT NULL AND EXISTS (SELECT 1 FROM albuns a WHERE a.id = k.album_id AND a.removido_em IS NULL AND (a.cliente_id = ?1 OR EXISTS (SELECT 1 FROM album_acessos x WHERE x.album_id = a.id AND x.cliente_id = ?1))))" +
+      " OR EXISTS (SELECT 1 FROM contrato_assinantes s WHERE s.contrato_id = k.id AND s.cliente_id = ?1)" +
+      " OR (k.album_id IS NULL AND k.cliente_id = ?1)) ORDER BY k.id"
+    ).bind(c.id).all();
+    const lista = [];
+    for (const k of r.results) {
+      const ass = await env.DB.prepare("SELECT nome, cliente_id, status, token FROM contrato_assinantes WHERE contrato_id = ? ORDER BY id").bind(k.id).all();
+      const pessoas = ass.results;
+      const assinados = pessoas.filter(function (p) { return p.status === "assinado"; }).length;
+      const satisfeito = k.regra === "nenhum" || (k.regra === "um" ? assinados > 0 : assinados === pessoas.length);
+      const meu = pessoas.find(function (p) { return p.cliente_id === c.id && p.status !== "assinado"; });
+      if (satisfeito && !meu) continue;
+      lista.push({
+        titulo: k.titulo, album_id: k.album_id, trava: !satisfeito, link: meu ? "/c/" + meu.token : null,
+        aguardando: satisfeito ? [] : pessoas.filter(function (p) { return p.status !== "assinado" && p.cliente_id !== c.id; }).map(function (p) { return p.nome; })
+      });
+    }
+    return lista;
+  }
+  // Responde 403 se algum contrato ainda trava este álbum (ou todos os álbuns desta pessoa).
+  async function travaDoAlbum(albumId) {
+    const x = (await situacaoContratos()).find(function (k) { return k.trava && (!k.album_id || k.album_id === albumId); });
+    if (!x) return null;
+    return resp({
+      error: x.link ? "Assine o contrato para liberar as fotos." : "Aguardando a assinatura de " + x.aguardando.join(", ") + ".",
+      contrato: true, link: x.link, aguardando: x.aguardando
+    }, 403);
   }
 
   // Arquivo (original, nunca a prévia) de um álbum deste cliente, já com as regras do álbum.
   async function arquivoDoCliente(id) {
     return await env.DB.prepare(
       "SELECT f.id, f.object_key, f.name, f.album_id, " + COLUNAS_REGRAS + " FROM files f JOIN albuns a ON a.id = f.album_id " +
-      "WHERE f.id = ? AND a.cliente_id = ? AND f.status = 'ready' AND f.e_previa = 0 AND a.removido_em IS NULL"
-    ).bind(parseInt(id, 10) || 0, c.id).first();
+      "WHERE f.id = ?2 AND (a.cliente_id = ?1 OR EXISTS (SELECT 1 FROM album_acessos x WHERE x.album_id = a.id AND x.cliente_id = ?1)) AND f.status = 'ready' AND f.e_previa = 0 AND a.removido_em IS NULL"
+    ).bind(c.id, parseInt(id, 10) || 0).first();
   }
 
   if (caminho === "/api/p/album" && request.method === "GET") {
-    const trava = await contratoObrigatorio();
+    const trava = await travaDoAlbum(parseInt(url.searchParams.get("id"), 10) || 0);
     if (trava) return trava;
     const album = await albumDoCliente(url.searchParams.get("id"));
     if (!album) return resp({ error: "Álbum não encontrado" }, 404);
@@ -994,9 +1108,9 @@ export async function tratarPortalCliente(request, env, url) {
   }
 
   if (caminho === "/api/p/baixar" && request.method === "GET") {
-    const trava = await contratoObrigatorio();
-    if (trava) return trava;
     const f = await arquivoDoCliente(url.searchParams.get("id"));
+    const trava = f ? await travaDoAlbum(f.album_id) : null;
+    if (trava) return trava;
     if (!f) return resp({ error: "Arquivo não encontrado" }, 404);
     if (albumVencido(f)) return resp({ error: MSG_VENCIDO }, 403);
     if (f.pode_baixar === 0) return resp({ error: "Neste álbum o estúdio liberou só a visualização. O download será liberado por ele." }, 403);

@@ -38,6 +38,7 @@ body{background:#f1f5f9}
     </div>
   </div>
 
+  <p id="pessoas" class="hidden naoImprime folha rounded-2xl px-5 py-3 text-sm"></p>
   <article id="doc" class="hidden folha doc rounded-2xl p-6 md:p-10"></article>
 
   <!-- Comprovante de assinatura -->
@@ -123,7 +124,14 @@ function desenhar(d) {
   document.getElementById("estudio").textContent = d.estudio;
   var selo = document.getElementById("selo");
   var assinado = d.status === "assinado";
-  selo.textContent = assinado ? "✅ Assinado" : "⏳ Aguardando sua assinatura";
+  selo.textContent = assinado ? "✅ Você assinou" : "⏳ Aguardando sua assinatura";
+  // Quando mais de uma pessoa assina: mostra quem já assinou e quem falta.
+  var ps = d.pessoas || [];
+  var cx = document.getElementById("pessoas");
+  if (ps.length > 1) {
+    cx.textContent = "Assinaturas: " + ps.map(function (p) { return (p.assinou ? "✅ " : "⏳ ") + p.nome + (p.eu ? " (você)" : ""); }).join(" · ");
+    mostrar("pessoas", true);
+  } else mostrar("pessoas", false);
   selo.className = "text-sm font-semibold px-3 py-1.5 rounded-full " + (assinado ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700");
   mostrar("topo", true);
   desenharTexto(document.getElementById("doc"), d.texto);
