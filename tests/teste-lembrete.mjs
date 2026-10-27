@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-// Teste do lembrete de recarga do chip do WhatsApp (e-mail + alerta no /admin, uma vez por ciclo de 60 dias).
+// Teste do lembrete de recarga do chip do WhatsApp (e-mail + alerta no /admin, uma vez por ciclo de 30 dias).
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
 import { createHmac } from "node:crypto";
@@ -55,12 +55,12 @@ globalThis.fetch = async (url, op) => { emails.push(JSON.parse(op.body)); return
 const dia = (d) => Date.parse(d + "T06:00:00Z");
 const alertas = () => db.prepare("SELECT chave FROM sentinela_alertas").all().length;
 
-confere("antes de 60 dias não avisa", !(await lembreteWhatsapp(env, dia("2026-12-20"))) && emails.length === 0, emails.length);
-confere("no dia 60 avisa", (await lembreteWhatsapp(env, dia("2026-12-26"))) && emails.length === 1 && emails[0].to[0] === "contato@masternuvem.com.br", emails);
+confere("antes de 30 dias não avisa", !(await lembreteWhatsapp(env, dia("2026-11-20"))) && emails.length === 0, emails.length);
+confere("no dia 30 avisa", (await lembreteWhatsapp(env, dia("2026-11-26"))) && emails.length === 1 && emails[0].to[0] === "contato@masternuvem.com.br", emails);
 confere("e-mail fala do crédito e do número", /crédito/.test(emails[0].text) && /98284-6067/.test(emails[0].text), emails[0].text);
 confere("alerta aparece no /admin", alertas() === 1, alertas());
-confere("no dia seguinte não repete", !(await lembreteWhatsapp(env, dia("2026-12-27"))) && emails.length === 1, emails.length);
-confere("60 dias depois avisa de novo", (await lembreteWhatsapp(env, dia("2027-02-24"))) && emails.length === 2 && alertas() === 2, emails.length);
+confere("no dia seguinte não repete", !(await lembreteWhatsapp(env, dia("2026-11-27"))) && emails.length === 1, emails.length);
+confere("30 dias depois avisa de novo", (await lembreteWhatsapp(env, dia("2026-12-26"))) && emails.length === 2 && alertas() === 2, emails.length);
 
 console.log(falhas ? "\n" + falhas + " FALHA(S)" : "\nTODOS OS TESTES PASSARAM");
 process.exit(falhas ? 1 : 0);
