@@ -908,6 +908,14 @@ async function tratarApi(request, env, url) {
     return resposta(ok ? { ok: true, email: u.email } : { error: "Não conseguimos enviar agora. Tente de novo em alguns minutos." }, ok ? 200 : 502);
   }
 
+  // Lucro Online: o admin do China em Casa lê aqui os totais da Master Nuvem mês a mês (só leitura, só números).
+  // Protegido pelo segredo LUCRO_TOKEN, gravado igual nos dois Workers. Sem o segredo, a rota nem existe.
+  if (caminho === "/api/integracao/lucro" && request.method === "GET") {
+    const tk = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+    if (!env.LUCRO_TOKEN || env.LUCRO_TOKEN.length < 32 || !iguais(tk, env.LUCRO_TOKEN)) return resposta({ error: "Rota não encontrada" }, 404);
+    return resposta(await resumoLucro(env), 200);
+  }
+
   // Configurações públicas que a página precisa (ex.: chave pública do Turnstile).
   if (caminho === "/api/config" && request.method === "GET") {
     return resposta({ turnstile_site_key: env.TURNSTILE_SITE_KEY || null }, 200);
@@ -1547,6 +1555,26 @@ function comProtecao(r, api) {
   h.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   if (api && !h.has("Cache-Control")) h.set("Cache-Control", "no-store");
   return new Response(r.body, { status: r.status, statusText: r.statusText, headers: h });
+}
+
+/* ---------- Lucro Online (resumo para o admin do China em Casa) ---------- */
+// Ganhos = planos pagos pelo Mercado Pago (id numérico), pelo mês do pedido. Cupom grátis e plano manual não contam.
+// Não inclui taxas do Mercado Pago nem os gastos fixos (domínio, chip, Claude): esses são lançados à mão no Lucro Online.
+async function resumoLucro(env) {
+  const r = await env.DB.prepare(
+    "SELECT substr(created_at, 1, 7) AS mes, COUNT(*) AS vendas, COALESCE(SUM(valor_centavos), 0) AS ganhos_centavos " +
+    "FROM subscriptions WHERE status IN ('active', 'replaced') AND mp_payment_id GLOB '[0-9]*' GROUP BY mes ORDER BY mes"
+  ).all();
+  const uso = await env.DB.prepare("SELECT COALESCE(SUM(size_bytes), 0) AS bytes FROM files").first();
+  const pagos = Math.max(0, uso.bytes - B2_GRATIS_BYTES);
+  return {
+    projeto: "Master Nuvem",
+    gerado_em: new Date().toISOString(),
+    meses: r.results,
+    armazenamento_atual_gb: Math.round(uso.bytes / 1e7) / 100,
+    custo_armazenamento_mes_estimado_reais: Math.round(pagos / 1e12 * B2_US_POR_TB * DOLAR_RESERVA * 100) / 100,
+    observacao: "Ganhos brutos (antes da taxa do Mercado Pago: PIX ~0,99%, cartão ~4,99%). Gastos fixos são lançados à mão."
+  };
 }
 
 /* ---------- Site no ar (UptimeRobot) ---------- */
