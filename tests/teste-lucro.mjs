@@ -7,6 +7,7 @@ import { createHmac } from "node:crypto";
 const RAIZ = fileURLToPath(new URL("../", import.meta.url)).replace(/\\/g, "/");
 const modulo = await import(new URL("../", import.meta.url).href + "src/worker.js");
 const enviarLucro = modulo.enviarLucro;
+const lerLucro = modulo.lerLucro;
 
 const db = new DatabaseSync(":memory:");
 for (const m of ["0001_init", "0002_recuperar_senha", "0003_aceite_termos", "0004_avisos", "0005_portal", "0006_cobrancas", "0007_cupons", "0008_tabela_precos", "0009_cupom_preco", "0010_assistente", "0011_sentinela", "0012_faq_mais", "0013_eventos", "0014_faq_blog_eventos", "0015_regras_acesso", "0016_faq_estudio", "0017_lixeira", "0018_visual", "0019_aumentar_espaco", "0020_fotos_extras", "0021_bancos", "0022_contratos", "0023_copias", "0024_contrato_obrigatorio", "0025_senha_cliente", "0026_varias_pessoas", "0027_confirmar_email", "0028_portfolio", "0029_faq_avaliar"]) db.exec(readFileSync(RAIZ + "migrations/" + m + ".sql", "utf8"));
@@ -96,6 +97,16 @@ let pelaLigacao = 0;
 env.CHINA_EM_CASA = { fetch: async (url, op) => { pelaLigacao++; return new Response("{}", { status: 200 }); } };
 r = await enviarLucro(env, agora);
 confere("usa a ligação interna com o China em Casa", r.ok && pelaLigacao === r.enviados.length && pelaLigacao > 0, { r, pelaLigacao });
+
+// Painel do /admin: lê o resumo dos dois negócios pela ligação interna.
+let pedido = null;
+env.CHINA_EM_CASA = { fetch: async (url, op) => { pedido = { url, chave: op.headers["x-lucro-key"] }; return new Response(JSON.stringify({ resumo: [{ mes: "2026-10", ganhos: 2, gastos: 230, lucro: -228, dizimoPct: 10, dizimo: 0 }], lancamentosMasterNuvem: [{ id: "l-mn-ganhos-202610", mes: "2026-10", tipo: "ganho", valor: 2, descricao: "Planos pagos: 2" }] })); } };
+let lido = await lerLucro(env);
+confere("painel lê o resumo com a chave", lido.configurado && lido.resumo.length === 1 && lido.master.length === 1 && pedido.url.endsWith("/api/lucro/resumo") && pedido.chave === env.LUCRO_KEY, { lido, pedido });
+env.CHINA_EM_CASA = { fetch: async () => new Response("{}", { status: 401 }) };
+confere("chave recusada aparece no painel", /recusou/.test((await lerLucro(env)).erro || ""), "");
+const semChave = Object.assign({}, env, { LUCRO_KEY: undefined });
+confere("sem chave: painel diz que falta", (await lerLucro(semChave)).configurado === false, "");
 
 console.log(falhas ? "\n" + falhas + " FALHA(S)" : "\nTODOS OS TESTES PASSARAM");
 process.exit(falhas ? 1 : 0);

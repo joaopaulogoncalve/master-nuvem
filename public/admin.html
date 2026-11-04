@@ -90,6 +90,26 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <div id="listaBlog" class="space-y-1"></div>
     </div>
 
+    <div id="secLucro" class="adSec hidden glass rounded-3xl p-6 space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-lg font-bold">💰 Lucro Online <span class="text-sm font-normal text-slate-400">Master Nuvem + China em Casa</span></h2>
+        <div class="flex gap-2">
+          <button type="button" id="btnLucroAtualizar" class="text-sm font-semibold text-cyan-300 hover:text-white">Atualizar</button>
+          <a href="https://china-em-casa.paulojao151.workers.dev/admin" target="_blank" rel="noopener" class="text-sm font-semibold text-cyan-300 hover:text-white">Abrir no China em Casa →</a>
+        </div>
+      </div>
+      <p class="text-xs text-slate-500">Lucro = ganhos − gastos dos dois negócios, por mês. Dízimo: 10% do lucro em 2026, +1 ponto por ano; mês sem lucro não tem dízimo. Os ganhos da Master Nuvem vão sozinhos todo dia às 4h; os outros lançamentos são feitos no admin do China em Casa.</p>
+      <div id="lucroTotais" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+      <div class="overflow-x-auto"><table class="w-full text-sm" style="font-variant-numeric:tabular-nums">
+        <thead><tr class="text-left text-slate-400 border-b border-blue-900"><th class="py-2 pr-3">Mês</th><th class="py-2 pr-3 text-right">Ganhos</th><th class="py-2 pr-3 text-right">Gastos</th><th class="py-2 pr-3 text-right">Lucro</th><th class="py-2 text-right">Dízimo</th></tr></thead>
+        <tbody id="lucroMeses"></tbody>
+      </table></div>
+      <div>
+        <p class="text-sm font-semibold text-slate-300 mb-1">Lançamentos da Master Nuvem</p>
+        <div id="lucroMaster" class="space-y-1 text-sm"></div>
+      </div>
+    </div>
+
     <div id="secSite" class="adSec hidden glass rounded-3xl p-6 space-y-3">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="text-lg font-bold">🩺 Site no ar <span class="text-sm font-normal text-slate-400">conferido a cada 5 min pelo UptimeRobot</span></h2>
@@ -871,11 +891,66 @@ async function carregarSite() {
 }
 document.getElementById("btnSite").addEventListener("click", carregarSite);
 
+/* ---------- Lucro Online ---------- */
+
+var lucroInfo = null;
+function reais(v) { return "R$ " + Number(v || 0).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+function nomeMes(m) {
+  var n = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  return n[parseInt(m.slice(5, 7), 10) - 1] + "/" + m.slice(0, 4);
+}
+async function carregarLucro() {
+  var resp = await fetch("/api/admin/lucro");
+  if (!resp.ok) return;
+  lucroInfo = await resp.json();
+  var tot = document.getElementById("lucroTotais"), corpo = document.getElementById("lucroMeses"), mn = document.getElementById("lucroMaster");
+  tot.innerHTML = ""; corpo.innerHTML = ""; mn.innerHTML = "";
+  if (!lucroInfo.configurado) { mn.appendChild(el("p", "text-slate-400", "Falta a chave LUCRO_KEY.")); return; }
+  if (lucroInfo.erro) { mn.appendChild(el("p", "text-red-300", lucroInfo.erro)); return; }
+  var s = { ganhos: 0, gastos: 0, lucro: 0, dizimo: 0 };
+  lucroInfo.resumo.forEach(function (m) {
+    s.ganhos += m.ganhos; s.gastos += m.gastos; s.lucro += m.lucro; s.dizimo += m.dizimo;
+    var tr = el("tr", "border-b border-blue-950");
+    tr.appendChild(el("td", "py-2 pr-3", nomeMes(m.mes)));
+    tr.appendChild(el("td", "py-2 pr-3 text-right text-emerald-300", reais(m.ganhos)));
+    tr.appendChild(el("td", "py-2 pr-3 text-right text-red-300", reais(m.gastos)));
+    tr.appendChild(el("td", "py-2 pr-3 text-right font-semibold " + (m.lucro >= 0 ? "text-emerald-300" : "text-red-300"), reais(m.lucro)));
+    tr.appendChild(el("td", "py-2 text-right", m.dizimo > 0 ? reais(m.dizimo) + " (" + m.dizimoPct + "%)" : "—"));
+    corpo.appendChild(tr);
+  });
+  if (!lucroInfo.resumo.length) corpo.appendChild(el("tr", "", "Nenhum lançamento ainda."));
+  [["Ganhos", reais(s.ganhos), "text-emerald-300"], ["Gastos", reais(s.gastos), "text-red-300"],
+   ["Lucro", reais(s.lucro), s.lucro >= 0 ? "text-emerald-300" : "text-red-300"], ["Dízimo a separar", reais(s.dizimo), "text-amber-200"]].forEach(function (x) {
+    var c = el("div", "rounded-xl border border-blue-900 p-3");
+    c.appendChild(el("p", "text-xs text-slate-400 uppercase tracking-wider", x[0] + " (total)"));
+    c.appendChild(el("p", "text-xl font-bold mt-1 " + x[2], x[1]));
+    tot.appendChild(c);
+  });
+  if (!lucroInfo.master.length) mn.appendChild(el("p", "text-slate-400", "Nenhum ainda."));
+  lucroInfo.master.slice().sort(function (a, b) { return a.mes < b.mes ? 1 : -1; }).forEach(function (l) {
+    var linha = el("div", "flex flex-wrap justify-between gap-2 bg-slate-900/40 rounded-lg px-3 py-2");
+    linha.appendChild(el("span", "", nomeMes(l.mes) + " · " + l.descricao));
+    linha.appendChild(el("span", l.tipo === "ganho" ? "text-emerald-300" : "text-red-300", (l.tipo === "ganho" ? "+ " : "− ") + reais(l.valor)));
+    mn.appendChild(linha);
+  });
+}
+document.getElementById("btnLucroAtualizar").addEventListener("click", carregarLucro);
+
+function resumoLucro() {
+  if (!lucroInfo) return ["Carregando...", 0];
+  if (!lucroInfo.configurado) return ["Falta a chave", 0];
+  if (lucroInfo.erro) return [lucroInfo.erro, 1];
+  var atual = new Date().toISOString().slice(0, 7);
+  var m = lucroInfo.resumo.filter(function (x) { return x.mes === atual; })[0];
+  if (!m) return ["Sem lançamentos neste mês", 0];
+  return ["Este mês: lucro " + reais(m.lucro) + (m.dizimo > 0 ? " · dízimo " + reais(m.dizimo) : ""), 0];
+}
+
 /* ---------- tela inicial: quadradinhos com resumo e ponto vermelho ---------- */
 
 var SECOES = [
   ["Clientes", "👥 Clientes"], ["Assistente", "☁️ Assistente"], ["Sentinela", "🛡️ Sentinela"],
-  ["Bancos", "🏦 Bancos"], ["Blog", "📝 Blog"], ["B2", "💾 Backblaze"], ["Copias", "📦 Cópias"], ["Site", "🩺 Site no ar"], ["Cupons", "🎟️ Cupons"]
+  ["Bancos", "🏦 Bancos"], ["Blog", "📝 Blog"], ["B2", "💾 Backblaze"], ["Copias", "📦 Cópias"], ["Site", "🩺 Site no ar"], ["Lucro", "💰 Lucro Online"], ["Cupons", "🎟️ Cupons"]
 ];
 var resumoTile = {};
 
@@ -921,6 +996,7 @@ function atualizarTiles() {
     B2: ["Lucro: " + document.getElementById("b2Lucro").textContent + "/mês", document.getElementById("b2Aviso").classList.contains("hidden") ? 0 : 1],
     Cupons: [document.getElementById("listaCupons").children.length + " cupom(ns)", 0],
     Site: resumoSite(),
+    Lucro: resumoLucro(),
     Copias: [ultimaCopia ? (ultimaCopia.ok ? "Última: " + dataHora(ultimaCopia.created_at) : "A última cópia falhou!") : "Nenhuma cópia ainda", ultimaCopia && (!ultimaCopia.ok || Date.now() - new Date(String(ultimaCopia.created_at).replace(" ", "T") + "Z").getTime() > 2 * 86400000) ? 1 : (ultimaCopia ? 0 : 1)]
   };
   var home = document.getElementById("adHome");
@@ -960,7 +1036,7 @@ function limitarLista(id, n) {
 
 // Depois de cada carregamento: encurta as listas e atualiza os quadradinhos.
 [["carregar", []], ["carregarB2", []], ["carregarCupons", [["listaCupons", 4]]], ["carregarAssistente", [["listaSemResposta", 5]]],
- ["carregarSentinela", [["senAlertas", 8]]], ["carregarBlog", [["listaBlog", 6]]], ["carregarBancos", [["bcLista", 6]]], ["carregarCopias", []], ["carregarSite", []]].forEach(function (x) {
+ ["carregarSentinela", [["senAlertas", 8]]], ["carregarBlog", [["listaBlog", 6]]], ["carregarBancos", [["bcLista", 6]]], ["carregarCopias", []], ["carregarSite", []], ["carregarLucro", []]].forEach(function (x) {
   var original = window[x[0]];
   window[x[0]] = async function () {
     var r = await original.apply(this, arguments);
@@ -999,6 +1075,7 @@ carregarBlog();
 carregarBancos();
 carregarCopias();
 carregarSite();
+carregarLucro();
 document.getElementById("sair").addEventListener("click", function () {
   postar("/api/logout").then(function () { window.location.href = "/entrar"; });
 });
