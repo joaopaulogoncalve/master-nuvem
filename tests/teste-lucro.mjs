@@ -91,5 +91,11 @@ globalThis.fetch = async () => { throw new Error("fora do ar"); };
 r = await enviarLucro(env, agora);
 confere("China em Casa fora do ar: não quebra", r.ok === false, r);
 
+// Com a ligação interna (service binding), manda por ela e não pela internet.
+let pelaLigacao = 0;
+env.CHINA_EM_CASA = { fetch: async (url, op) => { pelaLigacao++; return new Response("{}", { status: 200 }); } };
+r = await enviarLucro(env, agora);
+confere("usa a ligação interna com o China em Casa", r.ok && pelaLigacao === r.enviados.length && pelaLigacao > 0, { r, pelaLigacao });
+
 console.log(falhas ? "\n" + falhas + " FALHA(S)" : "\nTODOS OS TESTES PASSARAM");
 process.exit(falhas ? 1 : 0);

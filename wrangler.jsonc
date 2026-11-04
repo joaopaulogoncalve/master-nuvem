@@ -19,5 +19,7 @@
   ],
   // "0 * * * *" = limpeza de hora em hora; "*/20 * * * *" = sentinela (vigia de segurança a cada 20 minutos).
   "triggers": { "crons": ["0 * * * *", "*/20 * * * *"] },
+  // Ligação interna com o Worker do China em Casa (ponte do Lucro Online). Worker não pode chamar outro da mesma conta pelo *.workers.dev.
+  "services": [{ "binding": "CHINA_EM_CASA", "service": "china-em-casa" }],
   "observability": { "enabled": true }
 }
