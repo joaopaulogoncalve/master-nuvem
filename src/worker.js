@@ -1595,9 +1595,11 @@ async function enviarLucro(env, agora) {
   const enviados = [];
   for (const l of lancamentos) {
     try {
-      const resp = await fetch(LUCRO_URL, { method: "POST", headers: { "Content-Type": "application/json", "x-lucro-key": env.LUCRO_KEY }, body: JSON.stringify(l) });
+      // Pela ligação interna (service binding) quando existe; o endereço público fica só como reserva.
+      const chamar = env.CHINA_EM_CASA ? function (u, o) { return env.CHINA_EM_CASA.fetch(u, o); } : fetch;
+      const resp = await chamar(LUCRO_URL, { method: "POST", headers: { "Content-Type": "application/json", "x-lucro-key": env.LUCRO_KEY }, body: JSON.stringify(l) });
       enviados.push({ id: l.id, mes: l.mes, valor: l.valor, ok: resp.ok });
-      if (!resp.ok) console.error("Lucro Online recusou", l.id, resp.status);
+      if (!resp.ok) console.error("Lucro Online recusou", l.id, resp.status, (await resp.text()).slice(0, 200));
     } catch (e) {
       enviados.push({ id: l.id, mes: l.mes, valor: l.valor, ok: false });
       console.error("Lucro Online fora do ar:", e.message);
