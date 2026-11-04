@@ -496,6 +496,10 @@ async function tratarAdmin(request, env, url) {
     if (!c) return resposta({ error: "Cópia não encontrada" }, 404);
     return resposta({ url: await urlArquivo(env, c.chave, c.chave.split("/").pop(), true, 300) }, 200);
   }
+  if (caminho === "/api/admin/lucro" && request.method === "GET") {
+    return resposta(await lerLucro(env), 200);
+  }
+
   if (caminho === "/api/admin/lucro/enviar" && request.method === "POST") {
     if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
     const r = await enviarLucro(env);
@@ -1559,6 +1563,7 @@ function comProtecao(r, api) {
 // A Master Nuvem MANDA os próprios números para a aba 💰 Lucro Online do China em Casa (POST /api/lucro/lancar),
 // com a chave LUCRO_KEY (secret; a mesma do Worker china-em-casa). O mesmo "id" atualiza em vez de duplicar.
 const LUCRO_URL = "https://china-em-casa.paulojao151.workers.dev/api/lucro/lancar";
+const LUCRO_RESUMO_URL = "https://china-em-casa.paulojao151.workers.dev/api/lucro/resumo";
 const LUCRO_MESES_POR_ENVIO = 2;   // mês atual e o anterior (cada envio é uma chamada; o plano grátis tem limite por rodada)
 // Ganhos = planos pagos pelo Mercado Pago (id numérico), pelo mês do pedido. Cupom grátis e plano manual não contam.
 // Não inclui taxas do Mercado Pago nem os gastos fixos (domínio, chip, Claude): esses são lançados à mão no Lucro Online.
@@ -1606,6 +1611,20 @@ async function enviarLucro(env, agora) {
     }
   }
   return { ok: enviados.every(function (x) { return x.ok; }), enviados: enviados };
+}
+
+// Lê o resumo do Lucro Online (os dois negócios, mês a mês, com o dízimo) para o painel do /admin.
+async function lerLucro(env) {
+  if (!env.LUCRO_KEY) return { configurado: false };
+  try {
+    const chamar = env.CHINA_EM_CASA ? function (u, o) { return env.CHINA_EM_CASA.fetch(u, o); } : fetch;
+    const resp = await chamar(LUCRO_RESUMO_URL, { headers: { "x-lucro-key": env.LUCRO_KEY } });
+    if (!resp.ok) return { configurado: true, erro: resp.status === 401 ? "O Lucro Online recusou a chave LUCRO_KEY." : "O Lucro Online respondeu com erro " + resp.status + "." };
+    const d = await resp.json();
+    return { configurado: true, resumo: d.resumo || [], master: d.lancamentosMasterNuvem || [] };
+  } catch (e) {
+    return { configurado: true, erro: "Não foi possível falar com o Lucro Online agora." };
+  }
 }
 
 /* ---------- Site no ar (UptimeRobot) ---------- */
@@ -1659,7 +1678,7 @@ async function lembreteWhatsapp(env, agora) {
   return true;
 }
 
-export { lembreteWhatsapp, lerUptimeRobot, enviarLucro };
+export { lembreteWhatsapp, lerUptimeRobot, enviarLucro, lerLucro };
 
 export default {
   async scheduled(event, env, ctx) {
