@@ -191,6 +191,11 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <div class="glass rounded-2xl p-5"><p class="text-xs text-slate-400 uppercase tracking-wider">Receita mensal</p><p id="totReceita" class="text-2xl font-bold mt-1 text-emerald-300">-</p><p class="text-xs text-slate-500 mt-1">estimada, sem planos manuais</p></div>
     </div>
 
+    <div class="glass rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm text-slate-300">💰 <strong>Lucro Online</strong>: os ganhos vão sozinhos todo dia às 4h para o admin do China em Casa.</p>
+      <button type="button" id="btnLucro" class="text-sm font-semibold text-cyan-300 border border-blue-800 hover:border-cyan-400 px-3 py-2 rounded-xl">Mandar agora</button>
+    </div>
+
     <input id="busca" type="search" placeholder="Buscar por nome ou e-mail" class="campo">
 
     <div id="lista" class="space-y-4"></div>
@@ -974,6 +979,17 @@ document.getElementById("faqNovo").addEventListener("click", function () { limpa
 });
 
 document.getElementById("busca").addEventListener("input", desenhar);
+document.getElementById("btnLucro").addEventListener("click", async function () {
+  var b = this;
+  b.disabled = true;
+  b.textContent = "Mandando...";
+  var r = await postar("/api/admin/lucro/enviar");
+  b.disabled = false;
+  b.textContent = "Mandar agora";
+  if (r.dados.erro) { avisar(r.dados.erro, "Lucro Online"); return; }
+  var n = (r.dados.enviados || []).length;
+  avisar(r.ok ? (n ? n + " lançamento(s) atualizados no Lucro Online." : "Nada para mandar ainda (nenhum ganho nos últimos meses).") : "O Lucro Online não aceitou. Confira a chave LUCRO_KEY.", r.ok ? "Pronto ✅" : "Ops");
+});
 document.getElementById("btnB2").addEventListener("click", carregarB2);
 carregarB2();
 carregarCupons();

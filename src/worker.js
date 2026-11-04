@@ -496,6 +496,12 @@ async function tratarAdmin(request, env, url) {
     if (!c) return resposta({ error: "Cópia não encontrada" }, 404);
     return resposta({ url: await urlArquivo(env, c.chave, c.chave.split("/").pop(), true, 300) }, 200);
   }
+  if (caminho === "/api/admin/lucro/enviar" && request.method === "POST") {
+    if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
+    const r = await enviarLucro(env);
+    return resposta(r, r.ok ? 200 : 502);
+  }
+
   if (caminho === "/api/admin/copias/agora" && request.method === "POST") {
     if (!origemOk(request, url)) return resposta({ error: "Origem inválida" }, 403);
     const r = await fazerCopia(env);
@@ -906,14 +912,6 @@ async function tratarApi(request, env, url) {
     if (!(await dentroDoLimite(env, await chaveConta("confirmar|" + u.email), "confirmar_email", 3))) return resposta({ error: "Já mandamos alguns e-mails. Espere 1 hora e olhe também o Spam." }, 429);
     const ok = await enviarConfirmacao(env, u);
     return resposta(ok ? { ok: true, email: u.email } : { error: "Não conseguimos enviar agora. Tente de novo em alguns minutos." }, ok ? 200 : 502);
-  }
-
-  // Lucro Online: o admin do China em Casa lê aqui os totais da Master Nuvem mês a mês (só leitura, só números).
-  // Protegido pelo segredo LUCRO_TOKEN, gravado igual nos dois Workers. Sem o segredo, a rota nem existe.
-  if (caminho === "/api/integracao/lucro" && request.method === "GET") {
-    const tk = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-    if (!env.LUCRO_TOKEN || env.LUCRO_TOKEN.length < 32 || !iguais(tk, env.LUCRO_TOKEN)) return resposta({ error: "Rota não encontrada" }, 404);
-    return resposta(await resumoLucro(env), 200);
   }
 
   // Configurações públicas que a página precisa (ex.: chave pública do Turnstile).
@@ -1557,7 +1555,11 @@ function comProtecao(r, api) {
   return new Response(r.body, { status: r.status, statusText: r.statusText, headers: h });
 }
 
-/* ---------- Lucro Online (resumo para o admin do China em Casa) ---------- */
+/* ---------- Lucro Online (ponte com o admin do China em Casa) ---------- */
+// A Master Nuvem MANDA os próprios números para a aba 💰 Lucro Online do China em Casa (POST /api/lucro/lancar),
+// com a chave LUCRO_KEY (secret; a mesma do Worker china-em-casa). O mesmo "id" atualiza em vez de duplicar.
+const LUCRO_URL = "https://china-em-casa.paulojao151.workers.dev/api/lucro/lancar";
+const LUCRO_MESES_POR_ENVIO = 2;   // mês atual e o anterior (cada envio é uma chamada; o plano grátis tem limite por rodada)
 // Ganhos = planos pagos pelo Mercado Pago (id numérico), pelo mês do pedido. Cupom grátis e plano manual não contam.
 // Não inclui taxas do Mercado Pago nem os gastos fixos (domínio, chip, Claude): esses são lançados à mão no Lucro Online.
 async function resumoLucro(env) {
@@ -1575,6 +1577,33 @@ async function resumoLucro(env) {
     custo_armazenamento_mes_estimado_reais: Math.round(pagos / 1e12 * B2_US_POR_TB * DOLAR_RESERVA * 100) / 100,
     observacao: "Ganhos brutos (antes da taxa do Mercado Pago: PIX ~0,99%, cartão ~4,99%). Gastos fixos são lançados à mão."
   };
+}
+
+// Envia os ganhos (e o custo do armazenamento acima do grátis) dos últimos meses. Devolve o que foi enviado.
+async function enviarLucro(env, agora) {
+  if (!env.LUCRO_KEY) return { ok: false, erro: "Falta a chave LUCRO_KEY" };
+  const r = await resumoLucro(env);
+  const atual = new Date(agora || Date.now()).toISOString().slice(0, 7);
+  const lancamentos = r.meses.slice(-LUCRO_MESES_POR_ENVIO).filter(function (m) { return m.ganhos_centavos > 0; }).map(function (m) {
+    return { mes: m.mes, tipo: "ganho", id: "ganhos-" + m.mes.replace("-", ""), valor: m.ganhos_centavos / 100,
+      descricao: "Planos pagos: " + m.vendas + " (bruto, antes da taxa do Mercado Pago)" };
+  });
+  if (r.custo_armazenamento_mes_estimado_reais > 0) {
+    lancamentos.push({ mes: atual, tipo: "gasto", id: "armazenamento-" + atual.replace("-", ""), valor: r.custo_armazenamento_mes_estimado_reais,
+      descricao: "Armazenamento dos arquivos (" + r.armazenamento_atual_gb + " GB, estimado)" });
+  }
+  const enviados = [];
+  for (const l of lancamentos) {
+    try {
+      const resp = await fetch(LUCRO_URL, { method: "POST", headers: { "Content-Type": "application/json", "x-lucro-key": env.LUCRO_KEY }, body: JSON.stringify(l) });
+      enviados.push({ id: l.id, mes: l.mes, valor: l.valor, ok: resp.ok });
+      if (!resp.ok) console.error("Lucro Online recusou", l.id, resp.status);
+    } catch (e) {
+      enviados.push({ id: l.id, mes: l.mes, valor: l.valor, ok: false });
+      console.error("Lucro Online fora do ar:", e.message);
+    }
+  }
+  return { ok: enviados.every(function (x) { return x.ok; }), enviados: enviados };
 }
 
 /* ---------- Site no ar (UptimeRobot) ---------- */
@@ -1628,7 +1657,7 @@ async function lembreteWhatsapp(env, agora) {
   return true;
 }
 
-export { lembreteWhatsapp, lerUptimeRobot };
+export { lembreteWhatsapp, lerUptimeRobot, enviarLucro };
 
 export default {
   async scheduled(event, env, ctx) {
@@ -1636,6 +1665,7 @@ export default {
     // A lixeira do Meu estúdio (removidos há mais de 30 min) é esvaziada logo depois da sentinela.
     // A cópia de segurança do banco roda uma vez por dia, na limpeza das 06:00 UTC (03:00 em Brasília).
     if (event.cron === "0 * * * *") ctx.waitUntil(limpeza(env).then(function (relatorio) {
+      if (new Date(event.scheduledTime).getUTCHours() === 7) return enviarLucro(env, event.scheduledTime).then(function () { return relatorio; });
       if (new Date(event.scheduledTime).getUTCHours() !== 6) return relatorio;
       return fazerCopia(env).then(function () { return lembreteWhatsapp(env, event.scheduledTime); }).then(function () { return relatorio; });
     }));
