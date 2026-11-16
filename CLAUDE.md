@@ -242,7 +242,7 @@ recuperação de senha, Termos/Privacidade, limpeza automática (modo teste), bo
    `/api/e/baixar` com pedido `pago`. Pagamento no PIX do fotógrafo (`portais.instrucoes_pagamento`), confirmação manual
    ("✔ Pago" → e-mail ao comprador). Limite 10 pedidos/h por IP. Preço sempre calculado no servidor (`calcularTotal`).
    **Blog — 2026-10-25** (`src/blog.js` + `src/blog-posts.js`): `/blog`, `/blog/<slug>` e `/sitemap.xml` montados no worker.
-   Agenda automática: post com `publicar` futuro (data de Brasília) não aparece até o dia. 13 posts (5 no ar, 8 agendados até 21/11).
+   Agenda automática: post com `publicar` futuro (data de Brasília) não aparece até o dia. 22 posts (agendados 1 por semana até 13/01/2027; 8 novos escritos em 2026-11-16).
    Busca e "mais procurados" (`PALAVRAS_EM_ALTA`, lista fixa — não vem do Google Trends). Admin: seção "Blog" (agenda).
    `public/robots.txt`. Nuvenzinha aponta para os posts (`migrations/0014_faq_blog_eventos.sql`, 60 respostas).
    Regra: post publicado não pode linkar post agendado para depois dele (o teste confere).
