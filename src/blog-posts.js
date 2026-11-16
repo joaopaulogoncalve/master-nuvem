@@ -542,5 +542,331 @@ Na Master Nuvem, **o dinheiro dos seus clientes vai direto para você**. Nós s�
 
 Porque o nosso negócio é o **espaço**. Você paga pelos GB que usa, e o que você vende é seu.
 `
+  },
+  {
+    slug: "portfolio-do-fotografo-no-google",
+    titulo: "Portfólio do fotógrafo: sua página de vendas no Google, dentro do seu plano",
+    descricao: "Monte uma página com as suas melhores fotos, WhatsApp, Instagram e um botão de orçamento, sem pagar site à parte.",
+    palavras: "portfolio fotografo, site para fotografo, pagina de fotografo, orcamento fotografia, aparecer no google, link na bio",
+    categoria: "Fotógrafos",
+    publicar: "2026-11-25",
+    leitura: 4,
+    corpo: `
+Muita gente descobre um fotógrafo pelo Instagram, mas na hora de decidir quer ver **mais trabalhos, num lugar organizado**, e falar com você sem complicação. É para isso que serve o portfólio.
+
+## O que é
+
+Uma página pública com o seu nome, em **masternuvem.com.br/f/seu-estudio**, que qualquer pessoa abre, inclusive pelo Google. Ela mostra:
+
+- uma **capa** grande, com o seu nome e uma frase de destaque;
+- **galerias** separadas por tipo de trabalho (Casamentos, 15 anos, Ensaios...);
+- o texto **Sobre**, a sua logo e a sua cor;
+- botões de **WhatsApp** e **Instagram**;
+- o formulário **Pedir orçamento**, que chega direto no seu e-mail.
+
+Não tem custo extra: faz parte do seu plano.
+
+## Como montar em 5 minutos
+
+1. Entre em [Meu estúdio](/meu-portal?aba=portfolio) e clique em **🌟 Portfólio**.
+2. Clique em **➕ Nova galeria** e dê um nome, por exemplo "Casamentos".
+3. Clique em **⬆️ Enviar fotos** e escolha as suas melhores. O site reduz as fotos no seu navegador antes de enviar: ficam leves e **não são o original**.
+4. Toque na **⭐** da foto que vai ser a capa.
+5. Em **Textos e contatos**, preencha a frase de destaque, a cidade, o WhatsApp e o Instagram.
+6. Clique em **🚀 Colocar no ar** e depois em **Abrir minha página**.
+
+> Escolha poucas e boas. Cada galeria aceita até 60 fotos, mas 15 a 25 fotos fortes vendem mais do que 60 parecidas.
+
+## Pedidos de orçamento
+
+Quando alguém preenche o formulário, o pedido aparece na aba **Orçamentos** com um 🔴 e chega no seu e-mail. Dali dá para responder pelo WhatsApp com uma mensagem já pronta.
+
+## Dicas para aparecer mais
+
+- Coloque o link na **bio do Instagram** e no seu **Perfil da Empresa no Google**.
+- Use na frase de destaque o que as pessoas procuram: "Fotografia de casamento em Goiânia" funciona melhor do que só o nome do estúdio.
+- Atualize as galerias a cada trabalho novo que você ama.
+
+A página só fica no ar enquanto o seu plano está ativo e tem pelo menos uma foto.
+`
+  },
+  {
+    slug: "contrato-de-fotografia-assinado-online",
+    titulo: "Contrato de fotografia assinado online: como funciona e o que ele registra",
+    descricao: "Mande o contrato pelo site, o cliente assina pelo celular com um código no e-mail e os dois recebem o comprovante.",
+    palavras: "contrato fotografia, contrato de casamento fotografo, assinatura online, assinar contrato pelo celular, contrato digital",
+    categoria: "Fotógrafos",
+    publicar: "2026-12-02",
+    leitura: 5,
+    corpo: `
+Imprimir, levar para assinar, escanear e guardar: o contrato de papel dá trabalho e às vezes nem volta. Na Master Nuvem o contrato vai pelo link e é assinado no celular do cliente.
+
+## Como mandar
+
+1. Em [Meu estúdio](/meu-portal), clique em **📝 Contratos**.
+2. Escolha um modelo (casamento, 15 anos e festas, ensaio, vídeo, contador ou em branco) e o cliente.
+3. O texto já vem preenchido com os dados do cliente, do estúdio e as regras do álbum (quantas fotos estão incluídas e o preço da foto a mais).
+4. Revise, mude o que quiser e clique em **Enviar**. O cliente recebe por e-mail, e você ainda pode mandar o link pelo WhatsApp.
+
+Dá para salvar os seus próprios textos em **⭐ Meus modelos**.
+
+## Como o cliente assina
+
+1. Abre o link e lê o contrato.
+2. Coloca o nome completo e o CPF ou CNPJ. O site confere se os números são válidos.
+3. Marca **"Li e concordo"**.
+4. Digita o código de 6 números que chegou no e-mail dele.
+
+Pronto: os dois recebem um e-mail de confirmação, e o contrato fica com o botão **📄 Baixar PDF**.
+
+## O que fica registrado
+
+O comprovante guarda a **data e a hora**, o **e-mail** que recebeu o código, o **IP** e o **navegador** usados e uma "impressão digital" do texto (um código que muda se qualquer letra do contrato for alterada depois).
+
+## Mais de uma pessoa
+
+Casamento tem dois noivos; 15 anos tem os pais. Você pode colocar várias pessoas para assinar, cada uma com o próprio link e código, e escolher a regra: **todos** precisam assinar para liberar as fotos, **basta um**, ou **nenhum** trava as fotos.
+
+Se a contratante for menor de idade, quem assina são os responsáveis, e o contrato ganha uma cláusula própria para isso.
+
+## Contrato antes das fotos
+
+Ligando a opção de contrato obrigatório, o cliente só vê o álbum depois de assinar. Ao entrar, ele vê o aviso "Antes de ver suas fotos, assine o contrato".
+
+> Os modelos são um ponto de partida e não substituem a orientação de um advogado. Se o seu trabalho tem regras próprias (multa, remarcação, direito de imagem), ajuste o texto antes de enviar.
+`
+  },
+  {
+    slug: "quanto-custa-guardar-1-tb",
+    titulo: "Quanto custa guardar 1 TB? Google Drive, Dropbox e Master Nuvem lado a lado",
+    descricao: "Uma comparação honesta: quando um plano pessoal resolve e quando vale um espaço feito para trabalhar com clientes.",
+    palavras: "quanto custa 1 tb, google one preço, dropbox preço, armazenamento em nuvem barato, nuvem para fotografo, comparação nuvem",
+    categoria: "Dicas",
+    publicar: "2026-12-09",
+    leitura: 4,
+    corpo: `
+Se o seu espaço acabou, a primeira ideia é pagar mais no serviço que você já usa. Às vezes é o certo. Às vezes não.
+
+## Como os grandes cobram
+
+Google Drive (Google One) e Dropbox vendem **planos fixos**: você escolhe um degrau (100 GB, 2 TB...) e paga por ele, use ou não. Os preços mudam com frequência, então confira o valor atual no site de cada um antes de decidir.
+
+Eles são ótimos para **uso pessoal**: fotos da família, documentos, celular.
+
+## Como a Master Nuvem cobra
+
+Você escolhe **exatamente quantos GB** quer, de 1 GB até 5 TB, e paga só por isso. Alguns exemplos de preço por mês:
+
+- **100 GB**: R$ 10,40
+- **1 TB**: R$ 59,00
+- **5 TB**: R$ 299,00
+
+O valor de qualquer tamanho aparece na hora na [calculadora da página inicial](/#calculadora). O pagamento é no PIX ou no cartão, sem renovação automática.
+
+## Então qual escolher?
+
+Se você só quer guardar as suas coisas, um plano pessoal de um serviço grande pode sair mais barato. Somos honestos sobre isso.
+
+A diferença aparece quando o espaço é **para trabalhar com clientes**:
+
+- o seu cliente entra num **portal com a sua marca**, sem precisar de conta no Google;
+- cada cliente vê **só a pasta dele**, com prazo de acesso e limite de downloads;
+- dá para **cobrar foto extra**, mandar **contrato para assinar** e **vender fotos de eventos** sem comissão;
+- você tem um **portfólio público** para receber pedidos de orçamento.
+
+Tudo isso entra no preço do espaço. Veja o [guia do Portal do Cliente](/blog/portal-do-cliente-para-fotografos).
+
+> Dá para testar antes: o teste grátis libera um espaço pequeno por 24 horas, sem cartão.
+`
+  },
+  {
+    slug: "organizar-e-entregar-fotos-de-casamento",
+    titulo: "Como organizar e entregar as fotos de um casamento sem dor de cabeça",
+    descricao: "Um roteiro do cartão de memória até o casal baixar as fotos: pastas, seleção, prazo, favoritas e edição.",
+    palavras: "entregar fotos de casamento, organizar fotos casamento, galeria para clientes, seleção de fotos, prazo de entrega fotografo",
+    categoria: "Fotógrafos",
+    publicar: "2026-12-16",
+    leitura: 5,
+    corpo: `
+Um casamento rende milhares de arquivos. Sem um caminho definido, a entrega vira uma maratona de WhatsApp. Este é um roteiro simples que funciona.
+
+## 1. No dia seguinte: copie e duplique
+
+- Copie os cartões para o computador numa pasta com **data e nome do casal** (ex.: "2026-12-12 Ana e Pedro").
+- Faça uma **segunda cópia** fora do computador (HD externo ou nuvem) antes de formatar qualquer cartão.
+
+## 2. Separe por momentos
+
+Dentro da pasta: making of, cerimônia, retratos, festa. Fica mais fácil editar e o casal acha o que quer.
+
+## 3. Crie o álbum do casal
+
+Em [Meu estúdio](/meu-portal) → **➕ Criar novo** → **Link fechado**, o passo a passo pergunta uma coisa por vez:
+
+- **Prazo** de acesso (por exemplo, 60 dias);
+- se o casal pode **escolher favoritas** e até quantas (ótimo para a seleção do álbum impresso);
+- se pode **pedir edição** e em quantas fotos;
+- se pode **baixar**, quantas vezes por foto e quantas fotos no total;
+- se precisa **assinar o contrato** antes de ver.
+
+Os dois noivos podem ter **acesso próprio**, cada um com o seu login.
+
+## 4. Envie e deixe o site trabalhar
+
+Ao enviar, o seu navegador cria uma **prévia leve** de cada foto. O casal navega rápido pelas prévias e só baixa o original quando você liberar.
+
+## 5. Acompanhe sem perguntar
+
+Na central do Meu estúdio você vê quem já entrou, quantas fotos baixou, quais escolheu e quais pedidos de edição chegaram.
+
+> Mande o link pelo botão de WhatsApp do álbum: a mensagem já vai pronta, sem a senha. O casal cria a própria senha no primeiro acesso.
+`
+  },
+  {
+    slug: "backup-regra-3-2-1-para-fotografos",
+    titulo: "Backup do jeito certo: a regra 3-2-1 para quem vive de fotos e vídeos",
+    descricao: "Três cópias, dois tipos de lugar, uma fora de casa. Como aplicar sem gastar muito.",
+    palavras: "backup de fotos, regra 3-2-1, hd externo, perder fotos, cópia de segurança, backup fotografo",
+    categoria: "Dicas",
+    publicar: "2026-12-23",
+    leitura: 4,
+    corpo: `
+HD queima, notebook é roubado, cartão corrompe. Quem trabalha com fotos de clientes não pode depender de uma cópia só.
+
+## A regra
+
+- **3 cópias** de cada trabalho importante;
+- em **2 tipos** de lugar diferentes (por exemplo, computador e HD externo);
+- **1 cópia fora de casa** (na nuvem ou em outro endereço).
+
+## Um jeito simples de montar
+
+1. **Cópia 1:** o computador onde você edita.
+2. **Cópia 2:** um HD externo, atualizado toda semana.
+3. **Cópia 3:** a nuvem, que fica longe de roubo, incêndio e queda de energia.
+
+Na Master Nuvem os arquivos ficam em data centers profissionais, com criptografia e redundância (cada arquivo é guardado em vários discos ao mesmo tempo).
+
+## Erros comuns
+
+- **Sincronizar não é backup.** Se você apaga no computador e a pasta sincroniza, apaga nos dois lugares.
+- **Nunca testar a cópia.** De vez em quando, abra um arquivo antigo do backup para ver se está inteiro.
+- **Formatar o cartão cedo demais.** Só formate depois que existirem duas cópias.
+
+## E quando o plano vence?
+
+Na Master Nuvem não existe renovação automática. Se o plano vencer, o envio de arquivos novos para, mas os seus arquivos ficam guardados por **15 dias** para você renovar ou baixar, e você recebe avisos por e-mail antes. Veja os [Termos de uso](/termos).
+
+> Quanto espaço você precisa? Veja [quantas fotos e vídeos cabem em cada plano](/blog/quanto-espaco-eu-preciso).
+`
+  },
+  {
+    slug: "vender-fotos-de-formatura-e-eventos-de-fim-de-ano",
+    titulo: "Formaturas e eventos de fim de ano: como vender as fotos por foto, sem comissão",
+    descricao: "Galeria aberta com marca d'água, busca por número, preço por foto com desconto e pagamento direto no seu PIX.",
+    palavras: "vender fotos de formatura, fotos de evento, vender fotos online, preço por foto, desconto por quantidade, fotografo de eventos",
+    categoria: "Fotógrafos",
+    publicar: "2026-12-30",
+    leitura: 4,
+    corpo: `
+Formatura, confraternização, apresentação de fim de ano: muita gente quer as fotos, e cada pessoa quer só as dela. Vender por foto resolve.
+
+## Como funciona
+
+1. Em [Meu estúdio](/meu-portal?aba=abertos) → **➕ Criar novo** → **Link aberto**, dê um nome ao evento e defina o **preço por foto**.
+2. Se quiser, crie **faixas de desconto** (por exemplo, a partir de 10 fotos o preço cai).
+3. Envie as fotos. O seu navegador cria uma **prévia com marca d'água** de cada uma; o original nunca aparece antes do pagamento.
+4. Divulgue o link no grupo da turma ou da empresa.
+
+## O que o comprador faz
+
+- Abre o link, procura as fotos em que aparece e, quando você cadastra números (de camisa, de peito), busca pelo número.
+- Escolhe as fotos, vê o total já com o desconto e faz o pedido.
+- Paga no **seu PIX** (ou no seu link de pagamento).
+
+## O que você faz
+
+Quando o dinheiro cair na sua conta, clique em **✔ Pago**. O comprador recebe um e-mail e baixa as fotos **sem marca d'água**.
+
+## Por que sem comissão?
+
+O dinheiro vai direto para você. A Master Nuvem cobra só o espaço que as fotos ocupam. Leia também [se a marca d'água protege mesmo](/blog/marca-dagua-protege-mesmo).
+
+> Precisa emitir nota? Ligue a opção de nota fiscal e o pedido já pede o CPF ou CNPJ de quem compra. Quem emite a nota é você.
+`
+  },
+  {
+    slug: "como-cobrar-foto-extra-do-cliente",
+    titulo: "Como cobrar foto extra do cliente sem constrangimento",
+    descricao: "Defina quantas fotos estão no pacote, o preço da foto a mais e deixe o site fazer a conta e o pedido.",
+    palavras: "foto extra, cobrar fotos extras, pacote de fotos, fotografo cobrança, limite de fotos, vender mais fotos",
+    categoria: "Fotógrafos",
+    publicar: "2027-01-06",
+    leitura: 4,
+    corpo: `
+O cliente ama as fotos e quer mais do que o pacote. Ótimo! O problema é pedir o dinheiro sem parecer chato. A saída é deixar a regra clara desde o começo.
+
+## Combine antes
+
+No contrato e na conversa de venda, diga quantas fotos estão incluídas e quanto custa cada foto a mais. Os [modelos de contrato](/blog/contrato-de-fotografia-assinado-online) já trazem esses números das regras do álbum.
+
+## Configure no álbum
+
+Ao criar o álbum (ou na aba **Regras**), em **Baixar**:
+
+- **Limite de fotos**: quantas fotos diferentes o cliente pode baixar (baixar de novo a mesma não conta);
+- **Cobrar as fotos a mais**: o preço de cada uma;
+- **Desconto por quantidade**: se quiser, o preço cai a partir de um número de fotos.
+
+## O que o cliente vê
+
+Ao chegar no limite, o site avisa e oferece **pedir fotos a mais**. Ele escolhe quantas, vê o valor já com desconto, e o pedido vira uma cobrança com o seu PIX ou link de pagamento.
+
+Você recebe um **e-mail** avisando. Quando o pagamento cair, marque como **pago** e as fotos extras são liberadas na hora.
+
+## Por que funciona
+
+- O cliente vê a regra na tela, não precisa ouvir de você.
+- Ninguém esquece de cobrar, e ninguém baixa sem pagar.
+- O desconto por quantidade incentiva a levar mais.
+
+> Comece com um preço por foto que você ficaria feliz em receber muitas vezes. É melhor vender 30 fotos extras com desconto do que 3 caras.
+`
+  },
+  {
+    slug: "planejamento-2027-para-fotografos",
+    titulo: "Planejamento 2027 para fotógrafos: arquivos, clientes e vendas em ordem",
+    descricao: "Uma lista curta para começar o ano organizado: limpar arquivos, revisar backup, contratos, preços e portfólio.",
+    palavras: "planejamento fotografo, organizar arquivos, metas 2027 fotografia, checklist fotografo, como conseguir mais clientes fotografia",
+    categoria: "Dicas",
+    publicar: "2027-01-13",
+    leitura: 4,
+    corpo: `
+Janeiro é o melhor mês para arrumar a casa antes da temporada. Uma tarde com esta lista economiza semanas no resto do ano.
+
+## Arquivos
+
+- Apague **duplicadas e fotos descartadas** dos trabalhos já entregues.
+- Confira se todo trabalho de 2026 tem a **cópia fora de casa**. Veja a [regra 3-2-1](/blog/backup-regra-3-2-1-para-fotografos).
+- Veja quanto espaço você usa de verdade e ajuste o plano. Dá para **aumentar e pagar só os dias que faltam**: veja [como aumentar o espaço](/blog/aumentar-espaco-so-pelos-dias).
+
+## Clientes e privacidade
+
+- Defina **por quanto tempo** você guarda as fotos de cada cliente e avise isso no contrato.
+- Revise quem ainda tem acesso a álbuns antigos. Leia os [cuidados de LGPD para fotógrafos](/blog/lgpd-para-fotografos).
+
+## Contratos e preços
+
+- Atualize o seu **modelo de contrato** com as regras de 2027.
+- Revise a **tabela de preços**: pacote, foto extra, edição, deslocamento.
+
+## Vendas
+
+- Atualize o **portfólio** com os melhores trabalhos do ano. Veja [como montar o seu](/blog/portfolio-do-fotografo-no-google).
+- Peça **avaliação no Google** para os clientes satisfeitos de 2026.
+- Planeje os eventos da temporada (formaturas, festas) e [como vender as fotos por foto](/blog/vender-fotos-de-formatura-e-eventos-de-fim-de-ano).
+
+> Escolha uma meta só para o primeiro trimestre, por exemplo "10 pedidos de orçamento por mês pelo portfólio", e acompanhe toda semana.
+`
   }
 ];
