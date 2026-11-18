@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://rezendecredito.com.br/sitemap.xml

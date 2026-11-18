@@ -6,3 +6,10 @@
 node_modules/
 .wrangler/
 fotos-google/
+
+# Vídeos: chave do Gemini e vozes geradas (NUNCA commitar a chave)
+videos/.gemini-key
+videos/voz/
+
+# Clientes de sites: material particular (manual, logos, conversas). Fica só no PC: o GitHub é público.
+clientes/*/privado/
