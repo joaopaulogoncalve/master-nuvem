@@ -1663,6 +1663,7 @@ async function lerUptimeRobot(env) {
 // e cria um alerta no /admin (Sentinela, com 🔴). A chave do alerta impede repetir no mesmo ciclo.
 // Link do Google para avaliar a Master Nuvem (Perfil da Empresa → Solicitar avaliações).
 const LINK_AVALIACAO_GOOGLE = "https://g.page/r/CQcUlW05oGWLEBM/review";
+const LINK_WHATSAPP = "https://wa.me/5562982846067";
 const DIAS_RECARGA_WHATSAPP = 30;   // chip TIM: recarga de R$ 15-20 costuma valer 30 dias
 const INICIO_RECARGA_WHATSAPP = "2026-10-27";
 async function lembreteWhatsapp(env, agora) {
@@ -1725,6 +1726,8 @@ export default {
     }
     // Atalho para avaliar a Master Nuvem no Google (usado nos rodapés, na Nuvenzinha e no e-mail de 7 dias).
     if (url.pathname === "/avaliar" || url.pathname === "/avaliar/") return Response.redirect(LINK_AVALIACAO_GOOGLE, 302);
+    // Atalho para o WhatsApp de atendimento (a Nuvenzinha só aceita links do próprio site).
+    if (url.pathname === "/whatsapp" || url.pathname === "/whatsapp/") return Response.redirect(LINK_WHATSAPP, 302);
 
     // Portfólio público do fotógrafo: /f/<endereço-do-estúdio> abre sempre a mesma página.
     if (/^\/f\/[a-z0-9-]+\/?$/.test(url.pathname)) {
