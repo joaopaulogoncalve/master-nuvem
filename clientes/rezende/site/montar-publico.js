@@ -75,10 +75,76 @@ fs.writeFileSync(path.join(OUT, 'emilly-rezende.vcf'), [
   'URL:' + URL, 'ADR;TYPE=WORK:;;;Trindade;GO;;Brasil', 'END:VCARD', ''].join('\r\n'));
 
 fs.copyFileSync(path.join(__dirname, 'modelos', 'base.css'), path.join(OUT, 'base.css'));
-fs.writeFileSync(path.join(OUT, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${URL}/sitemap.xml\n`);
+// Robôs de IA não podem copiar o site (o Google e o Bing continuam liberados, por causa da busca).
+const ROBOS_IA = ['GPTBot', 'ChatGPT-User', 'OAI-SearchBot', 'ClaudeBot', 'Claude-Web', 'anthropic-ai', 'Google-Extended',
+  'Applebot-Extended', 'CCBot', 'PerplexityBot', 'Perplexity-User', 'Bytespider', 'Amazonbot', 'meta-externalagent',
+  'FacebookBot', 'cohere-ai', 'Diffbot', 'ImagesiftBot', 'Omgilibot', 'Timpibot', 'YouBot', 'DeepSeekBot'];
+fs.writeFileSync(path.join(OUT, 'robots.txt'),
+  ROBOS_IA.map(r => `User-agent: ${r}\nDisallow: /\n`).join('\n') +
+  `\nUser-agent: *\nAllow: /\nSitemap: ${URL}/sitemap.xml\n`);
+// Links colados em mensagens às vezes levam a pontuação junto (ex.: "rezendecredito.com.br/simular:" no WhatsApp).
+// Esses endereços e os nomes antigos dos rascunhos levam para a página certa.
+const DESVIOS = [];
+for (const [de, para] of [['/simular', '/simular/'], ['/links', '/links/']]) {
+  // Cuidado: "/links/:" seria um coringa da Cloudflare (pegaria o próprio /links/ e daria vaivém infinito).
+  for (const p of [':', '%3A', '%3a', '.', ',', ')', ';', '!']) { DESVIOS.push(`${de}${p} ${para} 301`); }
+}
+DESVIOS.push('/modelo-1.html / 301', '/modelo-2.html /simular/ 301', '/modelo-3.html /links/ 301', '/modelo-unido.html / 301',
+  '/cartao /links/ 301', '/simulacao /simular/ 301', '/simule /simular/ 301', '/contato /simular/ 301',
+  '/whatsapp https://wa.me/5562994561967 302');
+fs.writeFileSync(path.join(OUT, '_redirects'), DESVIOS.join('\n') + '\n');
 fs.writeFileSync(path.join(OUT, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n<url><loc>${URL}/</loc></url>\n<url><loc>${URL}/simular/</loc></url>\n<url><loc>${URL}/links/</loc></url>\n</urlset>\n`);
-// www → domínio principal
-fs.writeFileSync(path.join(OUT, '_headers'), `/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Frame-Options: SAMEORIGIN\n  Strict-Transport-Security: max-age=31536000\n`);
+// Proteções de todas as páginas. CSP: só carrega coisas do próprio site + fontes do Google
+// (scripts embutidos continuam liberados: o formulário e o JSON do Google usam).
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com", // contador de visitas da Cloudflare
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  "img-src 'self' data:",
+  "connect-src 'self' https://cloudflareinsights.com",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+  'upgrade-insecure-requests',
+].join('; ');
+fs.writeFileSync(path.join(OUT, '_headers'), [
+  '/*',
+  '  X-Content-Type-Options: nosniff',
+  '  Referrer-Policy: strict-origin-when-cross-origin',
+  '  X-Frame-Options: SAMEORIGIN',
+  '  Strict-Transport-Security: max-age=31536000',
+  '  Content-Security-Policy: ' + CSP,
+  '  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+  '',
+  // endereço provisório: o Google não deve mostrar (o oficial é rezendecredito.com.br)
+  'https://rezende-site.pages.dev/*',
+  '  X-Robots-Tag: noindex',
+  'https://:versao.rezende-site.pages.dev/*',
+  '  X-Robots-Tag: noindex',
+  '',
+].join('\n'));
+
+// Página "não encontrada" (sem ela, qualquer endereço errado abria a página inicial)
+fs.writeFileSync(path.join(OUT, '404.html'), `<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Página não encontrada · Rezende Soluções Corporativas</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/base.css">
+<style>body{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px 16px;background:#FAF8F3;color:#122A43}
+.caixa{max-width:440px}.caixa h1{font-size:30px;margin:14px 0 10px}.caixa p{margin:0 0 22px;line-height:1.5}
+.caixa a{display:inline-block;margin:6px;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:600}
+.um{background:#122A43;color:#fff}.dois{border:2px solid #122A43;color:#122A43}</style>
+</head><body><div class="caixa">
+${R_SVG.replace('<svg ', '<svg width="64" height="64" ')}
+<h1>Página não encontrada</h1>
+<p>Esse endereço não existe no site da Rezende Soluções Corporativas. Confira o link ou use um dos botões abaixo.</p>
+<a class="um" href="/">Ir para o site</a><a class="dois" href="/simular/">Simular sem compromisso</a>
+<p style="margin-top:22px;font-size:14px">A Rezende nunca pede depósito antecipado. Atendimento só pelo (62) 99456-1967.</p>
+</div></body></html>
+`);
 
 const sobra = ['trocar', 'noindex', 'modelo-', 'Foto da Emilly'].filter(k => (site + links).includes(k));
 console.log('publico/ ok', fs.readdirSync(OUT), 'sobrou:', sobra);

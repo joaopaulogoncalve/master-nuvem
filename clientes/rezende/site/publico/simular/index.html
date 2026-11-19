@@ -104,6 +104,6 @@ document.querySelectorAll('#chips button').forEach(b=>b.onclick=()=>{document.qu
 function enviar(e){e.preventDefault();
   const s=document.querySelector('#chips .on').textContent,v=document.getElementById('valor').value.trim(),n=document.getElementById('nome').value.trim();
   const t=`Olá! Vim pelo site da Rezende.${n?` Meu nome é ${n}.`:''} Quero uma análise de ${s.toLowerCase()}${v?`, valor aproximado ${v}`:''}.`;
-  window.open('https://wa.me/5562994561967?text='+encodeURIComponent(t),'_blank');return false}
+  window.open('https://wa.me/5562994561967?text='+encodeURIComponent(t),'_blank','noopener');return false}
 </script>
 </body></html>
