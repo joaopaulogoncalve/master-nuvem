@@ -6,7 +6,8 @@
 // Buscas comuns sobre o assunto (aparecem como atalhos na busca do blog).
 export const PALAVRAS_EM_ALTA = [
   "google drive cheio", "armazenamento em nuvem barato", "onde guardar fotos", "como entregar fotos para cliente",
-  "vender fotos de corrida", "marca d'água", "backup de fotos", "esqueci minha senha", "verificação em duas etapas", "pix"
+  "vender fotos de corrida", "marca d'água", "backup de fotos", "esqueci minha senha", "verificação em duas etapas", "pix",
+  "quanto custa um site", "criar site"
 ];
 
 export const POSTS = [
@@ -867,6 +868,345 @@ Janeiro é o melhor mês para arrumar a casa antes da temporada. Uma tarde com e
 - Planeje os eventos da temporada (formaturas, festas) e [como vender as fotos por foto](/blog/vender-fotos-de-formatura-e-eventos-de-fim-de-ano).
 
 > Escolha uma meta só para o primeiro trimestre, por exemplo "10 pedidos de orçamento por mês pelo portfólio", e acompanhe toda semana.
+`
+  },
+
+  // ===== Criação de sites (segundo post da semana: segunda-feira) =====
+  {
+    slug: "quanto-custa-um-site-profissional",
+    titulo: "Quanto custa um site profissional? Valores reais e o que entra no preço",
+    descricao: "Cartão digital, site profissional, loja e manutenção: quanto custa cada um, o que vem incluso e o que se paga à parte, como o domínio .com.br.",
+    palavras: "quanto custa um site, preço de site, valor de site, criar site, site profissional, site barato, orçamento de site, manutenção de site",
+    categoria: "Sites",
+    publicar: "2026-11-18",
+    leitura: 4,
+    corpo: `
+"Quanto custa um site?" é a primeira pergunta de quem quer colocar a empresa na internet. A resposta depende do tipo de site. Aqui estão os valores que a Master Nuvem cobra, sem letra miúda.
+
+## Os três jeitos de começar
+
+- **Cartão digital, a partir de R$ 297.** Uma página só, com a sua marca, botões de WhatsApp, Instagram e mapa, e o contato para salvar no celular. Ótimo para a bio do Instagram.
+- **Site profissional, a partir de R$ 797.** Página principal com serviços, quem somos, perguntas frequentes e contato. Você recebe **3 modelos** com a sua marca para escolher, o site já vai pronto para o Google e o cartão digital vem de brinde.
+- **Loja e site com pagamento online: sob orçamento.** O preço muda conforme o número de produtos e a forma de pagamento.
+
+## O que se paga todo mês ou todo ano
+
+- **Manutenção: R$ 59 por mês.** Inclui hospedagem, o endereço seguro (https, o "cadeado"), cópia de segurança, atendimento pelo WhatsApp e as mudanças pequenas: texto, foto, preço, telefone.
+- **Domínio (.com.br): cerca de R$ 40 por ano**, pago direto no Registro.br, no seu CPF ou CNPJ.
+
+> O domínio fica **no seu nome**, nunca no nosso. Se um dia você quiser trocar de empresa para cuidar do site, o endereço continua seu.
+
+## Por que tem site de R$ 0 e site de R$ 10 mil?
+
+- **Montadores grátis** cobram mensalidade, colocam a marca deles no seu site e nem sempre deixam levar o site embora.
+- **Agências grandes** cobram reunião, projeto e equipe. Faz sentido para empresa grande.
+- Para **pequena empresa e profissional autônomo**, o que importa é: abrir rápido no celular, explicar o que você faz e levar o cliente para o WhatsApp.
+
+## Como pedir o seu
+
+1. Chame no [WhatsApp](/whatsapp) e conte o que você faz.
+2. Mande o logo, os textos e as fotos que tiver (sem logo também dá para começar).
+3. Receba os 3 modelos, escolha o seu e pronto.
+
+Veja os tipos de site e os trabalhos já feitos em [Criação de sites](/sites).
+`
+  },
+  {
+    slug: "site-ou-so-instagram",
+    titulo: "Só o Instagram basta? 5 motivos para a sua empresa ter um site",
+    descricao: "O Instagram é ótimo para aparecer, mas o site passa confiança, aparece no Google e é seu. Veja quando vale a pena ter os dois.",
+    palavras: "site ou instagram, preciso de site, vale a pena ter site, site para pequena empresa, presença online, aparecer no google",
+    categoria: "Sites",
+    publicar: "2026-11-23",
+    leitura: 3,
+    corpo: `
+Muita gente vende só pelo Instagram e pelo WhatsApp, e funciona. Então para que um site? Porque ele resolve coisas que a rede social não resolve.
+
+## 1. Quem procura no Google acha você
+
+Quem digita "contador em Goiânia" ou "salão perto de mim" está pronto para comprar. Perfil de Instagram aparece pouco nessa busca. Um site bem montado tem muito mais chance.
+
+## 2. Passa confiança antes do primeiro "oi"
+
+Endereço próprio (**suaempresa.com.br**), CNPJ, quem você é e perguntas respondidas. Para ramos como crédito, saúde e serviços, isso pesa muito na hora de o cliente decidir.
+
+## 3. É seu
+
+Se a conta do Instagram for bloqueada ou hackeada, o site continua no ar. O domínio fica no seu nome.
+
+## 4. Responde as perguntas de sempre
+
+Preço, horário, como funciona, onde fica: tudo numa página. Menos mensagem repetida no WhatsApp.
+
+## 5. Junta tudo num link
+
+O site é o lugar que leva para o WhatsApp, o Instagram, o mapa e o orçamento. É o link que vai na bio, no cartão de visita e no anúncio.
+
+> O melhor é ter **os dois**: o Instagram atrai, o site convence e leva para o WhatsApp.
+
+Quer saber quanto sai? Veja [quanto custa um site profissional](/blog/quanto-custa-um-site-profissional) ou chame no [WhatsApp](/whatsapp).
+`
+  },
+  {
+    slug: "como-registrar-dominio-com-br",
+    titulo: "Como registrar um domínio .com.br no seu nome: passo a passo",
+    descricao: "O endereço do seu site (suaempresa.com.br) deve ficar no seu CPF ou CNPJ. Veja como registrar no Registro.br, quanto custa e os cuidados.",
+    palavras: "registrar dominio, dominio com br, registro br, comprar dominio, endereco do site, dominio no meu nome, quanto custa dominio",
+    categoria: "Sites",
+    publicar: "2026-11-30",
+    leitura: 4,
+    corpo: `
+O domínio é o endereço do seu site, como **suaempresa.com.br**. Ele é como a escritura de um imóvel: precisa estar **no seu nome**.
+
+## Onde registrar
+
+Os domínios .com.br são registrados no **Registro.br**, o registro oficial dos endereços que terminam em .br. Custa **cerca de R$ 40 por ano**.
+
+## Passo a passo
+
+1. Entre no site do Registro.br e pesquise o nome que você quer.
+2. Se estiver livre, crie a sua conta com o **seu CPF ou o CNPJ da empresa**.
+3. Pague o boleto ou o PIX. O domínio fica ativo depois que o pagamento é confirmado.
+4. **Anote a data de vencimento** e mantenha o seu e-mail atualizado na conta, para receber os avisos de renovação.
+
+## Dicas para escolher o nome
+
+- Curto, fácil de falar e de escrever.
+- Evite hífen e números, se der.
+- Use o nome da empresa. Se já estiver em uso, junte a cidade ou o serviço (ex.: **rezendecredito.com.br**).
+
+## Cuidados
+
+- **Nunca deixe o domínio no nome de quem faz o site.** Se a parceria acabar, você perde o endereço.
+- Domínio vencido sai do ar e pode ser registrado por outra pessoa.
+- Desconfie de e-mail cobrando "renovação" de outro lugar que não seja o Registro.br.
+
+> Na Master Nuvem, a gente **ajuda você a registrar no seu nome** e liga o domínio ao site. A conta e o domínio continuam seus.
+
+Antes de registrar, veja também [por que ter um site além do Instagram](/blog/site-ou-so-instagram). Dúvidas? [WhatsApp](/whatsapp).
+`
+  },
+  {
+    slug: "cartao-digital-link-na-bio",
+    titulo: "Cartão digital: a página de links que substitui o cartão de visita",
+    descricao: "Uma página bonita com WhatsApp, Instagram, mapa e contato para salvar no celular. Serve para a bio do Instagram e para o QR code do cartão de visita.",
+    palavras: "cartao digital, cartao de visita digital, link na bio, linktree, pagina de links, qr code cartao, bio do instagram",
+    categoria: "Sites",
+    publicar: "2026-12-07",
+    leitura: 3,
+    corpo: `
+O Instagram só deixa colocar um link na bio. O cartão digital resolve: é uma página com **todos os seus contatos e links**, com a sua marca.
+
+## O que vai no cartão digital
+
+- Logo, nome e uma frase sobre o que você faz.
+- Botões de **WhatsApp**, **Instagram**, **mapa** e e-mail.
+- Botão para **salvar o contato** direto na agenda do celular.
+- Links para o que importa agora: catálogo, agendamento, promoção.
+
+## Onde usar
+
+- Na **bio do Instagram** e do TikTok.
+- No **cartão de visita impresso**, com um QR code que abre a página.
+- Na assinatura do e-mail e no status do WhatsApp.
+
+## Por que não usar um montador grátis?
+
+Dá para usar, mas a página fica com a marca deles, o endereço é deles e o visual é igual ao de todo mundo. O cartão digital da Master Nuvem fica com a **sua marca**, no **seu domínio** (se quiser) e abre rápido no celular.
+
+> **A partir de R$ 297.** E quem contrata o site profissional ganha o cartão digital de brinde.
+
+Veja os valores completos em [quanto custa um site profissional](/blog/quanto-custa-um-site-profissional) e os modelos em [Criação de sites](/sites).
+`
+  },
+  {
+    slug: "site-para-correspondente-bancario",
+    titulo: "Site para correspondente bancário: o que não pode faltar",
+    descricao: "Banco parceiro, aviso de que não se pede depósito antecipado, simulação e WhatsApp: o que o site de um correspondente bancário precisa ter para passar confiança.",
+    palavras: "site para correspondente bancario, correspondente bancario, site de credito, site de emprestimo, consignado, golpe do emprestimo, site confiavel",
+    categoria: "Sites",
+    publicar: "2026-12-14",
+    leitura: 4,
+    corpo: `
+No ramo de crédito, o cliente chega com medo de golpe. O site do correspondente bancário precisa mostrar, logo de cara, que a empresa é séria.
+
+## O que não pode faltar
+
+- **Banco parceiro escrito com todas as letras**, do jeito que o contrato com o banco pede (ex.: "correspondente bancário de Banco do Brasil S.A.").
+- **Aviso em destaque: "Nunca pedimos depósito antecipado."** É o golpe mais comum do ramo, e o aviso tranquiliza quem chega.
+- **CNPJ, endereço e horário de atendimento.**
+- **Serviços explicados de forma simples**: consignado, crédito pessoal, portabilidade, conta.
+- **Botão de WhatsApp** com mensagem pronta e, se quiser, uma **simulação rápida**.
+- **Perguntas frequentes**: documentos necessários, prazo, quem pode pedir.
+
+## O que não colocar
+
+- **CPF ou documento** de sócio ou de cliente.
+- Promessa de "aprovação garantida" ou "sem consulta". Além de não ser verdade, pode trazer problema com o banco parceiro.
+- Logo do banco fora das regras do **manual de marca** dele.
+
+> Siga o manual de marca do banco parceiro **à risca**: cor, tamanho e posição do logo.
+
+## Um exemplo real
+
+O site da **Rezende Soluções Corporativas** foi feito pela Master Nuvem seguindo essas regras. Veja em [Criação de sites → Trabalhos](/sites#trabalhos).
+
+Antes de começar, garanta o seu endereço: [como registrar um domínio .com.br](/blog/como-registrar-dominio-com-br).
+`
+  },
+  {
+    slug: "o-que-preparar-antes-de-pedir-um-site",
+    titulo: "O que preparar antes de pedir um site: checklist simples",
+    descricao: "Logo, textos, fotos, contatos e domínio: a lista do que separar para o seu site ficar pronto em poucos dias.",
+    palavras: "o que precisa para fazer um site, briefing de site, checklist site, material para site, textos do site, fotos para site",
+    categoria: "Sites",
+    publicar: "2026-12-21",
+    leitura: 3,
+    corpo: `
+O que mais atrasa um site não é a programação: é o material. Com esta lista em mãos, os modelos ficam prontos em poucos dias.
+
+## A marca
+
+- **Logo** (de preferência o arquivo original, em PNG ou PDF). Não tem? Dá para começar com o nome bem escrito.
+- **Cores** da marca, se tiver um manual.
+
+## Os textos
+
+- O que você faz, em 3 ou 4 frases, do jeito que explicaria para um cliente.
+- A lista de **serviços ou produtos**, com preço se quiser mostrar.
+- As **5 perguntas que mais te fazem** no WhatsApp. Elas viram as perguntas frequentes do site.
+
+> Não sabe escrever? Conte por áudio no WhatsApp. A gente transforma em texto.
+
+## As fotos
+
+- Fotos **reais** do seu trabalho, da equipe ou do local. Valem mais que foto de banco de imagens.
+- Foto boa de celular serve: luz natural e fundo limpo.
+
+## Os contatos
+
+- WhatsApp, Instagram, e-mail, endereço e horário.
+- **CNPJ**, se tiver (o CPF nunca vai no site).
+
+## Regras do seu ramo
+
+Registro em conselho (CRC, OAB, CRM...), banco parceiro, avisos obrigatórios. Veja o exemplo do [site para correspondente bancário](/blog/site-para-correspondente-bancario).
+
+## O domínio
+
+Escolha o endereço e registre no seu nome: [passo a passo do domínio .com.br](/blog/como-registrar-dominio-com-br).
+
+Tudo pronto? Mande no [WhatsApp](/whatsapp).
+`
+  },
+  {
+    slug: "como-fazer-o-site-aparecer-no-google",
+    titulo: "Como fazer o site da sua empresa aparecer no Google",
+    descricao: "Perfil da Empresa no Google, títulos certos, site rápido no celular e avaliações: o que realmente ajuda uma pequena empresa a ser encontrada.",
+    palavras: "aparecer no google, site no google, seo, perfil da empresa google, google meu negocio, ser encontrado no google, google maps",
+    categoria: "Sites",
+    publicar: "2026-12-28",
+    leitura: 4,
+    corpo: `
+Ninguém consegue prometer o primeiro lugar no Google. Mas dá para fazer o básico bem feito, e o básico já coloca a sua empresa na frente de quem não fez.
+
+## 1. Crie o Perfil da Empresa no Google
+
+É o que aparece no **Google Maps** e na lateral da busca, com telefone, horário, fotos e avaliações. É grátis e, para negócio local, é o que mais traz cliente.
+
+## 2. Peça avaliações
+
+Depois de cada atendimento bom, mande o link de avaliação para o cliente. Mais avaliações, e boas, ajudam você a aparecer.
+
+## 3. Diga no site o que você faz e onde
+
+O Google precisa ler, em texto, "**contador em Goiânia**" ou "**salão de beleza no Setor Bueno**". Título da página, descrição e textos com o serviço e a cidade.
+
+## 4. Site rápido e bom no celular
+
+A maioria das buscas é pelo celular. Site lento ou que fica torto na tela perde visita e posição.
+
+## 5. Avise o Google que o site existe
+
+Cadastre o site no **Google Search Console** e envie o mapa do site (sitemap). Assim o Google encontra as páginas mais rápido.
+
+## 6. Tenha paciência
+
+Site novo leva **semanas** para começar a aparecer. Continue atualizando: serviço novo, foto nova, post novo.
+
+> Os sites feitos pela Master Nuvem já vão com títulos, descrição e mapa do site prontos para o Google.
+
+Começando agora? Veja [o que preparar antes de pedir um site](/blog/o-que-preparar-antes-de-pedir-um-site).
+`
+  },
+  {
+    slug: "curriculo-online-site-pessoal",
+    titulo: "Currículo online: o site pessoal que ajuda você a ser chamado para a entrevista",
+    descricao: "Um link com a sua experiência, formação, trabalhos e contato. Fica ótimo no LinkedIn, no e-mail e no WhatsApp para o recrutador.",
+    palavras: "curriculo online, site pessoal, site de curriculo, portfolio pessoal, linkedin, procurar emprego, curriculo diferente",
+    categoria: "Sites",
+    publicar: "2027-01-04",
+    leitura: 3,
+    corpo: `
+Janeiro é mês de procurar emprego novo. Enquanto todo mundo manda o mesmo PDF, um **currículo online** mostra quem você é num link só.
+
+## O que vai no currículo online
+
+- Foto, nome e uma frase sobre o que você faz.
+- **Experiência** e **formação**, do mais recente para o mais antigo.
+- **Trabalhos e resultados**: projetos, números, certificados.
+- Contato: e-mail, WhatsApp e LinkedIn.
+- Botão para **baixar o currículo em PDF**.
+
+## Onde usar o link
+
+- No campo "site" do **LinkedIn**.
+- Na assinatura do e-mail e na mensagem para o recrutador.
+- Num QR code no currículo impresso.
+
+## Para quem serve
+
+Quem procura emprego, freelancer, professor, palestrante, designer: qualquer pessoa que quer ser lembrada.
+
+> Não coloque CPF, RG nem endereço completo no site. Cidade e contato bastam.
+
+Um dos trabalhos da Master Nuvem é justamente um currículo online usado no LinkedIn. Veja em [Criação de sites → Trabalhos](/sites#trabalhos) e, para o seu aparecer na busca, leia [como aparecer no Google](/blog/como-fazer-o-site-aparecer-no-google).
+`
+  },
+  {
+    slug: "site-com-agendamento-salao-barbearia",
+    titulo: "Site com agendamento para salão, barbearia e estética",
+    descricao: "Serviços, preços e horários numa página, com botão para o cliente pedir o horário pelo WhatsApp. Menos troca de mensagem e mais cliente marcado.",
+    palavras: "site para salao, site para barbearia, agendamento online, agendar horario, site estetica, agenda pelo whatsapp, site para manicure",
+    categoria: "Sites",
+    publicar: "2027-01-11",
+    leitura: 3,
+    corpo: `
+Quem atende com hora marcada perde muito tempo respondendo "quanto custa?" e "tem horário amanhã?". Um site com agendamento responde antes.
+
+## O que vai no site
+
+- **Serviços com preço e duração** (corte, barba, escova, unha, limpeza de pele...).
+- **Dias e horários de atendimento.**
+- Fotos do **seu trabalho** e do espaço.
+- Endereço com **mapa** e estacionamento.
+- Botão **"Pedir horário"** que abre o WhatsApp com a mensagem pronta: serviço, dia e horário que o cliente escolheu.
+
+## Como fica o atendimento
+
+1. O cliente vê os serviços e os preços no site.
+2. Escolhe o serviço e o melhor dia.
+3. Toca em "Pedir horário" e a mensagem chega no seu WhatsApp já completa.
+4. Você só confirma.
+
+> Neste modelo, quem confirma o horário é você, no WhatsApp. Agenda que bloqueia o horário sozinha ainda não faz parte do pacote: se precisar, fale com a gente.
+
+## Dicas
+
+- Coloque o link do site na bio do Instagram e no status do WhatsApp.
+- Crie o Perfil da Empresa no Google com o mesmo link: veja [como aparecer no Google](/blog/como-fazer-o-site-aparecer-no-google).
+
+Quer um assim? Veja os valores em [quanto custa um site profissional](/blog/quanto-custa-um-site-profissional) ou chame no [WhatsApp](/whatsapp).
 `
   }
 ];
