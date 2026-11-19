@@ -5,6 +5,10 @@ Cada cliente tem uma pasta: `clientes/<nome>/`.
 - `site/` = o código do site (vai para o GitHub, que é **público**: só coisa que já aparece no site).
 - `privado/` = manual da marca, logos, PDFs, conversas e passo a passo com dados do cliente. **Fica só no PC** (está no `.gitignore`).
 - `_modelo/briefing-cliente.md` = o texto para mandar no WhatsApp pedindo o material.
+- `_modelo/proposta-site.html` = proposta em PDF: abrir no Chrome, preencher e clicar em "Salvar em PDF".
+- `_modelo/contrato-criacao-site.md` = contrato de criação de site. Colar uma vez em Meu estúdio → 📝 Contratos → ⭐ Meus modelos ("Criação de site") e enviar para assinatura online.
+
+Ordem da venda: conversa no WhatsApp → **proposta** (PDF) → cliente aprova → **contrato** online → entrada (50%) → briefing/material → modelos → ajustes → publicação → restante (50%) → manutenção mensal.
 
 ## Como trabalhar com cada cliente
 1. Mandar o briefing (`_modelo/briefing-cliente.md`).

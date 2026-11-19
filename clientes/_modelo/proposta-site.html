@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proposta de site · Master Nuvem</title>
+<!-- Como usar: abra este arquivo no Chrome, preencha à esquerda e clique em "Salvar em PDF".
+     Os preços padrão são os da página /sites. Mudou lá? Mude em TIPOS, aqui embaixo. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --azul-noite:#030a1c; --azul:#1d4ed8; --ciano:#0ea5e9; --texto:#0f172a; --cinza:#475569; --linha:#dbe3ef; --fundo:#eef3fa; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Inter, Arial, sans-serif; color:var(--texto); background:var(--fundo); }
+  .tela { display:grid; grid-template-columns:minmax(280px, 380px) 1fr; gap:24px; padding:24px; align-items:start; }
+  .form { background:#fff; border:1px solid var(--linha); border-radius:12px; padding:18px; position:sticky; top:16px; max-height:calc(100vh - 32px); overflow:auto; }
+  .form h1 { font:700 18px "Space Grotesk", Arial, sans-serif; margin:0 0 4px; }
+  .form p.ajuda { margin:0 0 14px; color:var(--cinza); font-size:13px; }
+  label { display:block; font-size:12px; font-weight:600; color:var(--cinza); margin:12px 0 4px; }
+  input, select, textarea { width:100%; padding:8px 10px; border:1px solid var(--linha); border-radius:8px; font:14px Inter, Arial, sans-serif; color:var(--texto); background:#fff; }
+  textarea { min-height:120px; resize:vertical; }
+  .linha2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .check { display:flex; gap:8px; align-items:center; margin-top:12px; font-size:14px; }
+  .check input { width:auto; }
+  .botao { margin-top:16px; width:100%; padding:12px; border:0; border-radius:10px; background:var(--azul); color:#fff; font:700 15px Inter, Arial, sans-serif; cursor:pointer; }
+  .botao:hover { background:#1e40af; }
+  .dica { font-size:12px; color:var(--cinza); margin-top:8px; }
+
+  /* folha A4 */
+  .folha { background:#fff; width:210mm; min-height:297mm; margin:0 auto; padding:16mm 16mm 14mm; box-shadow:0 10px 30px #0f172a1f; display:flex; flex-direction:column; gap:7mm; }
+  .topo { display:flex; justify-content:space-between; align-items:flex-start; gap:10mm; padding-bottom:6mm; border-bottom:3px solid var(--azul); }
+  .marca { display:flex; gap:10px; align-items:center; }
+  .marca img { width:44px; height:44px; }
+  .marca b { font:700 20px "Space Grotesk", Arial, sans-serif; display:block; }
+  .marca span { font-size:12px; color:var(--cinza); }
+  .num { text-align:right; font-size:12px; color:var(--cinza); line-height:1.6; }
+  .num b { display:block; font:700 18px "Space Grotesk", Arial, sans-serif; color:var(--texto); }
+  h2 { font:700 13px Inter, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--azul); margin:0 0 3mm; }
+  .para { font-size:14px; line-height:1.55; }
+  .para b { font-size:16px; }
+  .servico { font:700 22px "Space Grotesk", Arial, sans-serif; margin:0 0 2mm; }
+  ul.itens { margin:0; padding-left:5mm; font-size:14px; line-height:1.7; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  td { padding:3mm 0; border-bottom:1px solid var(--linha); vertical-align:top; }
+  td.v { text-align:right; font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  tr.total td { border-bottom:0; border-top:2px solid var(--texto); font-size:17px; }
+  .nota { font-size:12px; color:var(--cinza); margin-top:2mm; line-height:1.5; }
+  ol.passos { margin:0; padding-left:5mm; font-size:14px; line-height:1.7; }
+  .caixa { background:var(--fundo); border-radius:8px; padding:4mm 5mm; font-size:13px; line-height:1.6; }
+  .rodape { margin-top:auto; padding-top:5mm; border-top:1px solid var(--linha); font-size:11px; color:var(--cinza); display:flex; justify-content:space-between; gap:6mm; flex-wrap:wrap; }
+
+  @media (max-width: 900px) {
+    .tela { grid-template-columns:1fr; padding:16px; }
+    .form { position:static; max-height:none; }
+    .folha { width:100%; min-height:0; padding:18px; }
+  }
+  @page { size:A4; margin:0; }
+  @media print {
+    body { background:#fff; }
+    .form { display:none; }
+    .tela { display:block; padding:0; }
+    .folha { box-shadow:none; margin:0; width:210mm; min-height:297mm; }
+    * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+</style>
+</head>
+<body>
+<div class="tela">
+  <form class="form" id="form" onsubmit="return false">
+    <h1>Proposta de site</h1>
+    <p class="ajuda">Preencha aqui. A folha ao lado muda na hora. O navegador lembra o último preenchimento.</p>
+
+    <label for="cliente">Nome do cliente</label>
+    <input id="cliente" placeholder="Ex.: Maria da Silva">
+    <label for="empresa">Empresa (opcional)</label>
+    <input id="empresa" placeholder="Ex.: Silva Contabilidade">
+
+    <label for="tipo">Tipo de site</label>
+    <select id="tipo"></select>
+
+    <label for="itens">O que vem incluso (uma linha por item)</label>
+    <textarea id="itens"></textarea>
+
+    <div class="linha2">
+      <div><label for="valor">Valor (R$)</label><input id="valor" inputmode="decimal"></div>
+      <div><label for="desconto">Desconto (R$)</label><input id="desconto" inputmode="decimal" value="0"></div>
+    </div>
+
+    <label for="pagamento">Forma de pagamento</label>
+    <select id="pagamento">
+      <option value="metade">50% para começar e 50% na entrega</option>
+      <option value="vista">À vista, para começar</option>
+      <option value="outro">Outra (escrever abaixo)</option>
+    </select>
+    <input id="pagamentoTexto" placeholder="Ex.: 3 parcelas no cartão pelo link" hidden>
+
+    <div class="linha2">
+      <div><label for="prazo">Modelos prontos em (dias)</label><input id="prazo" inputmode="numeric" value="7"></div>
+      <div><label for="validade">Proposta vale (dias)</label><input id="validade" inputmode="numeric" value="15"></div>
+    </div>
+
+    <label class="check"><input type="checkbox" id="manutencao" checked> Incluir manutenção (R$ 59/mês)</label>
+    <label class="check"><input type="checkbox" id="dominio" checked> Explicar o domínio (.com.br)</label>
+
+    <label for="obs">Observação (opcional)</label>
+    <textarea id="obs" style="min-height:60px" placeholder="Ex.: seguindo o manual da marca do Banco do Brasil."></textarea>
+
+    <button type="button" class="botao" id="pdf">Salvar em PDF</button>
+    <p class="dica">Na janela que abrir, escolha <b>Destino: Salvar como PDF</b>. Depois mande o PDF no WhatsApp.</p>
+  </form>
+
+  <main class="folha" id="folha">
+    <header class="topo">
+      <div class="marca">
+        <img src="../../public/marca/icone.png" alt="">
+        <div><b>Master Nuvem</b><span>Criação de sites · masternuvem.com.br/sites</span></div>
+      </div>
+      <div class="num"><b>Proposta</b>Nº <span id="pNum"></span><br>Data: <span id="pData"></span><br>Válida até: <span id="pValidade"></span></div>
+    </header>
+
+    <section>
+      <h2>Para</h2>
+      <div class="para"><b id="pCliente"></b><br><span id="pEmpresa"></span></div>
+    </section>
+
+    <section>
+      <h2>O que vamos fazer</h2>
+      <p class="servico" id="pTipo"></p>
+      <ul class="itens" id="pItens"></ul>
+    </section>
+
+    <section>
+      <h2>Investimento</h2>
+      <table id="pTabela"></table>
+      <p class="nota" id="pNota"></p>
+    </section>
+
+    <section>
+      <h2>Como funciona</h2>
+      <ol class="passos" id="pPassos"></ol>
+    </section>
+
+    <section id="pObsBox" hidden>
+      <h2>Observação</h2>
+      <div class="caixa" id="pObs"></div>
+    </section>
+
+    <footer class="rodape">
+      <span>Master Nuvem · CNPJ 66.265.791/0001-90 · Goiânia-GO</span>
+      <span>WhatsApp (62) 98284-6067 · contato@masternuvem.com.br</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+// Preços padrão = página /sites. "valor: null" = sob orçamento (você digita).
+var TIPOS = {
+  cartao: { nome: "Cartão digital", valor: 297, itens: [
+    "1 página com a sua marca (logo e cores)",
+    "Botões de WhatsApp, Instagram, mapa e e-mail",
+    "Botão para salvar o contato no celular",
+    "Endereço seguro (https, o \"cadeado\")",
+    "Pronto para a bio do Instagram e para QR code"] },
+  site: { nome: "Site profissional", valor: 797, itens: [
+    "Página principal com serviços, quem somos, perguntas frequentes e contato",
+    "3 modelos com a sua marca para você escolher",
+    "2 rodadas de ajustes no modelo escolhido",
+    "Feito para o celular e para o computador",
+    "Pronto para o Google (títulos, descrição e mapa do site)",
+    "Botões de WhatsApp, Instagram e mapa",
+    "Cartão digital de brinde",
+    "Ligado ao seu domínio, com endereço seguro (https)"] },
+  loja: { nome: "Loja / site de vendas", valor: null, itens: [
+    "Catálogo de produtos com fotos, preços, busca e categorias",
+    "Compra fechada pelo WhatsApp [ou pagamento no site]",
+    "Até [número] produtos cadastrados por nós",
+    "Feito para o celular e pronto para o Google",
+    "Ligado ao seu domínio, com endereço seguro (https)"] },
+  agendamento: { nome: "Site com agendamento", valor: 797, itens: [
+    "Serviços com preço e duração",
+    "Dias e horários de atendimento",
+    "Botão \"Pedir horário\" que abre o WhatsApp com a mensagem pronta",
+    "Fotos do trabalho e mapa",
+    "Pronto para o Google, com endereço seguro (https)"] },
+  curriculo: { nome: "Site pessoal / currículo online", valor: 297, itens: [
+    "Apresentação, experiência, formação e trabalhos",
+    "Contato e botão para baixar o currículo em PDF",
+    "Pronto para o LinkedIn e para o Google",
+    "Endereço seguro (https)"] },
+  outro: { nome: "Outro (escreva o nome nos itens)", valor: null, itens: ["[descreva o serviço]"] }
+};
+var CAMPOS = ["cliente", "empresa", "tipo", "itens", "valor", "desconto", "pagamento", "pagamentoTexto", "prazo", "validade", "manutencao", "dominio", "obs"];
+var $ = function (id) { return document.getElementById(id); };
+
+var sel = $("tipo");
+Object.keys(TIPOS).forEach(function (k) { var o = document.createElement("option"); o.value = k; o.textContent = TIPOS[k].nome; sel.appendChild(o); });
+sel.value = "site";
+
+function aplicarTipo() {
+  var t = TIPOS[sel.value];
+  $("itens").value = t.itens.join("\n");
+  $("valor").value = t.valor == null ? "" : String(t.valor);
+}
+
+function numero(v) { var n = parseFloat(String(v || "").replace(/\./g, "").replace(",", ".")); return isNaN(n) ? 0 : n; }
+function reais(n) { return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+function dataBr(d) { return d.toLocaleDateString("pt-BR"); }
+function texto(el, t) { el.textContent = t; }
+
+function montar() {
+  var hoje = new Date();
+  var validade = new Date(hoje.getTime() + (parseInt($("validade").value, 10) || 15) * 86400000);
+  var dois = function (n) { return (n < 10 ? "0" : "") + n; };
+  texto($("pNum"), hoje.getFullYear() + dois(hoje.getMonth() + 1) + dois(hoje.getDate()) + "-" + (($("cliente").value || "X").trim().charAt(0).toUpperCase()));
+  texto($("pData"), dataBr(hoje));
+  texto($("pValidade"), dataBr(validade));
+  texto($("pCliente"), $("cliente").value || "Nome do cliente");
+  texto($("pEmpresa"), $("empresa").value);
+  texto($("pTipo"), TIPOS[sel.value].nome);
+
+  var ul = $("pItens"); ul.innerHTML = "";
+  $("itens").value.split("\n").map(function (s) { return s.trim(); }).filter(Boolean).forEach(function (s) {
+    var li = document.createElement("li"); li.textContent = s; ul.appendChild(li);
+  });
+
+  var valor = numero($("valor").value), desconto = numero($("desconto").value), total = Math.max(0, valor - desconto);
+  var linhas = [];
+  linhas.push([TIPOS[sel.value].nome + " (pagamento único)", valor ? reais(valor) : "sob orçamento"]);
+  if (desconto > 0) linhas.push(["Desconto", "− " + reais(desconto)]);
+  var pg = $("pagamento").value, comoPagar;
+  $("pagamentoTexto").hidden = pg !== "outro";
+  if (pg === "metade") comoPagar = "50% para começar (" + reais(total / 2) + ") e 50% na entrega (" + reais(total - total / 2) + "), por PIX ou link de pagamento.";
+  else if (pg === "vista") comoPagar = "À vista, para começar, por PIX ou link de pagamento.";
+  else comoPagar = $("pagamentoTexto").value || "[forma de pagamento]";
+  var tb = $("pTabela"); tb.innerHTML = "";
+  linhas.forEach(function (l) { var tr = tb.insertRow(); texto(tr.insertCell(), l[0]); var c = tr.insertCell(); c.className = "v"; texto(c, l[1]); });
+  var tr = tb.insertRow(); tr.className = "total"; texto(tr.insertCell(), "Total da criação"); var c = tr.insertCell(); c.className = "v"; texto(c, valor ? reais(total) : "sob orçamento");
+  if ($("manutencao").checked) { tr = tb.insertRow(); texto(tr.insertCell(), "Manutenção mensal: hospedagem, https, cópia de segurança, atendimento no WhatsApp e mudanças pequenas (texto, foto, preço, telefone). Sem fidelidade."); c = tr.insertCell(); c.className = "v"; texto(c, "R$ 59,00/mês"); }
+  var nota = "Forma de pagamento: " + comoPagar;
+  if ($("dominio").checked) nota += " O domínio (ex.: suaempresa.com.br) fica no seu CPF ou CNPJ e é pago à parte, direto no Registro.br (cerca de R$ 40 por ano). A gente ajuda a registrar.";
+  texto($("pNota"), nota);
+
+  var passos = [
+    "Você aprova esta proposta respondendo no WhatsApp.",
+    "Você assina o contrato online (chega um link no seu e-mail) e paga " + (pg === "metade" ? "a entrada." : "o valor combinado."),
+    "Você manda o material: logo, textos (ou um áudio contando sobre o seu trabalho), fotos e contatos.",
+    "Em até " + (parseInt($("prazo").value, 10) || 7) + " dias depois do material completo, você recebe os modelos para ver no celular.",
+    "Você escolhe, a gente ajusta e publica no seu domínio."
+  ];
+  var ol = $("pPassos"); ol.innerHTML = "";
+  passos.forEach(function (s) { var li = document.createElement("li"); li.textContent = s; ol.appendChild(li); });
+
+  var obs = $("obs").value.trim();
+  $("pObsBox").hidden = !obs; texto($("pObs"), obs);
+  guardar();
+}
+
+function guardar() {
+  try { var d = {}; CAMPOS.forEach(function (k) { var el = $(k); d[k] = el.type === "checkbox" ? el.checked : el.value; }); localStorage.setItem("proposta-site", JSON.stringify(d)); } catch (e) {}
+}
+function carregar() {
+  try { var d = JSON.parse(localStorage.getItem("proposta-site") || "null"); if (!d) return false;
+    CAMPOS.forEach(function (k) { if (d[k] === undefined) return; var el = $(k); if (el.type === "checkbox") el.checked = d[k]; else el.value = d[k]; }); return true;
+  } catch (e) { return false; }
+}
+
+if (!carregar()) aplicarTipo();
+sel.addEventListener("change", function () { aplicarTipo(); montar(); });
+$("form").addEventListener("input", montar);
+$("form").addEventListener("change", montar);
+$("pdf").addEventListener("click", function () {
+  var antes = document.title;
+  document.title = "Proposta site - " + ($("empresa").value || $("cliente").value || "cliente");
+  window.print();
+  document.title = antes;
+});
+montar();
+</script>
+</body>
+</html>
