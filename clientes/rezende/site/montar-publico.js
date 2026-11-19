@@ -45,6 +45,7 @@ site = site.replace('Ver o cartão digital (/links)', 'Abrir o cartão digital')
 site = site.replace('<div class="foto">Foto da Emilly<br>(retrato, fundo claro)</div>',
   '<div class="foto"><svg viewBox="0 0 70 100" style="height:45%"><path d="M6 94V6h30a24 24 0 0 1 0 48H22" fill="none" stroke="#FAF8F3" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 54h10c6 0 9 2 13 7l17 31" fill="none" stroke="#A9C4D9" stroke-width="3" stroke-linecap="round"/></svg></div>');
 site = site.replace('© 2026 Rezende', '© <span id="ano">2026</span> Rezende');
+site = site.replace('Rezende Soluções Corporativas.</div>', 'Rezende Soluções Corporativas. <a href="/privacidade/" style="color:inherit">Privacidade</a></div>');
 fs.writeFileSync(path.join(OUT, 'index.html'), site);
 
 // ---------- /simular ----------
@@ -55,6 +56,7 @@ sim = sim.replace(/<title>[^<]*<\/title>/, `<title>${T3}</title>\n${cabeca(T3, U
 sim = sim.replace('href="base.css"', 'href="/base.css"');
 sim = sim.replace('<a href="#" class="marca">', '<a href="/" class="marca">');
 sim = sim.replace('<span class="tel">(62) 99456-1967 · WhatsApp</span>', '<a class="tel" href="/">← Site completo</a>');
+sim = sim.replace('Crédito sujeito a análise. © 2026 Rezende Soluções Corporativas.</div>', 'Correspondente bancário de Banco do Brasil S.A. Crédito sujeito a análise. © 2026 Rezende Soluções Corporativas. <a href="/privacidade/" style="color:inherit">Privacidade</a></div>');
 fs.writeFileSync(path.join(OUT, 'simular', 'index.html'), sim);
 
 // ---------- /links ----------
@@ -66,7 +68,59 @@ links = links.replace('href="base.css"', 'href="/base.css"');
 links = links.replace(/\s*<a class="item" href="#"><div class="ic">[\s\S]*?<\/a>/, '');
 links = links.replace(/<a class="salvar" href="#">Salvar contato no celular<\/a>/,
   '<a class="salvar" href="/emilly-rezende.vcf" download>Salvar contato no celular</a>\n  <a class="item" href="/simular/" style="margin-top:18px;justify-content:center"><div><b>Simular sem compromisso</b></div></a>\n  <a class="item" href="/" style="margin-top:10px;justify-content:center"><div><b>Ver o site completo</b></div></a>');
+links = links.replace('Crédito sujeito a análise.</div>', 'Crédito sujeito a análise.<br><a href="/privacidade/" style="color:inherit">Privacidade</a></div>');
 fs.writeFileSync(path.join(OUT, 'links', 'index.html'), links);
+
+// ---------- /privacidade (LGPD) ----------
+// Revisar com a Emilly: prazos de guarda e com quem os dados são compartilhados dependem do contrato dela com o banco.
+fs.mkdirSync(path.join(OUT, 'privacidade'), { recursive: true });
+const T4 = 'Política de privacidade · Rezende Soluções Corporativas';
+fs.writeFileSync(path.join(OUT, 'privacidade', 'index.html'), `<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${T4}</title>
+${cabeca(T4, URL + '/privacidade/', 'Como a Rezende Soluções Corporativas trata os seus dados pessoais, conforme a LGPD (Lei 13.709/2018).')}
+<link rel="stylesheet" href="/base.css">
+<style>body{background:#FAF8F3;color:#122A43;margin:0}
+.topo{background:#122A43;padding:16px}.topo a{color:#fff;text-decoration:none;font-weight:600}
+main{max-width:760px;margin:0 auto;padding:32px 16px 56px;line-height:1.65}
+h1{font-size:30px;margin:0 0 6px}h2{font-size:20px;margin:30px 0 8px}
+p,li{font-size:16px}ul{padding-left:20px}a{color:#122A43}
+.data{color:#5a6b7d;font-size:14px;margin-bottom:24px}
+.aviso{background:#fff;border-left:4px solid #122A43;padding:14px 16px;border-radius:8px;margin:24px 0}</style>
+</head><body>
+<div class="topo"><a href="/">← Rezende Soluções Corporativas</a></div>
+<main>
+<h1>Política de privacidade</h1>
+<div class="data">Atualizada em 19 de novembro de 2026</div>
+
+<p>Esta página explica como a <b>Rezende Soluções Corporativas</b> (CNPJ 69.164.083/0001-50, Trindade – GO), correspondente bancário de Banco do Brasil S.A., trata os seus dados pessoais, de acordo com a Lei Geral de Proteção de Dados (Lei 13.709/2018).</p>
+
+<h2>1. O que o site coleta</h2>
+<p>Este site <b>não pede nem guarda dados pessoais</b>. O formulário "Simule sem compromisso" só monta uma mensagem e abre o seu WhatsApp: nada é enviado ou gravado pelo site.</p>
+<p>Para saber quantas pessoas visitam o site, usamos uma contagem de visitas anônima, sem cookies e sem identificar você.</p>
+
+<h2>2. Dados no atendimento</h2>
+<p>Quando você fala com a gente pelo WhatsApp, por telefone ou por e-mail, podemos pedir dados como nome, CPF, telefone, endereço, renda, dados do benefício ou do emprego e documentos. Esses dados servem para:</p>
+<ul>
+<li>analisar o que você pediu e montar a proposta;</li>
+<li>encaminhar a proposta para análise da instituição financeira;</li>
+<li>cumprir as regras do Banco Central e da instituição parceira, inclusive de prevenção a fraudes e à lavagem de dinheiro.</li>
+</ul>
+
+<h2>3. Com quem compartilhamos</h2>
+<p>Só com a instituição financeira responsável pelo produto que você escolheu (por exemplo, o Banco do Brasil) e com órgãos públicos quando a lei exigir. <b>Não vendemos nem emprestamos os seus dados</b> para ninguém.</p>
+
+<h2>4. Por quanto tempo guardamos</h2>
+<p>Pelo tempo necessário para o atendimento e pelo prazo exigido pelas normas do Banco Central e da instituição parceira. Depois disso, os dados são apagados.</p>
+
+<h2>5. Os seus direitos</h2>
+<p>Você pode, a qualquer momento, pedir para saber quais dados temos sobre você, corrigir, receber uma cópia ou pedir que sejam apagados (quando a lei permitir). Basta escrever para <a href="mailto:rezendesolucoescorporativas@gmail.com">rezendesolucoescorporativas@gmail.com</a> ou chamar no WhatsApp <a href="https://wa.me/5562994561967">(62) 99456-1967</a>.</p>
+
+<div class="aviso"><b>Proteja-se contra golpes:</b> a Rezende <b>nunca</b> pede depósito, PIX ou taxa antecipada para liberar crédito, e atende somente pelo (62) 99456-1967. Desconfie de qualquer outro número usando o nosso nome.</div>
+
+<p style="font-size:14px;color:#5a6b7d">Crédito sujeito a análise. © 2026 Rezende Soluções Corporativas.</p>
+</main></body></html>
+`);
 
 // contato pro celular
 fs.writeFileSync(path.join(OUT, 'emilly-rezende.vcf'), [
@@ -93,7 +147,7 @@ DESVIOS.push('/modelo-1.html / 301', '/modelo-2.html /simular/ 301', '/modelo-3.
   '/cartao /links/ 301', '/simulacao /simular/ 301', '/simule /simular/ 301', '/contato /simular/ 301',
   '/whatsapp https://wa.me/5562994561967 302');
 fs.writeFileSync(path.join(OUT, '_redirects'), DESVIOS.join('\n') + '\n');
-fs.writeFileSync(path.join(OUT, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n<url><loc>${URL}/</loc></url>\n<url><loc>${URL}/simular/</loc></url>\n<url><loc>${URL}/links/</loc></url>\n</urlset>\n`);
+fs.writeFileSync(path.join(OUT, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n<url><loc>${URL}/</loc></url>\n<url><loc>${URL}/simular/</loc></url>\n<url><loc>${URL}/links/</loc></url>\n<url><loc>${URL}/privacidade/</loc></url>\n</urlset>\n`);
 // Proteções de todas as páginas. CSP: só carrega coisas do próprio site + fontes do Google
 // (scripts embutidos continuam liberados: o formulário e o JSON do Google usam).
 const CSP = [
