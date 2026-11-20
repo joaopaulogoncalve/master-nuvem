@@ -102,7 +102,8 @@ async function chamarJoao(env, f, telefone, nome, texto, motivo) {
   const link = "https://wa.me/" + telefone;
   const html = "<p><strong>" + f.escaparHtml(motivo) + "</strong></p><p>Nome no WhatsApp: " + f.escaparHtml(nome || "-") +
     "<br>Número: <a href=\"" + link + "\">" + formatarTelefone(telefone) + "</a></p><p style=\"white-space:pre-line\">" +
-    f.escaparHtml(texto) + "</p><p>O robô fica quieto nessa conversa por " + HORAS_HUMANO + " horas. Responda pelo app do WhatsApp Business.</p>";
+    f.escaparHtml(texto) + "</p><p>O robô fica quieto nessa conversa por " + HORAS_HUMANO + " horas. Responda em <a href=\"" + SITE + "/admin?secao=WhatsApp\">" +
+    SITE.replace("https://", "") + "/admin → 💬 WhatsApp</a> (de graça até 24 horas depois da última mensagem da pessoa).</p>";
   await f.enviarEmail(env, f.EMAIL_SUPORTE, "WhatsApp: " + (nome || formatarTelefone(telefone)) + " precisa de você", html,
     motivo + "\nNome: " + (nome || "-") + "\nNúmero: " + formatarTelefone(telefone) + " (" + link + ")\n\n" + texto);
 }
@@ -144,6 +145,69 @@ async function responder(env, f, telefone, nome, texto) {
   await guardar(env, null, telefone, "robo", saida, faqId);
   if (chamou) await chamarJoao(env, f, telefone, nome, texto, chamou);
   return chamou ? "joao" : faqId ? "faq" : "ok";
+}
+
+/* ---------- /admin: o João lê e responde pelo site (o número não fica mais no app do celular) ---------- */
+
+// Último texto, quem mandou e se a pessoa ainda está dentro das 24 h (fora disso a Meta só aceita modelo pago).
+const SQL_CONVERSAS =
+  "SELECT c.telefone, c.nome, c.ultima_em, c.humano_ate, (c.humano_ate > datetime('now')) AS humano, " +
+  "(SELECT texto FROM whatsapp_mensagens m WHERE m.telefone = c.telefone ORDER BY m.id DESC LIMIT 1) AS ultima_texto, " +
+  "(SELECT direcao FROM whatsapp_mensagens m WHERE m.telefone = c.telefone ORDER BY m.id DESC LIMIT 1) AS ultima_direcao, " +
+  "((SELECT MAX(created_at) FROM whatsapp_mensagens m WHERE m.telefone = c.telefone AND m.direcao = 'entrada') > datetime('now', '-24 hours')) AS pode_responder " +
+  "FROM whatsapp_conversas c ORDER BY c.ultima_em DESC LIMIT 100";
+
+function telefoneOk(t) { return /^\d{10,15}$/.test(String(t || "")); }
+
+export async function tratarAdminWhatsapp(request, env, url, f) {
+  const caminho = url.pathname;
+  if (request.method === "GET" && caminho === "/api/admin/whatsapp") {
+    const r = await env.DB.prepare(SQL_CONVERSAS).all();
+    const conversas = r.results.map(function (c) {
+      c.humano = !!c.humano; c.pode_responder = !!c.pode_responder;
+      // Esperando o João: ele foi chamado e a última mensagem é da pessoa.
+      c.esperando = c.humano && c.ultima_direcao === "entrada";
+      c.telefone_br = formatarTelefone(c.telefone);
+      return c;
+    });
+    return f.resposta({ configurado: !!(env.WHATSAPP_TOKEN && env.WHATSAPP_PHONE_ID), conversas: conversas }, 200);
+  }
+  if (request.method === "GET" && caminho === "/api/admin/whatsapp/conversa") {
+    const tel = url.searchParams.get("tel");
+    if (!telefoneOk(tel)) return f.resposta({ error: "Número inválido" }, 400);
+    const r = await env.DB.prepare(
+      "SELECT direcao, texto, created_at FROM (SELECT * FROM whatsapp_mensagens WHERE telefone = ? ORDER BY id DESC LIMIT 100) ORDER BY id"
+    ).bind(tel).all();
+    return f.resposta({ mensagens: r.results }, 200);
+  }
+
+  if (request.method !== "POST") return f.resposta({ error: "Método não permitido" }, 405);
+  if (!f.origemOk(request, url)) return f.resposta({ error: "Origem inválida" }, 403);
+  const corpo = await f.lerJson(request);
+  if (!corpo || !telefoneOk(corpo.telefone)) return f.resposta({ error: "Número inválido" }, 400);
+  const conversa = await env.DB.prepare(SQL_CONVERSAS.replace("ORDER BY c.ultima_em DESC LIMIT 100", "WHERE c.telefone = ?")).bind(corpo.telefone).first();
+  if (!conversa) return f.resposta({ error: "Conversa não encontrada" }, 404);
+
+  if (caminho === "/api/admin/whatsapp/responder") {
+    const texto = String(corpo.texto || "").replace(/\r/g, "").trim().slice(0, 4000);
+    if (texto.length < 1) return f.resposta({ error: "Escreva a resposta" }, 400);
+    if (!conversa.pode_responder) {
+      return f.resposta({ error: "Já passaram 24 horas da última mensagem dessa pessoa. A Meta só deixa responder de graça dentro de 24 horas: peça para ela mandar uma mensagem de novo (ex.: pelo link wa.me) ou ligue." }, 409);
+    }
+    if (!env.WHATSAPP_TOKEN || !env.WHATSAPP_PHONE_ID) return f.resposta({ error: "O robô ainda não está ligado na Meta." }, 503);
+    if (!(await enviar(env, corpo.telefone, texto))) return f.resposta({ error: "A Meta não aceitou a mensagem. Tente de novo em instantes." }, 502);
+    await guardar(env, null, corpo.telefone, "joao", texto, null);
+    // O João assumiu: o robô fica quieto nessa conversa.
+    await env.DB.prepare("UPDATE whatsapp_conversas SET humano_ate = datetime('now', '+" + HORAS_HUMANO + " hours'), ultima_em = datetime('now') WHERE telefone = ?").bind(corpo.telefone).run();
+    return f.resposta({ ok: true }, 200);
+  }
+
+  if (caminho === "/api/admin/whatsapp/robo") {
+    // ligado = o robô volta a responder agora; desligado = fica quieto por HORAS_HUMANO horas.
+    await env.DB.prepare("UPDATE whatsapp_conversas SET humano_ate = " + (corpo.ligado ? "NULL" : "datetime('now', '+" + HORAS_HUMANO + " hours')") + " WHERE telefone = ?").bind(corpo.telefone).run();
+    return f.resposta({ ok: true }, 200);
+  }
+  return f.resposta({ error: "Rota não encontrada" }, 404);
 }
 
 // f = ferramentas do worker: { resposta, enviarEmail, escaparHtml, EMAIL_SUPORTE }

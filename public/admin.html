@@ -168,6 +168,30 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
       <div id="listaCupons" class="mt-4 space-y-2"></div>
     </div>
 
+    <div id="secWhatsApp" class="adSec hidden glass rounded-3xl p-6 space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-lg font-bold">💬 WhatsApp <span class="text-sm font-normal text-slate-400">a Nuvenzinha responde; você assume quando precisar</span></h2>
+        <button type="button" id="waAtualizar" class="text-sm font-semibold text-cyan-300 hover:text-white">↻ Atualizar</button>
+      </div>
+      <p id="waAviso" class="hidden text-sm bg-amber-500/10 border border-amber-400/30 rounded-xl px-4 py-2 text-amber-200">O robô ainda não está ligado na Meta (faltam os segredos). Passo a passo: docs/whatsapp-robo.md.</p>
+      <div id="waLista" class="space-y-2"></div>
+      <div id="waConversa" class="hidden space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <button type="button" id="waFechar" class="text-sm font-semibold text-cyan-300 hover:text-white">← Todas as conversas</button>
+          <a id="waLink" target="_blank" rel="noopener" class="text-sm text-slate-400 hover:text-white"></a>
+        </div>
+        <p id="waNome" class="font-bold"></p>
+        <div id="waMensagens" class="space-y-2 max-h-[55vh] overflow-y-auto bg-slate-950/40 rounded-2xl p-3"></div>
+        <p id="waJanela" class="text-xs text-slate-400"></p>
+        <textarea id="waTexto" rows="3" class="campo" maxlength="4000" placeholder="Escreva a sua resposta..."></textarea>
+        <div class="flex flex-wrap items-center gap-3">
+          <button type="button" id="waEnviar" class="cta px-5 py-2 rounded-xl font-semibold">Enviar</button>
+          <button type="button" id="waRobo" class="text-sm font-semibold text-cyan-300 hover:text-white"></button>
+          <span id="waErro" class="text-sm text-red-300"></span>
+        </div>
+      </div>
+    </div>
+
     <div id="secAssistente" class="adSec hidden glass rounded-3xl p-6 space-y-5">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="text-lg font-bold">☁️ Assistente (chat da nuvem)</h2>
@@ -946,10 +970,103 @@ function resumoLucro() {
   return ["Este mês: lucro " + reais(m.lucro) + (m.dizimo > 0 ? " · dízimo " + reais(m.dizimo) : ""), 0];
 }
 
+/* ---------- WhatsApp: conversas do robô, responder pelo site ---------- */
+
+var waDados = null, waAberta = null;
+
+async function carregarWhatsapp() {
+  var resp = await fetch("/api/admin/whatsapp");
+  if (!resp.ok) return;
+  waDados = await resp.json();
+  document.getElementById("waAviso").classList.toggle("hidden", waDados.configurado);
+  var lista = document.getElementById("waLista");
+  lista.innerHTML = "";
+  if (!waDados.conversas.length) lista.appendChild(el("p", "text-sm text-slate-400", "Nenhuma conversa ainda."));
+  waDados.conversas.forEach(function (c) {
+    var b = el("button", "w-full text-left rounded-xl px-4 py-3 border " + (c.esperando ? "bg-red-500/10 border-red-400/40" : "bg-slate-900/50 border-transparent hover:border-cyan-400"));
+    b.type = "button";
+    var topo = el("p", "flex flex-wrap items-center justify-between gap-2 text-sm");
+    topo.appendChild(el("span", "font-semibold", (c.esperando ? "🔴 " : "") + (c.nome || c.telefone_br)));
+    topo.appendChild(el("span", "text-xs text-slate-400", dataHora(c.ultima_em) + (c.humano ? " · 🙋 você" : " · 🤖 robô")));
+    b.appendChild(topo);
+    var quem = c.ultima_direcao === "entrada" ? "" : (c.ultima_direcao === "joao" ? "Você: " : "Robô: ");
+    b.appendChild(el("p", "text-sm text-slate-400 truncate", quem + (c.ultima_texto || "")));
+    b.addEventListener("click", function () { abrirConversa(c.telefone); });
+    lista.appendChild(b);
+  });
+  if (waAberta) abrirConversa(waAberta, true);
+}
+
+async function abrirConversa(tel, manterTexto) {
+  var c = (waDados.conversas || []).filter(function (x) { return x.telefone === tel; })[0];
+  if (!c) return;
+  waAberta = tel;
+  document.getElementById("waLista").classList.add("hidden");
+  document.getElementById("waConversa").classList.remove("hidden");
+  document.getElementById("waNome").textContent = (c.nome ? c.nome + " · " : "") + c.telefone_br;
+  var link = document.getElementById("waLink");
+  link.href = "https://wa.me/" + c.telefone;
+  link.textContent = "wa.me/" + c.telefone;
+  document.getElementById("waErro").textContent = "";
+  if (!manterTexto) document.getElementById("waTexto").value = "";
+  document.getElementById("waJanela").textContent = c.pode_responder
+    ? "✅ Pode responder de graça (a pessoa escreveu nas últimas 24 horas)."
+    : "⏰ Passaram 24 horas da última mensagem dessa pessoa: a Meta não deixa responder de graça. Peça para ela chamar de novo ou ligue.";
+  document.getElementById("waEnviar").disabled = !c.pode_responder || !waDados.configurado;
+  document.getElementById("waRobo").textContent = c.humano ? "🤖 Devolver para o robô" : "🙋 Pausar o robô nesta conversa";
+  var resp = await fetch("/api/admin/whatsapp/conversa?tel=" + encodeURIComponent(tel));
+  if (!resp.ok) return;
+  var d = await resp.json();
+  var caixa = document.getElementById("waMensagens");
+  caixa.innerHTML = "";
+  d.mensagens.forEach(function (m) {
+    var minha = m.direcao !== "entrada";
+    var linha = el("div", "flex " + (minha ? "justify-end" : "justify-start"));
+    var bolha = el("div", "max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-line break-words " +
+      (m.direcao === "joao" ? "bg-emerald-600/40" : m.direcao === "robo" ? "bg-indigo-600/30" : "bg-slate-800"));
+    bolha.appendChild(el("p", "text-[11px] text-slate-300 mb-1", (m.direcao === "joao" ? "Você" : m.direcao === "robo" ? "🤖 Nuvenzinha" : (c.nome || "Cliente")) + " · " + dataHora(m.created_at)));
+    bolha.appendChild(el("p", "", m.texto || ""));
+    linha.appendChild(bolha);
+    caixa.appendChild(linha);
+  });
+  caixa.scrollTop = caixa.scrollHeight;
+}
+
+document.getElementById("waFechar").addEventListener("click", function () {
+  waAberta = null;
+  document.getElementById("waConversa").classList.add("hidden");
+  document.getElementById("waLista").classList.remove("hidden");
+});
+document.getElementById("waAtualizar").addEventListener("click", function () { carregarWhatsapp(); });
+document.getElementById("waEnviar").addEventListener("click", async function () {
+  var b = this, texto = document.getElementById("waTexto").value.trim();
+  if (!texto) return;
+  b.disabled = true;
+  b.textContent = "Enviando...";
+  var r = await postar("/api/admin/whatsapp/responder", { telefone: waAberta, texto: texto });
+  b.textContent = "Enviar";
+  b.disabled = false;
+  if (!r.ok) { document.getElementById("waErro").textContent = r.dados.error || "Não foi possível enviar."; return; }
+  document.getElementById("waTexto").value = "";
+  carregarWhatsapp();
+});
+document.getElementById("waRobo").addEventListener("click", async function () {
+  var c = waDados.conversas.filter(function (x) { return x.telefone === waAberta; })[0];
+  await postar("/api/admin/whatsapp/robo", { telefone: waAberta, ligado: c.humano });
+  carregarWhatsapp();
+});
+
+function resumoWhatsapp() {
+  if (!waDados) return ["Carregando...", 0];
+  if (!waDados.configurado) return ["Falta ligar na Meta", 0];
+  var esperando = waDados.conversas.filter(function (c) { return c.esperando; }).length;
+  return [esperando ? esperando + " conversa(s) esperando você" : waDados.conversas.length + " conversa(s) · robô atendendo", esperando];
+}
+
 /* ---------- tela inicial: quadradinhos com resumo e ponto vermelho ---------- */
 
 var SECOES = [
-  ["Clientes", "👥 Clientes"], ["Assistente", "☁️ Assistente"], ["Sentinela", "🛡️ Sentinela"],
+  ["Clientes", "👥 Clientes"], ["WhatsApp", "💬 WhatsApp"], ["Assistente", "☁️ Assistente"], ["Sentinela", "🛡️ Sentinela"],
   ["Bancos", "🏦 Bancos"], ["Blog", "📝 Blog"], ["B2", "💾 Backblaze"], ["Copias", "📦 Cópias"], ["Site", "🩺 Site no ar"], ["Lucro", "💰 Lucro Online"], ["Cupons", "🎟️ Cupons"]
 ];
 var resumoTile = {};
@@ -996,6 +1113,7 @@ function atualizarTiles() {
     B2: ["Lucro: " + document.getElementById("b2Lucro").textContent + "/mês", document.getElementById("b2Aviso").classList.contains("hidden") ? 0 : 1],
     Cupons: [document.getElementById("listaCupons").children.length + " cupom(ns)", 0],
     Site: resumoSite(),
+    WhatsApp: resumoWhatsapp(),
     Lucro: resumoLucro(),
     Copias: [ultimaCopia ? (ultimaCopia.ok ? "Última: " + dataHora(ultimaCopia.created_at) : "A última cópia falhou!") : "Nenhuma cópia ainda", ultimaCopia && (!ultimaCopia.ok || Date.now() - new Date(String(ultimaCopia.created_at).replace(" ", "T") + "Z").getTime() > 2 * 86400000) ? 1 : (ultimaCopia ? 0 : 1)]
   };
@@ -1036,7 +1154,7 @@ function limitarLista(id, n) {
 
 // Depois de cada carregamento: encurta as listas e atualiza os quadradinhos.
 [["carregar", []], ["carregarB2", []], ["carregarCupons", [["listaCupons", 4]]], ["carregarAssistente", [["listaSemResposta", 5]]],
- ["carregarSentinela", [["senAlertas", 8]]], ["carregarBlog", [["listaBlog", 6]]], ["carregarBancos", [["bcLista", 6]]], ["carregarCopias", []], ["carregarSite", []], ["carregarLucro", []]].forEach(function (x) {
+ ["carregarSentinela", [["senAlertas", 8]]], ["carregarBlog", [["listaBlog", 6]]], ["carregarBancos", [["bcLista", 6]]], ["carregarCopias", []], ["carregarSite", []], ["carregarLucro", []], ["carregarWhatsapp", [["waLista", 12]]]].forEach(function (x) {
   var original = window[x[0]];
   window[x[0]] = async function () {
     var r = await original.apply(this, arguments);
@@ -1076,6 +1194,14 @@ carregarBancos();
 carregarCopias();
 carregarSite();
 carregarLucro();
+carregarWhatsapp();
+// Link do e-mail do robô: /admin?secao=WhatsApp abre direto nas conversas.
+(function () {
+  var s = new URLSearchParams(location.search).get("secao");
+  if (s && /^[A-Za-z0-9]+$/.test(s) && document.getElementById("sec" + s)) abrirSecao(s);
+})();
+// Conversas novas aparecem sozinhas enquanto a tela estiver aberta.
+setInterval(function () { if (!document.hidden) carregarWhatsapp(); }, 60000);
 document.getElementById("sair").addEventListener("click", function () {
   postar("/api/logout").then(function () { window.location.href = "/entrar"; });
 });

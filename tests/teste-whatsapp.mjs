@@ -150,5 +150,50 @@ const envSemSegredo = Object.assign({}, env, { META_APP_SECRET: "" });
 r = await worker.fetch(new Request(BASE + "/api/whatsapp/webhook", { method: "POST", body: bruto, headers: { "X-Hub-Signature-256": "sha256=abc" } }), envSemSegredo);
 confere(r.status === 401, "sem META_APP_SECRET nada é aceito");
 
+// 12) /admin → 💬 WhatsApp: listar, abrir, responder, devolver ao robô
+let cookie = "";
+async function api(caminho, corpo, ip) {
+  const h = { "Content-Type": "application/json", "Origin": BASE, "CF-Connecting-IP": ip || "10.0.0.1" };
+  if (cookie) h.Cookie = cookie;
+  const resp = await worker.fetch(new Request(BASE + caminho, { method: corpo === undefined ? "GET" : "POST", headers: h, body: corpo === undefined ? undefined : JSON.stringify(corpo) }), env);
+  const sc = resp.headers.get("Set-Cookie");
+  if (sc) cookie = sc.split(";")[0];
+  return { status: resp.status, json: await resp.json().catch(() => null) };
+}
+await api("/api/register", { email: "cli@teste.com", senha: "senha-forte-2", nome: "Cliente", aceite: true }, "10.9.1.1");
+let s = await api("/api/admin/whatsapp");
+confere(s.status === 403, "cliente comum não vê as conversas do WhatsApp");
+cookie = "";
+await api("/api/register", { email: "admin@teste.com", senha: "senha-forte-1", nome: "Admin", aceite: true }, "10.9.1.2");
+db.prepare("UPDATE users SET role = 'admin' WHERE email = 'admin@teste.com'").run();
+
+s = await api("/api/admin/whatsapp");
+const pedro = s.json && s.json.conversas.find(c => c.telefone === "5562922220000");
+confere(s.status === 200 && s.json.configurado && pedro && pedro.esperando && pedro.pode_responder, "admin vê a conversa do Pedro marcada como esperando");
+s = await api("/api/admin/whatsapp/conversa?tel=5562922220000");
+confere(s.json.mensagens.some(m => m.direcao === "entrada" && /napoleao/.test(m.texto)) && s.json.mensagens.some(m => m.direcao === "robo"), "abre a conversa com as mensagens dos dois lados");
+
+const qtd3 = enviadas.length;
+s = await api("/api/admin/whatsapp/responder", { telefone: "5562922220000", texto: "Oi Pedro, aqui é o João!" });
+confere(s.status === 200 && enviadas.length === qtd3 + 1 && ultima().to === "5562922220000" && ultima().text.body === "Oi Pedro, aqui é o João!", "João responde pelo site e a mensagem sai pela Meta");
+s = await api("/api/admin/whatsapp");
+confere(!s.json.conversas.find(c => c.telefone === "5562922220000").esperando, "depois de responder, sai da lista de esperando");
+
+// Fora das 24 horas: a Meta cobraria, então o site não deixa
+db.prepare("UPDATE whatsapp_mensagens SET created_at = datetime('now', '-2 days') WHERE telefone = '5562933330000'").run();
+s = await api("/api/admin/whatsapp/responder", { telefone: "5562933330000", texto: "Oi Ana" });
+confere(s.status === 409 && /24 horas/.test(s.json.error), "depois de 24 horas não deixa responder (seria cobrado)");
+
+// Devolver para o robô
+s = await api("/api/admin/whatsapp/robo", { telefone: "5562922220000", ligado: true });
+const qtd4 = enviadas.length;
+await aviso(mensagem("5562922220000", "quanto custa 1 TB?", "Pedro"));
+confere(s.status === 200 && enviadas.length === qtd4 + 1, "devolvido ao robô, ele volta a responder");
+
+s = await api("/api/admin/whatsapp/responder", { telefone: "123", texto: "x" });
+confere(s.status === 400, "número inválido é recusado");
+s = await worker.fetch(new Request(BASE + "/api/admin/whatsapp/responder", { method: "POST", headers: { "Content-Type": "application/json", Cookie: cookie, Origin: "https://golpe.com" }, body: JSON.stringify({ telefone: "5562922220000", texto: "x" }) }), env);
+confere(s.status === 403, "pedido vindo de outro site é recusado");
+
 if (falhas) { console.log(falhas + " falha(s)"); process.exit(1); }
 console.log("TODOS OS TESTES DO WHATSAPP PASSARAM");

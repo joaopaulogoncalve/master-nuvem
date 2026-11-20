@@ -139,8 +139,9 @@ checkout, ciclo de 30 dias com avisos, 2FA do admin ativado, limpeza por Cron). 
 
 **Marketing com robôs (pedido do João em 2026-11-20, nesta ordem):** 1) **Robô do WhatsApp** — feito no ramo `whatsapp-robo`
 (`src/whatsapp.js`, `migrations/0031_whatsapp.sql`, teste `tests/teste-whatsapp.mjs`): responde com a tabela `faq`, menu para "oi",
-"atendente"/não sabe → e-mail para contato@ e 12 h quieto; falta o João criar o app na Meta e escolher o número (chip novo direto
-ou coexistência com o (62) 98284-6067 via parceiro) — `docs/whatsapp-robo.md`. 2) Instagram ("comenta que eu te mando" + postagem pela API).
+"atendente"/não sabe → e-mail para contato@ e 12 h quieto. **Número: (62) 98284-6067 sai do app e vai direto para a API ("Jeito 1",
+decisão de 2026-11-20)**; o João lê e responde em `/admin → 💬 WhatsApp` (`/api/admin/whatsapp*`, só dentro das 24 h grátis).
+Falta o João criar o app na Meta, apagar a conta do app e gravar os segredos — `docs/whatsapp-robo.md`. 2) Instagram ("comenta que eu te mando" + postagem pela API).
 3) Vídeos (um vídeo cortado para Reels/Shorts/TikTok). 4) Envio automático para YouTube e TikTok. Os planos de redes e o robô do
 YouTube do China em Casa ficam em `Renda-Online` (só ler para aproveitar ideias; nunca mexer).
 
