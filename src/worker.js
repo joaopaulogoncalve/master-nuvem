@@ -9,6 +9,7 @@ import { tratarBlog, agendaBlog } from "./blog.js";
 import { purgarLixeira } from "./lixeira.js";
 import { tratarPortfolioDono, tratarPortfolioPublico, portfoliosNoAr } from "./portfolio.js";
 import { tratarBancos, tratarAdminBancos, checarLinksBancos } from "./bancos.js";
+import { tratarWhatsapp } from "./whatsapp.js";
 const enc = new TextEncoder();
 const DIAS_SESSAO = 30;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1356,6 +1357,11 @@ async function tratarApi(request, env, url) {
     return await tratarAssistente(request, env, url);
   }
 
+  // Robô do WhatsApp: a Meta avisa as mensagens aqui (assinadas com META_APP_SECRET; ver src/whatsapp.js).
+  if (caminho === "/api/whatsapp/webhook") {
+    return await tratarWhatsapp(request, env, url, ferramentasBancos());
+  }
+
   if (caminho === "/api/bancos" || caminho.startsWith("/api/bancos/")) {
     return await tratarBancos(request, env, url, ferramentasBancos());
   }
@@ -1536,6 +1542,8 @@ async function limpeza(env) {
   await env.DB.prepare("DELETE FROM portal_sessoes WHERE expires_at < datetime('now')").run();
   await env.DB.prepare("DELETE FROM assistente_limite WHERE created_at < datetime('now', '-1 day')").run();
   await env.DB.prepare("DELETE FROM perguntas_chat WHERE created_at < datetime('now', '-180 days')").run();
+  try { await env.DB.prepare("DELETE FROM whatsapp_mensagens WHERE created_at < datetime('now', '-180 days')").run(); }
+  catch (e) { console.error("limpeza whatsapp", e.message); }   // tabela vem da migração 0031
   await env.DB.prepare("DELETE FROM seguranca_eventos WHERE created_at < datetime('now', '-90 days')").run();
   await env.DB.prepare("DELETE FROM sentinela_alertas WHERE created_at < datetime('now', '-180 days')").run();
   await env.DB.prepare("DELETE FROM password_resets WHERE expires_at < datetime('now', '-1 day')").run();

@@ -42,6 +42,7 @@ Navegador ◄──► Backblaze B2 (S3)   → upload/download DIRETO por URL as
 | `UPTIMEROBOT_API_KEY` | Chave **só de leitura** do UptimeRobot (Integrations & API → Read-only API key). Usada pelo quadradinho "🩺 Site no ar" do /admin (`/api/admin/site`, função `lerUptimeRobot`). Sem ela o quadradinho diz "Falta ligar". |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET` | Turnstile (anti-robô) no login e cadastro; gravados em 2026-10-27. |
 | `LUCRO_KEY` | Chave da ponte do Lucro Online (a mesma do Worker `china-em-casa`, arquivo `Renda-Online\worker\.lucro-key`). A Master Nuvem manda os ganhos para `https://china-em-casa.paulojao151.workers.dev/api/lucro/lancar` (`enviarLucro`, todo dia 07:00 UTC; botão "Mandar agora" no /admin → Clientes). Ligação pelo service binding `CHINA_EM_CASA` (Worker não chama outro da mesma conta pelo *.workers.dev). **Ao gravar a chave, tirar o BOM** (o `.lucro-key` antigo tinha; deu 401 "chave inválida"). Chave trocada em 2026-11-03. |
+| `WHATSAPP_TOKEN` / `WHATSAPP_PHONE_ID` / `WHATSAPP_VERIFY_TOKEN` / `META_APP_SECRET` | Robô do WhatsApp (API oficial da Meta, `src/whatsapp.js`, webhook `/api/whatsapp/webhook`). Passo a passo em `docs/whatsapp-robo.md`. Sem eles o robô não faz nada. |
 | `B2_KEY_ID` | ID da chave de aplicação do Backblaze (`site-master-nuvem`, só o bucket, Read and Write). A Master Key **não** funciona na API S3. Trocar: `scripts\b2-chave-site.ps1 -KeyId 005...` |
 | `B2_APP_KEY` | Chave secreta do Backblaze |
 | `B2_BUCKET` | `master-nuvem-cliente` (bucket **privado**) |
@@ -135,6 +136,13 @@ checkout, ciclo de 30 dias com avisos, 2FA do admin ativado, limpeza por Cron). 
     **Apagar arquivos de cliente só acontece com a variável `APAGAR_ARQUIVOS = "sim"`**; sem ela fica em modo teste (só log).
     Limites por rodada: 10 e-mails e 30 exclusões (plano grátis = 50 subrequests).
     Se mudar regra de cobrança/retenção no código, atualizar os textos também.
+
+**Marketing com robôs (pedido do João em 2026-11-20, nesta ordem):** 1) **Robô do WhatsApp** — feito no ramo `whatsapp-robo`
+(`src/whatsapp.js`, `migrations/0031_whatsapp.sql`, teste `tests/teste-whatsapp.mjs`): responde com a tabela `faq`, menu para "oi",
+"atendente"/não sabe → e-mail para contato@ e 12 h quieto; falta o João criar o app na Meta e escolher o número (chip novo direto
+ou coexistência com o (62) 98284-6067 via parceiro) — `docs/whatsapp-robo.md`. 2) Instagram ("comenta que eu te mando" + postagem pela API).
+3) Vídeos (um vídeo cortado para Reels/Shorts/TikTok). 4) Envio automático para YouTube e TikTok. Os planos de redes e o robô do
+YouTube do China em Casa ficam em `Renda-Online` (só ler para aproveitar ideias; nunca mexer).
 
 **Ideias futuras:** **Plataforma de automação para clientes** (pedido do João em 2026-11-18): em vez de só configurar o robô para cada um, o cliente entra num painel próprio e liga sozinho as automações (WhatsApp oficial pela API da Meta, vídeos para as redes, "comenta que eu te mando"), pagando mensalidade. Começar pelo piloto da Rezende; só virar plataforma depois de 3–4 clientes. Análise de custo e risco feita na conversa de 18/11; **Respostas rápidas do WhatsApp Business** (pedido do João em 2026-10-26: saudação e ausência já configuradas no app; faltam os atalhos `/preco`, `/teste`... Vão ser muitas: dá para gerar a lista a partir das 68 respostas da Nuvenzinha, tabela `faq`, e o João cadastra no app em Ferramentas → Respostas rápidas); **Portal do contador** (pedido do João em 2026-10-25, anotado, não feito): arquivos compartilhados entre o contador e os clientes dele (ex.: supermercados), cada cliente com a sua pasta (notas, guias, extratos por mês), e no futuro uma API para os sistemas contábeis enviarem/buscarem documentos sozinhos; bot de WhatsApp para suporte/venda; "Fase 2" com HD/NAS próprio para baratear; planos pré-definidos além do slider; e-mails transacionais.
 
