@@ -9,7 +9,7 @@ import { tratarBlog, agendaBlog } from "./blog.js";
 import { purgarLixeira } from "./lixeira.js";
 import { tratarPortfolioDono, tratarPortfolioPublico, portfoliosNoAr } from "./portfolio.js";
 import { tratarBancos, tratarAdminBancos, checarLinksBancos } from "./bancos.js";
-import { tratarWhatsapp } from "./whatsapp.js";
+import { tratarWhatsapp, tratarAdminWhatsapp } from "./whatsapp.js";
 const enc = new TextEncoder();
 const DIAS_SESSAO = 30;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -388,6 +388,7 @@ async function tratarAdmin(request, env, url) {
   if (!u) return resposta({ error: "Não autenticado" }, 401);
   if (u.role !== "admin") return resposta({ error: "Acesso restrito" }, 403);
   if (caminho === "/api/admin/bancos" || caminho.startsWith("/api/admin/bancos/")) return await tratarAdminBancos(request, env, url, ferramentasBancos());
+  if (caminho === "/api/admin/whatsapp" || caminho.startsWith("/api/admin/whatsapp/")) return await tratarAdminWhatsapp(request, env, url, ferramentasBancos());
 
   if (caminho === "/api/admin/clientes") {
     const r = await env.DB.prepare(
