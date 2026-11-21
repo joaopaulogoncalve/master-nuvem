@@ -15,6 +15,19 @@ depois que o João ligar o número na Meta e gravar os 4 segredos abaixo. Sem os
 - Responder quem chamou primeiro é **grátis** na Meta (conversa de atendimento). Só mensagem que a Master Nuvem
   começa (propaganda, lembrete) é paga e precisa de modelo aprovado — o robô não faz isso.
 
+## Situação em 2026-11-20 (o que já foi feito e o que aprendemos)
+- App **"Master Nuvem Atendimento"** (id 1679122323651006) criado no portfólio **João Paulo** (o mesmo do China em Casa),
+  caso de uso WhatsApp, **publicado** (política /privacidade e termos /termos preenchidos). Webhook verificado e campo `messages` assinado.
+- Os 4 segredos gravados. `WHATSAPP_PHONE_ID` ainda é o do **número de teste** da Meta (+1 555 137-7320, conta 914078901698331).
+- O robô recebe, responde e a Meta aceita, mas o número de teste **não entrega no Brasil** (erro 130497 "restricted from messaging
+  users in this country"): número americano → brasileiro é bloqueado. Resolve com o número brasileiro de verdade (e a verificação da empresa).
+- **Token passa de 256 letras**: a janelinha do `segredo.ps1` corta. Para token, copiar e rodar
+  `powershell -STA -ExecutionPolicy Bypass -File scripts\segredo-copiado.ps1 -Nome WHATSAPP_TOKEN` (lê do Ctrl+C e limpa).
+- **/admin → 💬 WhatsApp → "🔧 Conferir ligação com a Meta"**: testa o token e assina a conta (WABA) no app. Sem essa assinatura a
+  Meta não manda as mensagens. Usar de novo quando trocar de número ou de token (WABA da conta de verdade aparece no painel da Meta).
+- Celular brasileiro antigo chega sem o 9 (556298163109); o robô acrescenta o 9 ao responder (`paraEnvio`).
+- Erros de entrega aparecem em `npx wrangler tail master-nuvem` ("entrega falhou para ...").
+
 ## Número escolhido (decisão do João em 2026-11-20): "Jeito 1"
 O mesmo número de hoje, **(62) 98284-6067**, sai do app do WhatsApp Business e vai **direto para a API da Meta**
 (grátis, sem empresa parceira). Depois disso o número **não abre mais no app**: o João lê e responde tudo em

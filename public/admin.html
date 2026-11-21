@@ -171,8 +171,12 @@ body{background:radial-gradient(900px 500px at 15% -5%,#0b3a8f55,transparent),ra
     <div id="secWhatsApp" class="adSec hidden glass rounded-3xl p-6 space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="text-lg font-bold">💬 WhatsApp <span class="text-sm font-normal text-slate-400">a Nuvenzinha responde; você assume quando precisar</span></h2>
-        <button type="button" id="waAtualizar" class="text-sm font-semibold text-cyan-300 hover:text-white">↻ Atualizar</button>
+        <div class="flex flex-wrap gap-4">
+          <button type="button" id="waConferir" class="text-sm font-semibold text-cyan-300 hover:text-white">🔧 Conferir ligação com a Meta</button>
+          <button type="button" id="waAtualizar" class="text-sm font-semibold text-cyan-300 hover:text-white">↻ Atualizar</button>
+        </div>
       </div>
+      <div id="waConferencia" class="hidden text-sm bg-slate-900/60 rounded-xl px-4 py-3 space-y-1"></div>
       <p id="waAviso" class="hidden text-sm bg-amber-500/10 border border-amber-400/30 rounded-xl px-4 py-2 text-amber-200">O robô ainda não está ligado na Meta (faltam os segredos). Passo a passo: docs/whatsapp-robo.md.</p>
       <div id="waLista" class="space-y-2"></div>
       <div id="waConversa" class="hidden space-y-3">
@@ -1038,6 +1042,22 @@ document.getElementById("waFechar").addEventListener("click", function () {
   document.getElementById("waLista").classList.remove("hidden");
 });
 document.getElementById("waAtualizar").addEventListener("click", function () { carregarWhatsapp(); });
+// Testa o token e assina a conta do WhatsApp (WABA) no app da Meta. O número da conta fica no painel da Meta
+// (Etapa 1 → "Identificação da conta de mensagens"); é lembrado neste navegador.
+document.getElementById("waConferir").addEventListener("click", async function () {
+  var guardado = "";
+  try { guardado = localStorage.getItem("waba") || ""; } catch (e) {}
+  var waba = await pedirTexto("Conferir ligação com a Meta", "Número da \"Identificação da conta de mensagens\" (WhatsApp Business Account) que aparece no painel da Meta. Deixe em branco para só testar o token.", guardado);
+  if (waba === null) return;
+  waba = String(waba).replace(/\D/g, "");
+  try { if (waba) localStorage.setItem("waba", waba); } catch (e) {}
+  var caixa = document.getElementById("waConferencia");
+  caixa.classList.remove("hidden");
+  caixa.textContent = "Conferindo...";
+  var r = await postar("/api/admin/whatsapp/conferir", { waba: waba });
+  caixa.innerHTML = "";
+  ((r.dados && r.dados.passos) || [r.dados.error || "Não foi possível conferir."]).forEach(function (p) { caixa.appendChild(el("p", "break-words", p)); });
+});
 document.getElementById("waEnviar").addEventListener("click", async function () {
   var b = this, texto = document.getElementById("waTexto").value.trim();
   if (!texto) return;

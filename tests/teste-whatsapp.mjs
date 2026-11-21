@@ -6,7 +6,7 @@ import { createHmac } from "node:crypto";
 
 const RAIZ = fileURLToPath(new URL("../", import.meta.url)).replace(/\\/g, "/");
 const worker = (await import(new URL("../", import.meta.url).href + "src/worker.js")).default;
-const { buscarResposta, paraWhatsapp } = await import(new URL("../", import.meta.url).href + "src/whatsapp.js");
+const { buscarResposta, paraWhatsapp, paraEnvio } = await import(new URL("../", import.meta.url).href + "src/whatsapp.js");
 
 const db = new DatabaseSync(":memory:");
 for (const m of readdirSync(RAIZ + "migrations").filter(f => f.endsWith(".sql")).sort()) db.exec(readFileSync(RAIZ + "migrations/" + m, "utf8"));
@@ -30,10 +30,12 @@ const env = {
   WHATSAPP_TOKEN: "token-teste", WHATSAPP_PHONE_ID: "123456", WHATSAPP_VERIFY_TOKEN: "palavra-secreta", META_APP_SECRET: SEGREDO_APP
 };
 
-const enviadas = [], emails = [];
+const enviadas = [], emails = [], assinaturas = [];
 globalThis.fetch = async (url, op) => {
   url = String(url);
   if (url.startsWith("https://graph.facebook.com/")) {
+    if (url.includes("/123456?fields=")) return new Response(JSON.stringify({ display_phone_number: "+1 555 000", verified_name: "Teste" }));
+    if (url.includes("/999888777666/subscribed_apps")) { assinaturas.push(op && op.method === "POST" ? "post" : "get"); return new Response(JSON.stringify(op && op.method === "POST" ? { success: true } : { data: [{ whatsapp_business_api_data: { name: "Master Nuvem Atendimento" } }] })); }
     if (!url.includes("/123456/messages")) throw new Error("número errado " + url);
     if (op.headers.Authorization !== "Bearer token-teste") throw new Error("sem token");
     enviadas.push(JSON.parse(op.body));
@@ -140,6 +142,9 @@ confere(doRobo === 15, "no máximo 15 respostas por hora para o mesmo número (f
 confere(paraWhatsapp("Veja [os planos](/sites) e **já**") === "Veja os planos: https://masternuvem.com.br/sites e *já*", "converte link e negrito para o WhatsApp");
 confere(buscarResposta([{ id: 1, pergunta: "Tem WhatsApp?", palavras: "whatsapp,zap" }], "vcs tem zap?").id === 1, "busca igual à do chat do site");
 
+confere(paraEnvio("556298163109") === "5562998163109" && paraEnvio("5562998163109") === "5562998163109" && paraEnvio("556232221111") === "556232221111" && paraEnvio("15551234567") === "15551234567",
+  "celular brasileiro sem o 9 ganha o 9 ao responder (fixo e estrangeiro não mudam)");
+
 // 11) Sem os segredos: não quebra
 const envSem = Object.assign({}, env, { WHATSAPP_TOKEN: "" });
 const bruto = JSON.stringify(mensagem("5562977770000", "oi"));
@@ -190,6 +195,11 @@ const qtd4 = enviadas.length;
 await aviso(mensagem("5562922220000", "quanto custa 1 TB?", "Pedro"));
 confere(s.status === 200 && enviadas.length === qtd4 + 1, "devolvido ao robô, ele volta a responder");
 
+// Botão "Conferir ligação com a Meta": testa o token e assina a conta no app
+s = await api("/api/admin/whatsapp/conferir", { waba: "999888777666" });
+confere(s.status === 200 && /Token funciona/.test(s.json.passos[0]) && /assinada/.test(s.json.passos[1]) && assinaturas.join() === "post,get", "conferir testa o token e assina a conta do WhatsApp no app");
+s = await api("/api/admin/whatsapp/conferir", {});
+confere(s.status === 200 && s.json.passos.length === 1, "sem número da conta, só testa o token");
 s = await api("/api/admin/whatsapp/responder", { telefone: "123", texto: "x" });
 confere(s.status === 400, "número inválido é recusado");
 s = await worker.fetch(new Request(BASE + "/api/admin/whatsapp/responder", { method: "POST", headers: { "Content-Type": "application/json", Cookie: cookie, Origin: "https://golpe.com" }, body: JSON.stringify({ telefone: "5562922220000", texto: "x" }) }), env);

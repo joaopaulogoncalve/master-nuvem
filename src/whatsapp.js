@@ -75,7 +75,15 @@ async function assinaturaOk(env, corpo, cabecalho) {
   return iguais(esperado, cabecalho.slice(7).toLowerCase());
 }
 
+// Celular brasileiro antigo chega da Meta sem o 9 (55 + DDD + 8 números, ex.: 556298163109). Para responder,
+// o formato oficial é com o 9 (5562998163109); sem isso a Meta recusa no modo teste ("not in allowed list").
+export function paraEnvio(telefone) {
+  const t = String(telefone || "");
+  return /^55\d{2}[6-9]\d{7}$/.test(t) ? t.slice(0, 4) + "9" + t.slice(4) : t;
+}
+
 async function enviar(env, para, texto) {
+  para = paraEnvio(para);
   const r = await fetch(GRAPH + env.WHATSAPP_PHONE_ID + "/messages", {
     method: "POST",
     headers: { "Authorization": "Bearer " + env.WHATSAPP_TOKEN, "Content-Type": "application/json" },
@@ -184,6 +192,11 @@ export async function tratarAdminWhatsapp(request, env, url, f) {
   if (request.method !== "POST") return f.resposta({ error: "Método não permitido" }, 405);
   if (!f.origemOk(request, url)) return f.resposta({ error: "Origem inválida" }, 403);
   const corpo = await f.lerJson(request);
+  if (caminho === "/api/admin/whatsapp/conferir") {
+    if (!env.WHATSAPP_TOKEN || !env.WHATSAPP_PHONE_ID) return f.resposta({ passos: ["❌ Faltam os segredos WHATSAPP_TOKEN ou WHATSAPP_PHONE_ID."] }, 200);
+    const waba = String((corpo && corpo.waba) || "").replace(/\D/g, "");
+    return f.resposta({ passos: await conferirMeta(env, f, waba.length >= 10 ? waba : "") }, 200);
+  }
   if (!corpo || !telefoneOk(corpo.telefone)) return f.resposta({ error: "Número inválido" }, 400);
   const conversa = await env.DB.prepare(SQL_CONVERSAS.replace("ORDER BY c.ultima_em DESC LIMIT 100", "WHERE c.telefone = ?")).bind(corpo.telefone).first();
   if (!conversa) return f.resposta({ error: "Conversa não encontrada" }, 404);
@@ -209,6 +222,24 @@ export async function tratarAdminWhatsapp(request, env, url, f) {
   }
   return f.resposta({ error: "Rota não encontrada" }, 404);
 }
+
+// Conferir a ligação com a Meta (botão no /admin): testa o token, e assina a conta do WhatsApp (WABA) no app,
+// que é o que faz a Meta mandar as mensagens para o webhook. O token nunca sai do servidor.
+async function conferirMeta(env, f, waba) {
+  const auth = { "Authorization": "Bearer " + env.WHATSAPP_TOKEN };
+  const passos = [];
+  const lerErro = async function (r) { try { const j = await r.json(); return (j.error && j.error.message) || JSON.stringify(j).slice(0, 200); } catch (e) { return "HTTP " + r.status; } };
+  let r = await fetch(GRAPH + env.WHATSAPP_PHONE_ID + "?fields=display_phone_number,verified_name", { headers: auth });
+  if (r.ok) { const j = await r.json(); passos.push("✅ Token funciona. Número: " + (j.display_phone_number || "?") + " (" + (j.verified_name || "sem nome") + ")"); }
+  else { passos.push("❌ Token recusado pela Meta: " + (await lerErro(r)) + ". Gere outro e grave de novo (WHATSAPP_TOKEN)."); return passos; }
+  if (!waba) return passos;
+  r = await fetch(GRAPH + waba + "/subscribed_apps", { method: "POST", headers: auth });
+  passos.push(r.ok ? "✅ Conta do WhatsApp " + waba + " assinada no app (as mensagens passam a vir para o robô)." : "❌ Não consegui assinar a conta " + waba + ": " + (await lerErro(r)));
+  r = await fetch(GRAPH + waba + "/subscribed_apps", { headers: auth });
+  if (r.ok) { const j = await r.json(); passos.push("Apps assinados nessa conta: " + ((j.data || []).map(function (a) { return (a.whatsapp_business_api_data || {}).name || a.name || a.id || "?"; }).join(", ") || "nenhum")); }
+  return passos;
+}
+
 
 // f = ferramentas do worker: { resposta, enviarEmail, escaparHtml, EMAIL_SUPORTE }
 export async function tratarWhatsapp(request, env, url, f) {
@@ -253,6 +284,13 @@ export async function tratarWhatsapp(request, env, url, f) {
         continue;
       }
       if (mudanca.field !== "messages") continue;
+
+      // Recibos de entrega das respostas (sent / delivered / read / failed). Falha vai para o log com o motivo.
+      for (const st of v.statuses || []) {
+        if (st.status === "failed") console.error("WhatsApp: entrega falhou para", st.recipient_id, JSON.stringify(st.errors || []).slice(0, 400));
+        else console.log("WhatsApp: recibo", st.status, "para", st.recipient_id);
+        resultados.push("recibo-" + st.status);
+      }
 
       const nomes = {};
       (v.contacts || []).forEach(function (c) { nomes[c.wa_id] = c.profile && c.profile.name ? String(c.profile.name).slice(0, 80) : null; });

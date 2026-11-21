@@ -141,7 +141,10 @@ checkout, ciclo de 30 dias com avisos, 2FA do admin ativado, limpeza por Cron). 
 (`src/whatsapp.js`, `migrations/0031_whatsapp.sql`, teste `tests/teste-whatsapp.mjs`): responde com a tabela `faq`, menu para "oi",
 "atendente"/não sabe → e-mail para contato@ e 12 h quieto. **Número: (62) 98284-6067 sai do app e vai direto para a API ("Jeito 1",
 decisão de 2026-11-20)**; o João lê e responde em `/admin → 💬 WhatsApp` (`/api/admin/whatsapp*`, só dentro das 24 h grátis).
-Falta o João criar o app na Meta, apagar a conta do app e gravar os segredos — `docs/whatsapp-robo.md`. 2) Instagram ("comenta que eu te mando" + postagem pela API).
+**2026-11-20: app "Master Nuvem Atendimento" criado e publicado na Meta, segredos gravados, robô testado de ponta a ponta com o
+número de teste da Meta** (recebe e responde; a entrega para o Brasil é bloqueada só porque o número de teste é americano, erro 130497).
+Falta: token permanente (usuário do sistema), trocar para o número de verdade (62) 98284-6067 e verificar a empresa com o CCMEI.
+Token > 256 letras: gravar com `scripts\segredo-copiado.ps1`. Botão "🔧 Conferir ligação com a Meta" no /admin. Tudo em `docs/whatsapp-robo.md`. 2) Instagram ("comenta que eu te mando" + postagem pela API).
 3) Vídeos (um vídeo cortado para Reels/Shorts/TikTok). 4) Envio automático para YouTube e TikTok. Os planos de redes e o robô do
 YouTube do China em Casa ficam em `Renda-Online` (só ler para aproveitar ideias; nunca mexer).
 
